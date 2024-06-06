@@ -20,3 +20,17 @@
 # Go workspace file
 go.work
 go.work.sum
+
+.idea
+*.iml
+.scannerwork
+
+main/main
+resources/log/*
+!resources/log/.gitkeep
+resources/temp/*
+resources/test/*
+resources/config/*
+!resources/config/application-example.yaml
+
+*.upx
