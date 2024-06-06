@@ -7,3 +7,8 @@ type TestingListen struct {
 type TestingTiDB struct {
 	DSN string `json:"dsn" validate:"required"`
 }
+
+type TestingCert struct {
+	Cert string `json:"cert" validate:"required"`
+	Pkey string `json:"pkey" validate:"required"`
+}

@@ -2,15 +2,18 @@ package initapi
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
+	"net/http"
 	"time"
 
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/agies-server/argument/request"
-	"github.com/xmx/agies-server/handler/shipx"
-	"github.com/xmx/agies-server/library/sqldb"
+	"github.com/xmx/aegis-server/argument/request"
+	"github.com/xmx/aegis-server/handler/shipx"
+	"github.com/xmx/aegis-server/library/sqldb"
 )
 
+// Testing 敏感接口。
 func Testing() shipx.Register {
 	return &testingAPI{}
 }
@@ -20,6 +23,7 @@ type testingAPI struct{}
 func (api *testingAPI) Register(route shipx.Router) error {
 	route.Anon().Route("/testing/listen").POST(api.Listen)
 	route.Anon().Route("/testing/tidb").POST(api.TiDB)
+	route.Anon().Route("/testing/cert").POST(api.Cert)
 	return nil
 }
 
@@ -36,12 +40,35 @@ func (api *testingAPI) Listen(c *ship.Context) error {
 
 	lc := new(net.ListenConfig)
 	lis, err := lc.Listen(ctx, "tcp", req.Addr)
-	if err != nil {
-		return err
+	if err == nil {
+		_ = lis.Close()
+		return nil
 	}
-	_ = lis.Close()
 
-	return nil
+	var listenPort, localPort int
+	{
+		ope, ok := err.(*net.OpError)
+		if !ok {
+			return err
+		}
+		addr, yes := ope.Addr.(*net.TCPAddr)
+		if !yes {
+			return err
+		}
+		listenPort = addr.Port
+	}
+	{
+		addr, ok := parent.Value(http.LocalAddrContextKey).(*net.TCPAddr)
+		if !ok {
+			return err
+		}
+		localPort = addr.Port
+	}
+	if listenPort == localPort {
+		err = nil
+	}
+
+	return err
 }
 
 // TiDB 测试连接数据库。
@@ -55,7 +82,23 @@ func (api *testingAPI) TiDB(c *ship.Context) error {
 	if err != nil {
 		return err
 	}
+
+	parent := c.Request().Context()
+	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+	defer cancel()
+	err = db.PingContext(ctx)
 	_ = db.Close()
 
-	return nil
+	return err
+}
+
+func (api *testingAPI) Cert(c *ship.Context) error {
+	req := new(request.TestingCert)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+
+	_, err := tls.X509KeyPair([]byte(req.Cert), []byte(req.Pkey))
+
+	return err
 }
