@@ -1,18 +1,7 @@
 package main
 
-import (
-	"log"
-	"net"
-)
+import "fmt"
 
 func main() {
-	lis, err := net.Listen("tcp", "lo1.zzu.wiki:8080")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	_ = lis.Close()
-}
-
-type Init struct {
-	DSN string
+	fmt.Println("Hello World")
 }
