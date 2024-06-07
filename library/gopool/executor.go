@@ -54,23 +54,24 @@ func (le *limitExecutor) Exec(ctx context.Context, task func(ctx context.Context
 }
 
 func (le *limitExecutor) Await(parent context.Context, tasks []func(ctx context.Context)) context.Context {
+	uniques := make([]func(context.Context), 0, len(tasks))
+	for _, task := range tasks {
+		if task != nil {
+			uniques = append(uniques, task)
+		}
+	}
+
 	if parent == nil {
 		parent = context.Background()
 	}
-
-	size := len(tasks)
 	ctx, cancel := context.WithCancel(parent)
-	if size == 0 {
+	if len(uniques) == 0 {
 		cancel()
 		return ctx
 	}
 
 	count := &awaitCount{cancel: cancel}
 	for _, task := range tasks {
-		if task == nil {
-			continue
-		}
-
 		count.incr()
 		fn := le.awaitCountFunc(count, task)
 		le.Exec(ctx, fn)
