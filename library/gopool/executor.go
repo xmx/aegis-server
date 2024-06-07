@@ -40,7 +40,7 @@ func (le *limitExecutor) Exec(ctx context.Context, task func(ctx context.Context
 	tf := &taskFunc{ctx: ctx, task: task}
 	select {
 	case le.sem <- struct{}{}:
-		go tf.call()
+		go le.exec(tf)
 		return
 	default:
 	}
@@ -49,7 +49,7 @@ func (le *limitExecutor) Exec(ctx context.Context, task func(ctx context.Context
 	case <-ctx.Done():
 	case le.queue <- tf:
 	case le.sem <- struct{}{}:
-		go tf.call()
+		go le.exec(tf)
 	}
 }
 
