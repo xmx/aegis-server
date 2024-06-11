@@ -12,3 +12,7 @@ type TestingCert struct {
 	Cert string `json:"cert" validate:"required"`
 	Pkey string `json:"pkey" validate:"required"`
 }
+
+type TestingConfig struct {
+	TiDB TestingTiDB `json:"tidb"`
+}

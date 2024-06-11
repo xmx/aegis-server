@@ -24,6 +24,7 @@ func (api *testingAPI) Register(route shipx.Router) error {
 	route.Anon().Route("/testing/listen").POST(api.Listen)
 	route.Anon().Route("/testing/tidb").POST(api.TiDB)
 	route.Anon().Route("/testing/cert").POST(api.Cert)
+	route.Anon().Route("/testing/config").POST(api.Config)
 	return nil
 }
 
@@ -85,11 +86,18 @@ func (api *testingAPI) TiDB(c *ship.Context) error {
 
 	parent := c.Request().Context()
 	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
-	defer cancel()
-	err = db.PingContext(ctx)
-	_ = db.Close()
+	defer func() {
+		cancel()
+		_ = db.Close()
+	}()
 
-	return err
+	var version string
+	if err = db.QueryRowContext(ctx, "SELECT version()").
+		Scan(&version); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, version)
 }
 
 func (api *testingAPI) Cert(c *ship.Context) error {
@@ -101,4 +109,20 @@ func (api *testingAPI) Cert(c *ship.Context) error {
 	_, err := tls.X509KeyPair([]byte(req.Cert), []byte(req.Pkey))
 
 	return err
+}
+
+func (api *testingAPI) Config(c *ship.Context) error {
+	req := new(request.TestingConfig)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+
+	db, err := sqldb.TiDB(req.TiDB.DSN, 5*time.Second)
+	if err != nil {
+		return err
+	}
+	//goland:noinspection GoUnhandledErrorResult
+	defer db.Close()
+
+	return nil
 }

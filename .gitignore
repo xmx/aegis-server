@@ -26,6 +26,7 @@ go.work.sum
 .scannerwork
 
 main/main
+resources/tls/*
 resources/log/*
 !resources/log/.gitkeep
 resources/temp/*
