@@ -33,5 +33,6 @@ resources/temp/*
 resources/test/*
 resources/config/*
 !resources/config/application-example.yaml
+!resources/config/application-example.json
 
 *.upx

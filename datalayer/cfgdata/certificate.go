@@ -1,4 +1,4 @@
-package model
+package cfgdata
 
 import (
 	"context"
@@ -16,12 +16,12 @@ type CertificateConfigurer interface {
 
 func Certificate(qry *query.Query) CertificateConfigurer {
 	return &certificateConfig{
-		qry: qry,
+		qry: qry, // cfgdata
 	}
 }
 
 type certificateConfig struct {
-	qry *query.Query
+	qry *query.Query // effectivier
 }
 
 func (c *certificateConfig) Create(ctx context.Context, cert *model.Certificate) error {

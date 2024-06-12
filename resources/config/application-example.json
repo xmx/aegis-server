@@ -1,0 +1,3 @@
+{
+  "dsn": "root:<password>@tcp(tidb.example.com:3306)/dbname?tls=tidb"
+}
