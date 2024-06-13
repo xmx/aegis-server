@@ -2,25 +2,21 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"os"
-	"time"
-
-	"github.com/xmx/aegis-server/datalayer/model"
-	"github.com/xmx/aegis-server/library/sqldb"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 
 func main() {
 	args := os.Args
 	set := flag.NewFlagSet(args[0], flag.ExitOnError)
-	ver := set.Bool("v", false, "打印版本")
-	cfg := set.String("c", "resources/config/application.json", "配置文件")
+	verPtr := set.Bool("v", false, "打印版本")
+	cfgPtr := set.String("c", "resources/config/application.json", "配置文件")
 	_ = set.Parse(args[1:])
-	if *ver {
+	if *verPtr {
 		return
 	}
+
+	fmt.Println(*cfgPtr)
 
 	//dsn := "2LqbbPiusZmES3w.root:DuX1CBVcI93FnF9u@tcp(gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000)/test?tls=tidb"
 	//conn, err := sqldb.TiDB(dsn, time.Minute)
