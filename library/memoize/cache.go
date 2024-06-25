@@ -8,7 +8,7 @@ import (
 
 type Caching[T any] interface {
 	Load(ctx context.Context) (T, error)
-	Forget()
+	Forget() T
 }
 
 type Mapping[K comparable, V any] interface {
@@ -41,10 +41,13 @@ func (cd *cacheData[T]) Load(ctx context.Context) (T, error) {
 	return cd.slowLoad(ctx)
 }
 
-func (cd *cacheData[T]) Forget() {
+func (cd *cacheData[T]) Forget() T {
 	cd.mutex.Lock()
+	data := cd.data
 	cd.done = false
 	cd.mutex.Unlock()
+
+	return data
 }
 
 func (cd *cacheData[T]) fastLoad() (T, bool) {

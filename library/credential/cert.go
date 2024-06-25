@@ -10,7 +10,7 @@ type Certifier interface {
 	Modification(cfg *tls.Config) error
 }
 
-func NewPool() Certifier {
+func Atomic() Certifier {
 	return new(singleCert)
 }
 

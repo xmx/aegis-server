@@ -2,14 +2,10 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
+	"github.com/xmx/aegis-server/library/credential"
+	"github.com/xmx/aegis-server/quicsrv"
 	"os"
-	"time"
-
-	"github.com/xmx/aegis-server/datalayer/model"
-	"github.com/xmx/aegis-server/library/sqldb"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 
 func main() {
@@ -22,16 +18,11 @@ func main() {
 		return
 	}
 
-	//dsn := "2LqbbPiusZmES3w.root:DuX1CBVcI93FnF9u@tcp(gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000)/test?tls=tidb"
-	//conn, err := sqldb.TiDB(dsn, time.Minute)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//defer conn.Close()
-	//db, err := gorm.Open(mysql.New(mysql.Config{Conn: conn}))
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//err = db.AutoMigrate(&model.Certificate{})
-	//log.Println(err)
+	fmt.Println(*cfg)
+
+	srv := quicsrv.Server{
+		Cert: credential.Atomic(),
+	}
+
+	srv.ListenAndServe()
 }
