@@ -2,8 +2,8 @@ package model
 
 import "time"
 
-// Certificate 服务端证书。
-type Certificate struct {
+// ConfigCertificate 服务端证书。
+type ConfigCertificate struct {
 	ID           int64     `json:"id,string"    gorm:"column:id;primaryKey;autoIncrement"`
 	Enabled      bool      `json:"enabled"      gorm:"column:enabled"`
 	CommonName   string    `json:"common_name"  gorm:"column:common_name;not null;index:idx_common_name"`
@@ -22,6 +22,6 @@ type Certificate struct {
 	CreatedAt    time.Time `json:"created_at"   gorm:"column:created_at;not null;default:now(3)"`
 }
 
-func (Certificate) TableName() string {
-	return "certificate"
+func (ConfigCertificate) TableName() string {
+	return "config_certificate"
 }

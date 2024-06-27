@@ -16,34 +16,44 @@ import (
 )
 
 var (
-	Q           = new(Query)
-	Certificate *certificate
+	Q                 = new(Query)
+	ConfigCertificate *configCertificate
+	ConfigLogger      *configLogger
+	ConfigServer      *configServer
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	*Q = *Use(db, opts...)
-	Certificate = &Q.Certificate
+	ConfigCertificate = &Q.ConfigCertificate
+	ConfigLogger = &Q.ConfigLogger
+	ConfigServer = &Q.ConfigServer
 }
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
-		db:          db,
-		Certificate: newCertificate(db, opts...),
+		db:                db,
+		ConfigCertificate: newConfigCertificate(db, opts...),
+		ConfigLogger:      newConfigLogger(db, opts...),
+		ConfigServer:      newConfigServer(db, opts...),
 	}
 }
 
 type Query struct {
 	db *gorm.DB
 
-	Certificate certificate
+	ConfigCertificate configCertificate
+	ConfigLogger      configLogger
+	ConfigServer      configServer
 }
 
 func (q *Query) Available() bool { return q.db != nil }
 
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
-		db:          db,
-		Certificate: q.Certificate.clone(db),
+		db:                db,
+		ConfigCertificate: q.ConfigCertificate.clone(db),
+		ConfigLogger:      q.ConfigLogger.clone(db),
+		ConfigServer:      q.ConfigServer.clone(db),
 	}
 }
 
@@ -57,18 +67,24 @@ func (q *Query) WriteDB() *Query {
 
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
-		db:          db,
-		Certificate: q.Certificate.replaceDB(db),
+		db:                db,
+		ConfigCertificate: q.ConfigCertificate.replaceDB(db),
+		ConfigLogger:      q.ConfigLogger.replaceDB(db),
+		ConfigServer:      q.ConfigServer.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
-	Certificate *certificateDo
+	ConfigCertificate *configCertificateDo
+	ConfigLogger      *configLoggerDo
+	ConfigServer      *configServerDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
-		Certificate: q.Certificate.WithContext(ctx),
+		ConfigCertificate: q.ConfigCertificate.WithContext(ctx),
+		ConfigLogger:      q.ConfigLogger.WithContext(ctx),
+		ConfigServer:      q.ConfigServer.WithContext(ctx),
 	}
 }
 

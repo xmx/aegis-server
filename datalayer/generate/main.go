@@ -7,7 +7,9 @@ import (
 
 func main() {
 	tables := []any{
-		model.Certificate{},
+		model.ConfigCertificate{},
+		model.ConfigLogger{},
+		model.ConfigServer{},
 	}
 
 	g := gen.NewGenerator(gen.Config{
