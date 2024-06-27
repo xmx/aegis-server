@@ -3,9 +3,9 @@ package launch
 import (
 	"context"
 	"crypto/tls"
-	"github.com/quic-go/quic-go/http3"
 	"os"
 
+	"github.com/quic-go/quic-go/http3"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/datalayer/repository"
@@ -36,7 +36,7 @@ func Run(ctx context.Context, db *gorm.DB, cfgFile string) error {
 	configCertificateConfigurer := memconf.ConfigCertificate(configCertificateRepository)
 
 	srv := &http3.Server{
-		TLSConfig: &tls.Config{GetConfigForClient: configCertificateConfigurer.Certificate}
+		TLSConfig: &tls.Config{GetConfigForClient: configCertificateConfigurer.Certificate},
 	}
 
 	return nil
