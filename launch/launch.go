@@ -36,8 +36,10 @@ func Run(ctx context.Context, db *gorm.DB, cfgFile string) error {
 	configCertificateConfigurer := memconf.ConfigCertificate(configCertificateRepository)
 
 	srv := &http3.Server{
-		TLSConfig: &tls.Config{GetConfigForClient: configCertificateConfigurer.Certificate},
+		TLSConfig: &tls.Config{
+			GetConfigForClient: configCertificateConfigurer.Certificate,
+		},
 	}
 
-	return nil
+	return srv.ListenAndServe()
 }

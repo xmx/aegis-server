@@ -3,6 +3,7 @@ package memconf
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/repository"
@@ -13,7 +14,6 @@ import (
 type ConfigCertificateConfigurer interface {
 	repository.ConfigCertificateRepository
 	credential.Certifier
-	// Certificate(context.Context) (credential.Certifier, error)
 }
 
 func ConfigCertificate(repo repository.ConfigCertificateRepository) ConfigCertificateConfigurer {
@@ -25,7 +25,7 @@ func ConfigCertificate(repo repository.ConfigCertificateRepository) ConfigCertif
 
 type configCertificateConfigurer struct {
 	repo  repository.ConfigCertificateRepository
-	cache memoize.Cache2[credential.Certifier, error]
+	cache memoize.Cache2[*tls.Config, error]
 }
 
 func (c *configCertificateConfigurer) Enabled(ctx context.Context) (*model.ConfigCertificate, error) {
@@ -40,11 +40,15 @@ func (c *configCertificateConfigurer) Delete(ctx context.Context, id int64) (boo
 	return c.forget(c.repo.Delete(ctx, id))
 }
 
-func (c *configCertificateConfigurer) Certificate(ctx context.Context) (credential.Certifier, error) {
-	return c.cache.Load(ctx)
+func (c *configCertificateConfigurer) Certificate(*tls.ClientHelloInfo) (*tls.Config, error) {
+	return c.cache.Load(context.Background())
 }
 
-func (c *configCertificateConfigurer) slowLoad(ctx context.Context) (credential.Certifier, error) {
+func (c *configCertificateConfigurer) Modification(*tls.Config) error {
+	return errors.ErrUnsupported
+}
+
+func (c *configCertificateConfigurer) slowLoad(ctx context.Context) (*tls.Config, error) {
 	cert, err := c.Enabled(ctx)
 	if err != nil {
 		return nil, err
@@ -56,14 +60,9 @@ func (c *configCertificateConfigurer) slowLoad(ctx context.Context) (credential.
 	if err != nil {
 		return nil, err
 	}
-
 	cfg := &tls.Config{Certificates: []tls.Certificate{pair}}
-	pool := credential.Atomic()
-	if err = pool.Modification(cfg); err != nil {
-		return nil, err
-	}
 
-	return pool, nil
+	return cfg, nil
 }
 
 func (c *configCertificateConfigurer) forget(enabled bool, err error) (bool, error) {
