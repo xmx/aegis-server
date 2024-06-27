@@ -10,41 +10,41 @@ import (
 	"github.com/xmx/aegis-server/library/memoize"
 )
 
-type CertificateConfigurer interface {
-	repository.CertificateRepository
-
-	Certificate(context.Context) (credential.Certifier, error)
+type ConfigCertificateConfigurer interface {
+	repository.ConfigCertificateRepository
+	credential.Certifier
+	// Certificate(context.Context) (credential.Certifier, error)
 }
 
-func Certificate(repo repository.CertificateRepository) CertificateConfigurer {
-	c := &certificateConfig{repo: repo}
+func ConfigCertificate(repo repository.ConfigCertificateRepository) ConfigCertificateConfigurer {
+	c := &configCertificateConfigurer{repo: repo}
 	c.cache = memoize.NewCache2(c.slowLoad)
 
 	return c
 }
 
-type certificateConfig struct {
-	repo  repository.CertificateRepository
+type configCertificateConfigurer struct {
+	repo  repository.ConfigCertificateRepository
 	cache memoize.Cache2[credential.Certifier, error]
 }
 
-func (c *certificateConfig) Enabled(ctx context.Context) (*model.Certificate, error) {
+func (c *configCertificateConfigurer) Enabled(ctx context.Context) (*model.ConfigCertificate, error) {
 	return c.repo.Enabled(ctx)
 }
 
-func (c *certificateConfig) Create(ctx context.Context, cert *model.Certificate) (bool, error) {
+func (c *configCertificateConfigurer) Create(ctx context.Context, cert *model.ConfigCertificate) (bool, error) {
 	return c.forget(c.repo.Create(ctx, cert))
 }
 
-func (c *certificateConfig) Delete(ctx context.Context, id int64) (bool, error) {
+func (c *configCertificateConfigurer) Delete(ctx context.Context, id int64) (bool, error) {
 	return c.forget(c.repo.Delete(ctx, id))
 }
 
-func (c *certificateConfig) Certificate(ctx context.Context) (credential.Certifier, error) {
+func (c *configCertificateConfigurer) Certificate(ctx context.Context) (credential.Certifier, error) {
 	return c.cache.Load(ctx)
 }
 
-func (c *certificateConfig) slowLoad(ctx context.Context) (credential.Certifier, error) {
+func (c *configCertificateConfigurer) slowLoad(ctx context.Context) (credential.Certifier, error) {
 	cert, err := c.Enabled(ctx)
 	if err != nil {
 		return nil, err
@@ -66,7 +66,7 @@ func (c *certificateConfig) slowLoad(ctx context.Context) (credential.Certifier,
 	return pool, nil
 }
 
-func (c *certificateConfig) forget(enabled bool, err error) (bool, error) {
+func (c *configCertificateConfigurer) forget(enabled bool, err error) (bool, error) {
 	if err == nil && enabled {
 		_, _ = c.cache.Forget()
 	}

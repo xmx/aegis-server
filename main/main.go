@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
+
 	"github.com/xmx/aegis-server/library/credential"
 	"github.com/xmx/aegis-server/quicsrv"
-	"os"
 )
 
 func main() {
