@@ -37,6 +37,10 @@ func (c *configCertificateConfigurer) Create(ctx context.Context, cert *model.Co
 	return c.forget(c.repo.Create(ctx, cert))
 }
 
+func (c *configCertificateConfigurer) Update(ctx context.Context, cert *model.ConfigCertificate) (bool, error) {
+	return c.forget(c.repo.Update(ctx, cert))
+}
+
 func (c *configCertificateConfigurer) Delete(ctx context.Context, id int64) (bool, error) {
 	return c.forget(c.repo.Delete(ctx, id))
 }

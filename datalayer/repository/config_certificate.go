@@ -10,6 +10,7 @@ import (
 type ConfigCertificateRepository interface {
 	Enabled(ctx context.Context) (*model.ConfigCertificate, error)
 	Create(ctx context.Context, cert *model.ConfigCertificate) (enabled bool, err error)
+	Update(ctx context.Context, cert *model.ConfigCertificate) (enabled bool, err error)
 	Delete(ctx context.Context, id int64) (enabled bool, err error)
 }
 
@@ -66,6 +67,7 @@ func (c *configCertificateRepository) Update(ctx context.Context, cert *model.Co
 				return err
 			}
 		}
+		cert.UpdatedAt = dat.UpdatedAt
 		_, err = dao.Updates(cert)
 
 		return err
