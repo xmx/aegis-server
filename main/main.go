@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
-	"fmt"
+	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/xmx/aegis-server/library/credential"
-	"github.com/xmx/aegis-server/quicsrv"
+	"github.com/xmx/aegis-server/launch"
 )
 
 func main() {
@@ -19,11 +21,16 @@ func main() {
 		return
 	}
 
-	fmt.Println(*cfg)
+	signals := []os.Signal{syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGINT}
+	ctx, cancel := signal.NotifyContext(context.Background(), signals...)
+	defer cancel()
 
-	srv := quicsrv.Server{
-		Cert: credential.Atomic(),
+	logOpt := &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}
+	log := slog.New(slog.NewJSONHandler(os.Stdout, logOpt))
+
+	if err := launch.Run(ctx, *cfg); err != nil {
+		log.Error("服务运行错误", slog.Any("error", err))
+	} else {
+		log.Info("服务停止运行")
 	}
-
-	srv.ListenAndServe()
 }

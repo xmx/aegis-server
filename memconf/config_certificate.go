@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/repository"
@@ -40,8 +41,9 @@ func (c *configCertificateConfigurer) Delete(ctx context.Context, id int64) (boo
 	return c.forget(c.repo.Delete(ctx, id))
 }
 
-func (c *configCertificateConfigurer) Certificate(*tls.ClientHelloInfo) (*tls.Config, error) {
-	return c.cache.Load(context.Background())
+func (c *configCertificateConfigurer) Certificate(hi *tls.ClientHelloInfo) (*tls.Config, error) {
+	ctx := hi.Context()
+	return c.cache.Load(ctx)
 }
 
 func (c *configCertificateConfigurer) Modification(*tls.Config) error {
@@ -51,14 +53,14 @@ func (c *configCertificateConfigurer) Modification(*tls.Config) error {
 func (c *configCertificateConfigurer) slowLoad(ctx context.Context) (*tls.Config, error) {
 	cert, err := c.Enabled(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("服务端查询证书错误: %w", err)
 	}
 
 	certPEMBlock := []byte(cert.PublicKey)
 	keyPEMBlock := []byte(cert.PrivateKey)
 	pair, err := tls.X509KeyPair(certPEMBlock, keyPEMBlock)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("服务端证书格式错误: %w", err)
 	}
 	cfg := &tls.Config{Certificates: []tls.Certificate{pair}}
 

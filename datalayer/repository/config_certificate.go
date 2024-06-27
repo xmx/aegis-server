@@ -30,8 +30,46 @@ func (c *configCertificateRepository) Enabled(ctx context.Context) (*model.Confi
 
 func (c *configCertificateRepository) Create(ctx context.Context, cert *model.ConfigCertificate) (bool, error) {
 	enabled := cert.Enabled
-	tbl := c.qry.ConfigCertificate
-	err := tbl.WithContext(ctx).Create(cert)
+	if !enabled {
+		tbl := c.qry.ConfigCertificate
+		err := tbl.WithContext(ctx).Create(cert)
+		return false, err
+	}
+
+	err := c.qry.Transaction(func(tx *query.Query) error {
+		tbl := tx.ConfigCertificate
+		if _, err := tbl.WithContext(ctx).
+			Where(tbl.Enabled.Is(true)).
+			UpdateSimple(tbl.Enabled.Value(false)); err != nil {
+			return err
+		}
+		return tbl.WithContext(ctx).Create(cert)
+	})
+
+	return enabled, err
+}
+
+func (c *configCertificateRepository) Update(ctx context.Context, cert *model.ConfigCertificate) (bool, error) {
+	enabled := cert.Enabled
+	err := c.qry.Transaction(func(tx *query.Query) error {
+		tbl := tx.ConfigCertificate
+		dao := tbl.WithContext(ctx)
+		id := cert.ID
+		dat, err := dao.Where(tbl.ID.Eq(id)).First()
+		if err != nil {
+			return err
+		}
+
+		if enabled = enabled || enabled != dat.Enabled; enabled {
+			if _, err = dao.Where(tbl.Enabled.Is(true)).
+				UpdateSimple(tbl.Enabled.Value(false)); err != nil {
+				return err
+			}
+		}
+		_, err = dao.Updates(cert)
+
+		return err
+	})
 
 	return enabled, err
 }
