@@ -4,12 +4,17 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"log/slog"
 	"os"
 	"time"
 
 	"github.com/quic-go/quic-go/http3"
+	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/datalayer/repository"
+	"github.com/xmx/aegis-server/handler/restapi"
+	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/library/sqldb"
 	"github.com/xmx/aegis-server/memconf"
 	"gorm.io/driver/mysql"
@@ -36,6 +41,9 @@ func Run(ctx context.Context, path string) error {
 //
 //goland:noinspection GoUnhandledErrorResult
 func Exec(ctx context.Context, dsn string) error {
+	logOpt := &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}
+	log := slog.New(slog.NewJSONHandler(os.Stdout, logOpt))
+
 	db, err := sqldb.TiDB(dsn, 10*time.Second)
 	if err != nil {
 		return err
@@ -53,11 +61,26 @@ func Exec(ctx context.Context, dsn string) error {
 	}
 	qry := query.Use(gdb)
 
+	routeRegisters := make([]shipx.Register, 0, 50)
 	configCertificateRepository := repository.ConfigCertificate(qry)
 	configCertificateConfigurer := memconf.ConfigCertificate(configCertificateRepository)
+	configCertificateService := service.ConfigCertificate(qry, configCertificateConfigurer, log)
+	configCertificateAPI := restapi.ConfigCertificate(configCertificateService)
+	routeRegisters = append(routeRegisters, configCertificateAPI)
+
+	sh := ship.Default()
+	anon := sh.Group("/").Clone()
+	auth := sh.Group("/").Clone()
+	route := shipx.NewRouter(anon, auth)
+	for _, reg := range routeRegisters {
+		if err = reg.Register(route); err != nil {
+			return err
+		}
+	}
 
 	srv := &http3.Server{
-		Addr: ":1443",
+		Addr:    ":1443",
+		Handler: sh,
 		TLSConfig: &tls.Config{
 			GetConfigForClient: configCertificateConfigurer.Certificate,
 		},

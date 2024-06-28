@@ -3,18 +3,16 @@ package memconf
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"fmt"
 
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/repository"
-	"github.com/xmx/aegis-server/library/credential"
 	"github.com/xmx/aegis-server/library/memoize"
 )
 
 type ConfigCertificateConfigurer interface {
 	repository.ConfigCertificateRepository
-	credential.Certifier
+	Certificate(hi *tls.ClientHelloInfo) (*tls.Config, error)
 }
 
 func ConfigCertificate(repo repository.ConfigCertificateRepository) ConfigCertificateConfigurer {
@@ -48,10 +46,6 @@ func (c *configCertificateConfigurer) Delete(ctx context.Context, id int64) (boo
 func (c *configCertificateConfigurer) Certificate(hi *tls.ClientHelloInfo) (*tls.Config, error) {
 	ctx := hi.Context()
 	return c.cache.Load(ctx)
-}
-
-func (c *configCertificateConfigurer) Modification(*tls.Config) error {
-	return errors.ErrUnsupported
 }
 
 func (c *configCertificateConfigurer) slowLoad(ctx context.Context) (*tls.Config, error) {

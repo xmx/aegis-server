@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"log/slog"
 
 	"github.com/xmx/aegis-server/argument/request"
@@ -34,11 +35,11 @@ type configCertificateService struct {
 }
 
 func (svc *configCertificateService) List(ctx context.Context) ([]*model.ConfigCertificate, error) {
-	return svc.qry.ConfigCertificate.WithContext(ctx).Find()
+	return svc.qry.ConfigCertificate.WithContext(ctx).Limit(100).Find()
 }
 
 func (svc *configCertificateService) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
-	dat, err := svc.parseCertificate(req.PublicKey, req.PublicKey, req.Enabled)
+	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, req.Enabled)
 	if err != nil {
 		return err
 	}
@@ -48,7 +49,7 @@ func (svc *configCertificateService) Create(ctx context.Context, req *request.Co
 }
 
 func (svc *configCertificateService) Update(ctx context.Context, req *request.ConfigCertificateUpdate) error {
-	dat, err := svc.parseCertificate(req.PublicKey, req.PublicKey, req.Enabled)
+	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, req.Enabled)
 	if err != nil {
 		return err
 	}
@@ -65,7 +66,8 @@ func (svc *configCertificateService) Delete(ctx context.Context, id int64) error
 
 func (svc *configCertificateService) parseCertificate(publicKey, privateKey string, enabled bool) (*model.ConfigCertificate, error) {
 	publicKeyBlock, privateKeyBlock := []byte(publicKey), []byte(privateKey)
-	cert, err := x509.ParseCertificate(privateKeyBlock)
+	block, _ := pem.Decode(publicKeyBlock)
+	cert, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		return nil, err
 	}
