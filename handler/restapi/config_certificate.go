@@ -18,9 +18,13 @@ type configCertificateAPI struct {
 }
 
 func (cc *configCertificateAPI) Register(r shipx.Router) error {
-	anon := r.Anon()
-	anon.Route("/config/certificates").GET(cc.List)
-	anon.Route("/config/certificate").POST(cc.Create)
+	auth := r.Auth()
+	auth.Route("/config/certificates").GET(cc.List)
+	auth.Route("/config/certificate").
+		POST(cc.Create).
+		PUT(cc.Update).
+		DELETE(cc.Delete)
+
 	return nil
 }
 
@@ -39,6 +43,27 @@ func (cc *configCertificateAPI) Create(c *ship.Context) error {
 	if err := c.Bind(req); err != nil {
 		return err
 	}
+	ctx := c.Request().Context()
 
-	return nil
+	return cc.svc.Create(ctx, req)
+}
+
+func (cc *configCertificateAPI) Update(c *ship.Context) error {
+	req := new(request.ConfigCertificateUpdate)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+	ctx := c.Request().Context()
+
+	return cc.svc.Update(ctx, req)
+}
+
+func (cc *configCertificateAPI) Delete(c *ship.Context) error {
+	req := new(request.Int64ID)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+	ctx := c.Request().Context()
+
+	return cc.svc.Delete(ctx, req.ID)
 }
