@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"log/slog"
+	"os"
+
 	"github.com/quic-go/quic-go/http3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
@@ -15,8 +18,6 @@ import (
 	"github.com/xmx/aegis-server/memconf"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"log/slog"
-	"os"
 )
 
 func Run(ctx context.Context, path string) error {
