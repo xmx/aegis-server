@@ -12,7 +12,7 @@ import (
 
 type ConfigCertificateConfigurer interface {
 	repository.ConfigCertificateRepository
-	Certificate(hi *tls.ClientHelloInfo) (*tls.Config, error)
+	Certificate(*tls.ClientHelloInfo) (*tls.Config, error)
 }
 
 func ConfigCertificate(repo repository.ConfigCertificateRepository) ConfigCertificateConfigurer {
@@ -43,8 +43,8 @@ func (c *configCertificateConfigurer) Delete(ctx context.Context, id int64) (boo
 	return c.forget(c.repo.Delete(ctx, id))
 }
 
-func (c *configCertificateConfigurer) Certificate(hi *tls.ClientHelloInfo) (*tls.Config, error) {
-	ctx := hi.Context()
+func (c *configCertificateConfigurer) Certificate(info *tls.ClientHelloInfo) (*tls.Config, error) {
+	ctx := info.Context()
 	return c.cache.Load(ctx)
 }
 
