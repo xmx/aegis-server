@@ -1,4 +1,4 @@
-package memoize
+package mcache
 
 import (
 	"context"

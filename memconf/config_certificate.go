@@ -7,7 +7,7 @@ import (
 
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/repository"
-	"github.com/xmx/aegis-server/library/memoize"
+	"github.com/xmx/aegis-server/library/mcache"
 )
 
 type ConfigCertificateConfigurer interface {
@@ -17,14 +17,14 @@ type ConfigCertificateConfigurer interface {
 
 func ConfigCertificate(repo repository.ConfigCertificateRepository) ConfigCertificateConfigurer {
 	c := &configCertificateConfigurer{repo: repo}
-	c.cache = memoize.NewCache2(c.slowLoad)
+	c.cache = mcache.NewCache2(c.slowLoad)
 
 	return c
 }
 
 type configCertificateConfigurer struct {
 	repo  repository.ConfigCertificateRepository
-	cache memoize.Cache2[*tls.Config, error]
+	cache mcache.Cache2[*tls.Config, error]
 }
 
 func (c *configCertificateConfigurer) Enabled(ctx context.Context) (*model.ConfigCertificate, error) {
