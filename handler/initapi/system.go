@@ -79,7 +79,7 @@ func (api *testingAPI) TiDB(c *ship.Context) error {
 		return err
 	}
 
-	db, err := sqldb.TiDB(req.DSN, 5*time.Second)
+	db, err := sqldb.TiDB(req.DSN)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (api *testingAPI) Config(c *ship.Context) error {
 		return err
 	}
 
-	db, err := sqldb.TiDB(req.TiDB.DSN, 5*time.Second)
+	db, err := sqldb.TiDB(req.TiDB.DSN)
 	if err != nil {
 		return err
 	}

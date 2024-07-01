@@ -1,34 +1,21 @@
 package sqldb
 
 import (
-	"context"
 	"crypto/tls"
 	"database/sql"
 	"net"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/go-sql-driver/mysql"
 )
 
-func TiDB(dsn string, timeout time.Duration) (*sql.DB, error) {
+func TiDB(dsn string) (*sql.DB, error) {
 	if err := autoTLS(dsn); err != nil {
 		return nil, err
 	}
-	if timeout > 0 {
-		mysql.RegisterDialContext("tcp", dialTCPContext(timeout))
-		defer mysql.DeregisterDialContext("tcp")
-	}
 
 	return sql.Open("mysql", dsn)
-}
-
-func dialTCPContext(timeout time.Duration) mysql.DialContextFunc {
-	d := &net.Dialer{Timeout: timeout}
-	return func(ctx context.Context, addr string) (net.Conn, error) {
-		return d.DialContext(ctx, "tcp", addr)
-	}
 }
 
 func autoTLS(dsn string) error {

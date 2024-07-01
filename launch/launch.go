@@ -4,10 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"log/slog"
-	"os"
-	"time"
-
 	"github.com/quic-go/quic-go/http3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
@@ -19,6 +15,8 @@ import (
 	"github.com/xmx/aegis-server/memconf"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"log/slog"
+	"os"
 )
 
 func Run(ctx context.Context, path string) error {
@@ -44,7 +42,7 @@ func Exec(ctx context.Context, dsn string) error {
 	logOpt := &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}
 	log := slog.New(slog.NewJSONHandler(os.Stdout, logOpt))
 
-	db, err := sqldb.TiDB(dsn, 10*time.Second)
+	db, err := sqldb.TiDB(dsn)
 	if err != nil {
 		return err
 	}
