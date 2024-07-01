@@ -2,83 +2,59 @@ package memoize
 
 import (
 	"context"
-	"fmt"
 	"sync"
 )
 
-type Caching[T any] interface {
-	Load(ctx context.Context) (T, error)
-	Forget() T
+type Cache[V any] interface {
+	Load(context.Context) V
+	Forget() V
 }
 
-type Mapping[K comparable, V any] interface {
-	Load(ctx context.Context, key K) (V, error)
-	Forget(key K)
-	Forgets()
-}
-
-func Cache[T any](call func(context.Context) (T, error)) Caching[T] {
-	return &cacheData[T]{
-		call: call,
+func NewCache[V any](load func(context.Context) V) Cache[V] {
+	return &memCache[V]{
+		load: load,
 	}
 }
 
-type cacheData[T any] struct {
-	call  func(ctx context.Context) (T, error)
+type memCache[V any] struct {
+	load  func(context.Context) V
 	mutex sync.RWMutex
 	done  bool
-	data  T
+	v     V
 }
 
-func (cd *cacheData[T]) Load(ctx context.Context) (T, error) {
-	cd.mutex.RLock()
-	data, done := cd.fastLoad()
-	cd.mutex.RUnlock()
+func (c *memCache[V]) Load(ctx context.Context) V {
+	c.mutex.RLock()
+	done, v := c.done, c.v
+	c.mutex.RUnlock()
 	if done {
-		return data, nil
+		return v
 	}
 
-	return cd.slowLoad(ctx)
+	return c.slowLoad(ctx)
 }
 
-func (cd *cacheData[T]) Forget() T {
-	cd.mutex.Lock()
-	data := cd.data
-	cd.done = false
-	cd.mutex.Unlock()
-
-	return data
-}
-
-func (cd *cacheData[T]) fastLoad() (T, bool) {
-	return cd.data, cd.done
-}
-
-func (cd *cacheData[T]) slowLoad(ctx context.Context) (T, error) {
-	cd.mutex.Lock()
-	defer cd.mutex.Unlock()
-
-	if data, done := cd.fastLoad(); done {
-		return data, nil
+func (c *memCache[V]) Forget() (v V) {
+	c.mutex.Lock()
+	if c.done {
+		v = c.v
 	}
-
-	data, err := cd.safeCall(ctx)
-	if err == nil {
-		cd.data = data
-		cd.done = true
-	}
-
-	return data, err
-}
-
-func (cd *cacheData[T]) safeCall(ctx context.Context) (data T, err error) {
-	defer func() {
-		if v := recover(); v != nil {
-			err = fmt.Errorf("panicked oncall: %v", v)
-		}
-	}()
-
-	data, err = cd.call(ctx)
+	c.done = false
+	c.mutex.Unlock()
 
 	return
+}
+
+func (c *memCache[V]) slowLoad(ctx context.Context) V {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if c.done {
+		return c.v
+	}
+
+	v := c.load(ctx)
+	c.v, c.done = v, true
+
+	return v
 }
