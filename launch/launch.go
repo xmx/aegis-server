@@ -4,9 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log/slog"
 	"os"
-	"time"
+
+	"github.com/xmx/aegis-server/datalayer/model"
 
 	"github.com/quic-go/quic-go/http3"
 	"github.com/xgfone/ship/v5"
@@ -41,25 +44,28 @@ func Run(ctx context.Context, path string) error {
 //
 //goland:noinspection GoUnhandledErrorResult
 func Exec(ctx context.Context, dsn string) error {
-	logOpt := &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}
-	log := slog.New(slog.NewJSONHandler(os.Stdout, logOpt))
-
-	db, err := sqldb.TiDB(dsn, 10*time.Second)
+	db, err := sqldb.TiDB(dsn)
 	if err != nil {
-		return err
+		return fmt.Errorf("连接数据库错误：%w", err)
 	}
 	defer db.Close()
 
 	mysqlCfg := &mysql.Config{Conn: db}
 	gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg})
 	if err != nil {
-		return err
+		return fmt.Errorf("gorm.Open 错误：%w", err)
 	}
 
 	if err = autoMigrate(gdb); err != nil {
-		return err
+		return fmt.Errorf("auto migration 错误：%w", err)
 	}
 	qry := query.Use(gdb)
+
+	configLoggerRepository := repository.ConfigLogger(qry)
+	loggerConfig, err := configLoggerRepository.Enabled(ctx)
+	if err != nil {
+		return err
+	}
 
 	routeRegisters := make([]shipx.Register, 0, 50)
 	configCertificateRepository := repository.ConfigCertificate(qry)
@@ -99,4 +105,13 @@ func Exec(ctx context.Context, dsn string) error {
 
 func serveHTTP(srv *http3.Server, errs chan<- error) {
 	errs <- srv.ListenAndServe()
+}
+
+func sss(cfg *model.ConfigLogger) io.WriteCloser {
+	var lvl slog.Level
+	_ = lvl.UnmarshalText([]byte(cfg.Level))
+	if lvl {
+	}
+
+	return nil
 }

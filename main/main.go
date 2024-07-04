@@ -25,8 +25,8 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), signals...)
 	defer cancel()
 
-	logOpt := &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}
-	log := slog.New(slog.NewJSONHandler(os.Stdout, logOpt))
+	opt := &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}
+	log := slog.New(slog.NewJSONHandler(os.Stdout, opt))
 
 	if err := launch.Run(ctx, *cfg); err != nil {
 		log.Error("服务运行错误", slog.Any("error", err))
