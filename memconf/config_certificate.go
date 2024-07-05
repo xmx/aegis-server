@@ -7,24 +7,24 @@ import (
 
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/repository"
-	"github.com/xmx/aegis-server/library/memoize"
+	"github.com/xmx/aegis-server/library/mcache"
 )
 
 type ConfigCertificateConfigurer interface {
 	repository.ConfigCertificateRepository
-	Certificate(hi *tls.ClientHelloInfo) (*tls.Config, error)
+	Certificate(*tls.ClientHelloInfo) (*tls.Config, error)
 }
 
 func ConfigCertificate(repo repository.ConfigCertificateRepository) ConfigCertificateConfigurer {
 	c := &configCertificateConfigurer{repo: repo}
-	c.cache = memoize.NewCache2(c.slowLoad)
+	c.cache = mcache.NewCache2(c.slowLoad)
 
 	return c
 }
 
 type configCertificateConfigurer struct {
 	repo  repository.ConfigCertificateRepository
-	cache memoize.Cache2[*tls.Config, error]
+	cache mcache.Cache2[*tls.Config, error]
 }
 
 func (c *configCertificateConfigurer) Enabled(ctx context.Context) (*model.ConfigCertificate, error) {
@@ -43,8 +43,8 @@ func (c *configCertificateConfigurer) Delete(ctx context.Context, id int64) (boo
 	return c.forget(c.repo.Delete(ctx, id))
 }
 
-func (c *configCertificateConfigurer) Certificate(hi *tls.ClientHelloInfo) (*tls.Config, error) {
-	ctx := hi.Context()
+func (c *configCertificateConfigurer) Certificate(info *tls.ClientHelloInfo) (*tls.Config, error) {
+	ctx := info.Context()
 	return c.cache.Load(ctx)
 }
 

@@ -54,7 +54,7 @@ func autoTLS(dsn string) error {
 //
 // example:
 //
-//	tls=a&tls=b&tls=c --> c
+//	lookupTLS("tls=a&tls=b&tls=c") => "c"
 func lookupTLS(params string) string {
 	var name string
 	for _, v := range strings.Split(params, "&") {

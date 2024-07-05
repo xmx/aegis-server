@@ -1,4 +1,4 @@
-package memoize
+package mcache
 
 import (
 	"context"
@@ -11,12 +11,12 @@ type Cache2[K, V any] interface {
 }
 
 func NewCache2[K, V any](load func(context.Context) (K, V)) Cache2[K, V] {
-	return &cache2[K, V]{
+	return &memCache2[K, V]{
 		load: load,
 	}
 }
 
-type cache2[K, V any] struct {
+type memCache2[K, V any] struct {
 	load  func(context.Context) (K, V)
 	mutex sync.RWMutex
 	done  bool
@@ -24,7 +24,7 @@ type cache2[K, V any] struct {
 	v     V
 }
 
-func (c *cache2[K, V]) Load(ctx context.Context) (K, V) {
+func (c *memCache2[K, V]) Load(ctx context.Context) (K, V) {
 	c.mutex.RLock()
 	done := c.done
 	k, v := c.k, c.v
@@ -36,7 +36,7 @@ func (c *cache2[K, V]) Load(ctx context.Context) (K, V) {
 	return c.slowLoad(ctx)
 }
 
-func (c *cache2[K, V]) Forget() (k K, v V) {
+func (c *memCache2[K, V]) Forget() (k K, v V) {
 	c.mutex.Lock()
 	if c.done {
 		k = c.k
@@ -48,7 +48,7 @@ func (c *cache2[K, V]) Forget() (k K, v V) {
 	return
 }
 
-func (c *cache2[K, V]) slowLoad(ctx context.Context) (K, V) {
+func (c *memCache2[K, V]) slowLoad(ctx context.Context) (K, V) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
