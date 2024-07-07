@@ -3,12 +3,13 @@ module github.com/xmx/aegis-server
 go 1.23
 
 require (
+	github.com/dop251/goja v0.0.0-20240627195025-eb1f15ee67d2
+	github.com/dop251/goja_nodejs v0.0.0-20240418154818-2aae10d4cbcf
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.21.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/quic-go/quic-go v0.45.1
-	github.com/reugn/go-quartz v0.12.0
 	github.com/xgfone/ship/v5 v5.3.1
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gen v0.3.26
@@ -18,7 +19,9 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/pprof v0.0.0-20240625030939-27f56978b8b0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
