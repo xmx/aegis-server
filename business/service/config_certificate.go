@@ -14,6 +14,7 @@ import (
 )
 
 type ConfigCertificateService interface {
+	Find(ctx context.Context, id int64) (*model.ConfigCertificate, error)
 	List(ctx context.Context) ([]*model.ConfigCertificate, error)
 	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
 	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
@@ -32,6 +33,11 @@ type configCertificateService struct {
 	qry  *query.Query
 	log  *slog.Logger
 	repo repository.ConfigCertificateRepository
+}
+
+func (svc *configCertificateService) Find(ctx context.Context, id int64) (*model.ConfigCertificate, error) {
+	tbl := svc.qry.ConfigCertificate
+	return tbl.WithContext(ctx).Where(tbl.ID.Eq(id)).First()
 }
 
 func (svc *configCertificateService) List(ctx context.Context) ([]*model.ConfigCertificate, error) {

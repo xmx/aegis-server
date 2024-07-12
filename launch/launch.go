@@ -5,11 +5,10 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
-	"github.com/xmx/aegis-server/datalayer/model"
+	"github.com/quic-go/quic-go"
 
 	"github.com/quic-go/quic-go/http3"
 	"github.com/xgfone/ship/v5"
@@ -61,11 +60,13 @@ func Exec(ctx context.Context, dsn string) error {
 	}
 	qry := query.Use(gdb)
 
-	configLoggerRepository := repository.ConfigLogger(qry)
-	loggerConfig, err := configLoggerRepository.Enabled(ctx)
-	if err != nil {
-		return err
-	}
+	//configLoggerRepository := repository.ConfigLogger(qry)
+	//loggerConfig, err := configLoggerRepository.Enabled(ctx)
+	//if err != nil {
+	//	return err
+	//}
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{})
+	log := slog.New(handler)
 
 	routeRegisters := make([]shipx.Register, 0, 50)
 	configCertificateRepository := repository.ConfigCertificate(qry)
@@ -85,14 +86,20 @@ func Exec(ctx context.Context, dsn string) error {
 	}
 
 	srv := &http3.Server{
-		Addr:    ":1443",
 		Handler: sh,
-		TLSConfig: &tls.Config{
-			GetConfigForClient: configCertificateConfigurer.Certificate,
-		},
 	}
 	errs := make(chan error)
 	go serveHTTP(srv, errs)
+	srv.TLSConfig.NextProtos = append(srv.TLSConfig.NextProtos, "hi")
+
+	tlsCfg := &tls.Config{
+		NextProtos:     []string{"hi"},
+		GetCertificate: configCertificateConfigurer.Certificate,
+	}
+	listener, err := quic.ListenAddrEarly(":1443", tlsCfg, nil)
+	if err != nil {
+		return err
+	}
 
 	select {
 	case err = <-errs:
@@ -107,11 +114,13 @@ func serveHTTP(srv *http3.Server, errs chan<- error) {
 	errs <- srv.ListenAndServe()
 }
 
-func sss(cfg *model.ConfigLogger) io.WriteCloser {
-	var lvl slog.Level
-	_ = lvl.UnmarshalText([]byte(cfg.Level))
-	if lvl {
-	}
+func listenQUIC(ctx context.Context, lis *quic.EarlyListener, errs chan<- error) {
+	for {
+		conn, err := lis.Accept(ctx)
+		if err != nil {
+			errs <- err
+			break
+		}
 
-	return nil
+	}
 }

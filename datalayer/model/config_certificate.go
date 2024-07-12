@@ -5,7 +5,7 @@ import "time"
 // ConfigCertificate 服务端证书。
 type ConfigCertificate struct {
 	ID           int64     `json:"id,string"    gorm:"column:id;primaryKey;autoIncrement"`
-	Enabled      bool      `json:"enabled"      gorm:"column:enabled"`
+	Enabled      bool      `json:"enabled"      gorm:"column:enabled"` // 允许开启多张证书。
 	CommonName   string    `json:"common_name"  gorm:"column:common_name;not null;index:idx_common_name"`
 	PublicKey    string    `json:"public_key"   gorm:"column:public_key"`
 	PrivateKey   string    `json:"private_key"  gorm:"column:private_key"`

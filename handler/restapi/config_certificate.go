@@ -1,6 +1,8 @@
 package restapi
 
 import (
+	"archive/zip"
+	"mime"
 	"net/http"
 
 	"github.com/xgfone/ship/v5"
@@ -21,6 +23,7 @@ func (cc *configCertificateAPI) Register(r shipx.Router) error {
 	auth := r.Auth()
 	auth.Route("/config/certificates").GET(cc.List)
 	auth.Route("/config/certificate").
+		GET(cc.Download).
 		POST(cc.Create).
 		PUT(cc.Update).
 		DELETE(cc.Delete)
@@ -66,4 +69,47 @@ func (cc *configCertificateAPI) Delete(c *ship.Context) error {
 	ctx := c.Request().Context()
 
 	return cc.svc.Delete(ctx, req.ID)
+}
+
+func (cc *configCertificateAPI) Download(c *ship.Context) error {
+	req := new(request.Int64ID)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+	ctx := c.Request().Context()
+
+	dat, err := cc.svc.Find(ctx, req.ID)
+	if err != nil {
+		return err
+	}
+
+	extension := ".zip"
+	commonName := dat.CommonName
+	filename := commonName + extension
+	contentType := mime.TypeByExtension(extension)
+	if contentType == "" {
+		contentType = ship.MIMEOctetStream
+	}
+	disposition := mime.FormatMediaType("attachment", map[string]string{"filename": filename})
+	c.SetRespHeader(ship.HeaderContentType, contentType)
+	c.SetRespHeader(ship.HeaderContentDisposition, disposition)
+	c.WriteHeader(http.StatusOK)
+
+	zw := zip.NewWriter(c.ResponseWriter())
+	//goland:noinspection GoUnhandledErrorResult
+	defer zw.Close()
+	cw, err := zw.Create(commonName + ".crt")
+	if err != nil {
+		return err
+	}
+	if _, err = cw.Write([]byte(dat.PublicKey)); err != nil {
+		return err
+	}
+	cw, err = zw.Create(commonName + ".key")
+	if err != nil {
+		return err
+	}
+	_, err = cw.Write([]byte(dat.PrivateKey))
+
+	return err
 }
