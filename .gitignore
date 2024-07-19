@@ -37,4 +37,6 @@ resources/log/*
 resources/temp/*
 resources/test/*
 
+aegis-server-*
+
 *.upx

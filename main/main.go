@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/xmx/aegis-server/infra/banner"
 	"github.com/xmx/aegis-server/launch"
 )
 
@@ -17,7 +18,7 @@ func main() {
 	ver := set.Bool("v", false, "打印版本")
 	cfg := set.String("c", "resources/config", "配置目录")
 	_ = set.Parse(args[1:])
-	if *ver {
+	if banner.ANSI(os.Stdout); *ver {
 		return
 	}
 

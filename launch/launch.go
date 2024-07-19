@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log/slog"
-	"net/http"
 
+	"github.com/quic-go/quic-go/http3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/query"
@@ -78,7 +78,8 @@ func Exec(ctx context.Context, cfg config.Config) error {
 	}
 
 	configCertificateAPI := restapi.ConfigCertificate(configCertificateService)
-	routeRegisters = append(routeRegisters, configCertificateAPI)
+	transportAPI := restapi.Transport()
+	routeRegisters = append(routeRegisters, configCertificateAPI, transportAPI)
 
 	sh := ship.Default()
 	sh.Validator = valid
@@ -94,7 +95,7 @@ func Exec(ctx context.Context, cfg config.Config) error {
 		}
 	}
 
-	srv := &http.Server{
+	srv := &http3.Server{
 		Addr:    ":1443",
 		Handler: sh,
 		TLSConfig: &tls.Config{
@@ -112,6 +113,6 @@ func Exec(ctx context.Context, cfg config.Config) error {
 	return err
 }
 
-func serveHTTP(srv *http.Server, errs chan<- error) {
-	errs <- srv.ListenAndServeTLS("", "")
+func serveHTTP(srv *http3.Server, errs chan<- error) {
+	errs <- srv.ListenAndServe()
 }
