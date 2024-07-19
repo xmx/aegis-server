@@ -21,7 +21,7 @@ func main() {
 		return
 	}
 
-	signals := []os.Signal{syscall.SIGTERM, syscall.SIGHUP, syscall.SIGKILL, syscall.SIGINT}
+	signals := []os.Signal{syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGSTOP}
 	ctx, cancel := signal.NotifyContext(context.Background(), signals...)
 	defer cancel()
 

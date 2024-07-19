@@ -1,5 +1,6 @@
 {
   "database": {
+    "dsn": "root:password@tcp(localhost:3306)/dbname?tls=yourTLS&parseTime=True&timeout=10s"
   },
   "logger": {
     "level": "DEBUG",
