@@ -1,0 +1,14 @@
+{
+  "database": {
+  },
+  "logger": {
+    "level": "DEBUG",
+    "terminal": true,
+    "filename": "",
+    "max_age": 180,
+    "max_size": 1000,
+    "max_backup": 0,
+    "localtime": true,
+    "compress": true
+  }
+}

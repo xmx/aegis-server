@@ -25,14 +25,16 @@ go.work.sum
 *.iml
 .scannerwork
 
+# config file
+resources/config/*
+!resources/config/00-example.json
+!resources/config/README.md
+
 main/main
 resources/tls/*
 resources/log/*
 !resources/log/.gitkeep
 resources/temp/*
 resources/test/*
-resources/config/*
-!resources/config/application-example.yaml
-!resources/config/application-example.json
 
 *.upx

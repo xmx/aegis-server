@@ -12,6 +12,7 @@ import (
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/response"
+	"gorm.io/gorm"
 )
 
 func NotFound(_ *ship.Context) error {
@@ -58,24 +59,10 @@ func HandleError(c *ship.Context, e error) {
 		limit := strconv.FormatInt(err.Limit, 10)
 		pd.Detail = "请求报文超过 " + limit + " 个字节限制"
 		pd.Status = http.StatusRequestEntityTooLarge
-	// case mongo.CommandError:
-	//	pd.Status = http.StatusInternalServerError
-	//	pd.Title = "内部错误"
-	//	pd.Detail = "内部错误请联系管理员"
-	// case topology.ServerSelectionError:
-	//	pd.Status = http.StatusServiceUnavailable
-	//	pd.Title = "内部错误"
-	//	pd.Detail = "内部错误请联系管理员"
-	//	if errors.Is(err.Wrapped, context.DeadlineExceeded) {
-	//		pd.Detail = "内部服务超时"
-	//	}
-	//	c.Errorf("数据库连接错误", slog.Any("error", e))
 	default:
 		switch {
-		// case errors.Is(err, primitive.ErrInvalidHex):
-		//	pd.Detail = "不是一个有效的 ID"
-		// case errors.Is(err, mongo.ErrNoDocuments):
-		//	pd.Detail = "数据不存在"
+		case errors.Is(err, gorm.ErrRecordNotFound):
+			pd.Detail = "数据不存在"
 		case errors.Is(err, ship.ErrSessionNotExist), errors.Is(err, ship.ErrInvalidSession):
 			pd.Status = http.StatusUnauthorized
 			pd.Detail = "认证无效"

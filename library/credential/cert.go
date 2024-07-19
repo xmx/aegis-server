@@ -2,19 +2,17 @@ package credential
 
 import (
 	"crypto/tls"
-	"maps"
 	"strings"
 	"sync/atomic"
 )
 
 type Certifier interface {
-	Get(*tls.ClientHelloInfo) (*tls.Certificate, error)
-	Put(name string, cert *tls.Certificate)
-	Clear()
+	Match(*tls.ClientHelloInfo) (*tls.Config, error)
+	Replace(certs []tls.Certificate)
 }
 
-func NewPool() Certifier {
-	return &certPool{}
+func Pool(base *tls.Config) Certifier {
+	return &certPool{base: base}
 }
 
 type certPool struct {
@@ -22,39 +20,41 @@ type certPool struct {
 	val  atomic.Value
 }
 
-func (a *certPool) Get(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	hm, yes := a.val.Load().(map[string]*tls.Certificate)
+func (cp *certPool) Match(info *tls.ClientHelloInfo) (*tls.Config, error) {
+	hm, yes := cp.val.Load().(map[string]*tls.Config)
 	if !yes || len(hm) == 0 {
 		return nil, nil
 	}
 
 	// https://github.com/golang/go/blob/go1.22.5/src/crypto/tls/common.go#L1141-L1154
 	name := strings.ToLower(info.ServerName)
-	if cert, ok := hm[name]; ok && cert != nil || name == "" {
-		return cert, nil
+	if cfg, ok := hm[name]; ok && cfg != nil || name == "" {
+		return cfg, nil
 	}
 
 	labels := strings.Split(name, ".")
 	labels[0] = "*"
 	wildcardName := strings.Join(labels, ".")
-	cert := hm[wildcardName]
+	cfg := hm[wildcardName]
 
-	return cert, nil
+	return cfg, nil
 }
 
-// Put 存放证书。
-func (a *certPool) Put(name string, cert *tls.Certificate) {
-	hm, ok := a.val.Load().(map[string]*tls.Certificate)
-	if !ok {
-		a.val.Store(map[string]*tls.Certificate{name: cert})
-		return
+func (cp *certPool) Replace(certs []tls.Certificate) {
+	hm := make(map[string]*tls.Config, len(certs)*4)
+	for _, cert := range certs {
+		leaf := cert.Leaf
+		for _, name := range leaf.DNSNames {
+			cfg := cp.base.Clone()
+			cfg.Certificates = []tls.Certificate{cert}
+			hm[name] = cfg
+		}
+		for _, ip := range leaf.IPAddresses {
+			cfg := cp.base.Clone()
+			cfg.Certificates = []tls.Certificate{cert}
+			hm[ip.String()] = cfg
+		}
 	}
 
-	certs := maps.Clone(hm)
-	certs[name] = cert
-	a.val.Store(certs)
-}
-
-func (a *certPool) Clear() {
-	a.val.Store(map[string]*tls.Certificate{})
+	cp.val.Store(hm)
 }

@@ -8,13 +8,12 @@ import (
 func main() {
 	tables := []any{
 		model.ConfigCertificate{},
-		model.ConfigLogger{},
 		model.ConfigServer{},
 	}
 
 	g := gen.NewGenerator(gen.Config{
 		Mode:    gen.WithDefaultQuery,
-		OutPath: "./datalayer/query",
+		OutPath: "datalayer/query",
 	})
 	g.ApplyBasic(tables...)
 	g.Execute()

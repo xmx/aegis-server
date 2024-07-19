@@ -3,81 +3,90 @@ package launch
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
+	"net/http"
 
-	"github.com/quic-go/quic-go"
-
-	"github.com/quic-go/quic-go/http3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/query"
-	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
+	"github.com/xmx/aegis-server/infra/config"
+	"github.com/xmx/aegis-server/infra/gormlog"
+	"github.com/xmx/aegis-server/library/credential"
+	"github.com/xmx/aegis-server/library/profile"
 	"github.com/xmx/aegis-server/library/sqldb"
-	"github.com/xmx/aegis-server/memconf"
+	"github.com/xmx/aegis-server/library/validation"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func Run(ctx context.Context, path string) error {
-	file, err := os.ReadFile(path)
-	if err != nil {
+	var cfg config.Config
+	if err := profile.JSON(path, &cfg); err != nil {
 		return err
 	}
 
-	var jsonCfg struct {
-		DSN string `json:"dsn"`
-	}
-	if err = json.Unmarshal(file, &jsonCfg); err != nil {
-		return err
-	}
-
-	return Exec(ctx, jsonCfg.DSN)
+	return Exec(ctx, cfg)
 }
 
 // Exec 运行服务。
 //
 //goland:noinspection GoUnhandledErrorResult
-func Exec(ctx context.Context, dsn string) error {
-	db, err := sqldb.TiDB(dsn)
+func Exec(ctx context.Context, cfg config.Config) error {
+	// 创建参数校验器，并校验配置文件。
+	validTags := []string{"json", "query", "form", "yaml", "xml"}
+	valid := validation.NewValidator(validation.TagNameFunc(validTags))
+	if err := valid.Validate(cfg); err != nil {
+		return err
+	}
+
+	// 初始化日志组件。
+	logOpt, logWC := cfg.Logger.Option()
+	defer logWC.Close()
+	logHandler := slog.NewJSONHandler(logWC, logOpt)
+	log := slog.New(logHandler)
+
+	// 连接数据库
+	db, err := sqldb.TiDB(cfg.Database.DSN)
 	if err != nil {
 		return fmt.Errorf("连接数据库错误：%w", err)
 	}
 	defer db.Close()
 
 	mysqlCfg := &mysql.Config{Conn: db}
-	gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg})
+	gormLog := gormlog.NewLog(logHandler, logger.Config{})
+	gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg}, &gorm.Config{Logger: gormLog})
 	if err != nil {
 		return fmt.Errorf("gorm.Open 错误：%w", err)
 	}
-
-	if err = autoMigrate(gdb); err != nil {
-		return fmt.Errorf("auto migration 错误：%w", err)
-	}
 	qry := query.Use(gdb)
 
-	//configLoggerRepository := repository.ConfigLogger(qry)
-	//loggerConfig, err := configLoggerRepository.Enabled(ctx)
-	//if err != nil {
-	//	return err
+	//if err = autoMigrate(gdb); err != nil {
+	//	return fmt.Errorf("auto migration 错误：%w", err)
 	//}
-	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{})
-	log := slog.New(handler)
+
+	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
+	poolTLS := credential.Pool(baseTLS)
 
 	routeRegisters := make([]shipx.Register, 0, 50)
-	configCertificateRepository := repository.ConfigCertificate(qry)
-	configCertificateConfigurer := memconf.ConfigCertificate(configCertificateRepository)
-	configCertificateService := service.ConfigCertificate(qry, configCertificateConfigurer, log)
+	configCertificateService := service.ConfigCertificate(poolTLS, qry, log)
+	if err = configCertificateService.Refresh(ctx); err != nil { // 初始化刷新证书池。
+		return err
+	}
+
 	configCertificateAPI := restapi.ConfigCertificate(configCertificateService)
 	routeRegisters = append(routeRegisters, configCertificateAPI)
 
 	sh := ship.Default()
-	anon := sh.Group("/").Clone()
-	auth := sh.Group("/").Clone()
+	sh.Validator = valid
+	sh.NotFound = shipx.NotFound
+	sh.HandleError = shipx.HandleError
+	baseAPI := sh.Group("/api")
+	anon := baseAPI.Clone()
+	auth := baseAPI.Clone()
 	route := shipx.NewRouter(anon, auth)
 	for _, reg := range routeRegisters {
 		if err = reg.Register(route); err != nil {
@@ -85,22 +94,15 @@ func Exec(ctx context.Context, dsn string) error {
 		}
 	}
 
-	srv := &http3.Server{
+	srv := &http.Server{
+		Addr:    ":1443",
 		Handler: sh,
+		TLSConfig: &tls.Config{
+			GetConfigForClient: poolTLS.Match,
+		},
 	}
 	errs := make(chan error)
 	go serveHTTP(srv, errs)
-	srv.TLSConfig.NextProtos = append(srv.TLSConfig.NextProtos, "hi")
-
-	tlsCfg := &tls.Config{
-		NextProtos:     []string{"hi"},
-		GetCertificate: configCertificateConfigurer.Certificate,
-	}
-	listener, err := quic.ListenAddrEarly(":1443", tlsCfg, nil)
-	if err != nil {
-		return err
-	}
-
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
@@ -110,17 +112,6 @@ func Exec(ctx context.Context, dsn string) error {
 	return err
 }
 
-func serveHTTP(srv *http3.Server, errs chan<- error) {
-	errs <- srv.ListenAndServe()
-}
-
-func listenQUIC(ctx context.Context, lis *quic.EarlyListener, errs chan<- error) {
-	for {
-		conn, err := lis.Accept(ctx)
-		if err != nil {
-			errs <- err
-			break
-		}
-
-	}
+func serveHTTP(srv *http.Server, errs chan<- error) {
+	errs <- srv.ListenAndServeTLS("", "")
 }

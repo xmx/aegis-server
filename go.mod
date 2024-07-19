@@ -11,6 +11,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/quic-go/quic-go v0.45.1
 	github.com/xgfone/ship/v5 v5.3.1
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gen v0.3.26
 	gorm.io/gorm v1.25.10

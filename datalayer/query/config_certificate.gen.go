@@ -32,6 +32,9 @@ func newConfigCertificate(db *gorm.DB, opts ...gen.DOOption) configCertificate {
 	_configCertificate.CommonName = field.NewString(tableName, "common_name")
 	_configCertificate.PublicKey = field.NewString(tableName, "public_key")
 	_configCertificate.PrivateKey = field.NewString(tableName, "private_key")
+	_configCertificate.CertificateSHA256 = field.NewString(tableName, "certificate_sha256")
+	_configCertificate.PublicKeySHA256 = field.NewString(tableName, "public_key_sha256")
+	_configCertificate.PrivateKeySHA256 = field.NewString(tableName, "private_key_sha256")
 	_configCertificate.Organization = field.NewField(tableName, "organization")
 	_configCertificate.Country = field.NewField(tableName, "country")
 	_configCertificate.Province = field.NewField(tableName, "province")
@@ -51,22 +54,25 @@ func newConfigCertificate(db *gorm.DB, opts ...gen.DOOption) configCertificate {
 type configCertificate struct {
 	configCertificateDo configCertificateDo
 
-	ALL          field.Asterisk
-	ID           field.Int64
-	Enabled      field.Bool
-	CommonName   field.String
-	PublicKey    field.String
-	PrivateKey   field.String
-	Organization field.Field
-	Country      field.Field
-	Province     field.Field
-	DNSNames     field.Field
-	IPAddresses  field.Field
-	Version      field.Int
-	NotBefore    field.Time
-	NotAfter     field.Time
-	UpdatedAt    field.Time
-	CreatedAt    field.Time
+	ALL               field.Asterisk
+	ID                field.Int64
+	Enabled           field.Bool
+	CommonName        field.String
+	PublicKey         field.String
+	PrivateKey        field.String
+	CertificateSHA256 field.String
+	PublicKeySHA256   field.String
+	PrivateKeySHA256  field.String
+	Organization      field.Field
+	Country           field.Field
+	Province          field.Field
+	DNSNames          field.Field
+	IPAddresses       field.Field
+	Version           field.Int
+	NotBefore         field.Time
+	NotAfter          field.Time
+	UpdatedAt         field.Time
+	CreatedAt         field.Time
 
 	fieldMap map[string]field.Expr
 }
@@ -88,6 +94,9 @@ func (c *configCertificate) updateTableName(table string) *configCertificate {
 	c.CommonName = field.NewString(table, "common_name")
 	c.PublicKey = field.NewString(table, "public_key")
 	c.PrivateKey = field.NewString(table, "private_key")
+	c.CertificateSHA256 = field.NewString(table, "certificate_sha256")
+	c.PublicKeySHA256 = field.NewString(table, "public_key_sha256")
+	c.PrivateKeySHA256 = field.NewString(table, "private_key_sha256")
 	c.Organization = field.NewField(table, "organization")
 	c.Country = field.NewField(table, "country")
 	c.Province = field.NewField(table, "province")
@@ -126,12 +135,15 @@ func (c *configCertificate) GetFieldByName(fieldName string) (field.OrderExpr, b
 }
 
 func (c *configCertificate) fillFieldMap() {
-	c.fieldMap = make(map[string]field.Expr, 15)
+	c.fieldMap = make(map[string]field.Expr, 18)
 	c.fieldMap["id"] = c.ID
 	c.fieldMap["enabled"] = c.Enabled
 	c.fieldMap["common_name"] = c.CommonName
 	c.fieldMap["public_key"] = c.PublicKey
 	c.fieldMap["private_key"] = c.PrivateKey
+	c.fieldMap["certificate_sha256"] = c.CertificateSHA256
+	c.fieldMap["public_key_sha256"] = c.PublicKeySHA256
+	c.fieldMap["private_key_sha256"] = c.PrivateKeySHA256
 	c.fieldMap["organization"] = c.Organization
 	c.fieldMap["country"] = c.Country
 	c.fieldMap["province"] = c.Province
