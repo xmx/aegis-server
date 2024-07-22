@@ -3,7 +3,6 @@ package launch
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -14,10 +13,9 @@ import (
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
-	"github.com/xmx/aegis-server/infra/config"
 	"github.com/xmx/aegis-server/infra/gormlog"
+	"github.com/xmx/aegis-server/infra/profile"
 	"github.com/xmx/aegis-server/library/credential"
-	"github.com/xmx/aegis-server/library/profile"
 	"github.com/xmx/aegis-server/library/sqldb"
 	"github.com/xmx/aegis-server/library/validation"
 	"gorm.io/driver/mysql"
@@ -26,8 +24,8 @@ import (
 )
 
 func Run(ctx context.Context, path string) error {
-	var cfg config.Config
-	if err := profile.JSON(path, &cfg); err != nil {
+	cfg, err := profile.JSON(path)
+	if err != nil {
 		return err
 	}
 
@@ -37,7 +35,7 @@ func Run(ctx context.Context, path string) error {
 // Exec 运行服务。
 //
 //goland:noinspection GoUnhandledErrorResult
-func Exec(ctx context.Context, cfg config.Config) error {
+func Exec(ctx context.Context, cfg *profile.Config) error {
 	// 创建参数校验器，并校验配置文件。
 	validTags := []string{"json", "query", "form", "yaml", "xml"}
 	valid := validation.NewValidator(validation.TagNameFunc(validTags))
@@ -54,7 +52,8 @@ func Exec(ctx context.Context, cfg config.Config) error {
 	// 连接数据库
 	db, err := sqldb.TiDB(cfg.Database.TiDB())
 	if err != nil {
-		return fmt.Errorf("连接数据库错误：%w", err)
+		log.Error("数据库连接失败", slog.Any("error", err))
+		return err
 	}
 	defer db.Close()
 
@@ -63,12 +62,14 @@ func Exec(ctx context.Context, cfg config.Config) error {
 	mysqlCfg := &mysql.Config{Conn: db}
 	gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg}, &gorm.Config{Logger: gormLog})
 	if err != nil {
-		return fmt.Errorf("gorm.Open 错误：%w", err)
+		log.Error("数据库连接(gorm)失败", slog.Any("error", err))
+		return err
 	}
 	qry := query.Use(gdb)
 
 	if err = autoMigrate(gdb); err != nil {
-		return fmt.Errorf("auto migration 错误：%w", err)
+		log.Error("合并数据库错误", slog.Any("error", err))
+		return err
 	}
 
 	// 查询 server 配置
@@ -76,7 +77,8 @@ func Exec(ctx context.Context, cfg config.Config) error {
 
 	srvCfg, err := configServerRepository.Enabled(ctx)
 	if err != nil {
-		return fmt.Errorf("查询服务配置错误：%w", err)
+		log.Error("查询 server 配置错误", slog.Any("error", err))
+		return err
 	}
 
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}

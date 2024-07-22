@@ -5,17 +5,18 @@ import (
 	"os"
 )
 
-func JSON(path string, v any) error {
-	for name, err := range Readdir(path, "*.json") {
+func JSON(path string) (*Config, error) {
+	cfg := new(Config)
+	for name, err := range readdir(path, "*.json") {
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if err = unmarshalJSON(name, v); err != nil {
-			return err
+		if err = unmarshalJSON(name, cfg); err != nil {
+			return nil, err
 		}
 	}
 
-	return nil
+	return cfg, nil
 }
 
 func unmarshalJSON(name string, v any) error {

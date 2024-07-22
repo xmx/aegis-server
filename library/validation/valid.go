@@ -68,9 +68,12 @@ type Validator struct {
 
 func (vd *Validator) Validate(val any) error {
 	err := vd.v.Struct(val)
-	if ve, ok := err.(validator.ValidationErrors); ok {
+	switch ve := err.(type) {
+	case validator.ValidationErrors:
 		trans := ve.Translate(vd.t)
 		return &Error{trans: trans, valid: ve}
+	case *validator.InvalidValidationError:
+		return &NilError{Type: ve.Type}
 	}
 
 	return err

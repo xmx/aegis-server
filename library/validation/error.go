@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
@@ -20,4 +21,17 @@ func (e *Error) Error() string {
 	}
 
 	return strings.Join(causes, ",")
+}
+
+type NilError struct {
+	Type reflect.Type
+}
+
+func (e *NilError) Error() string {
+	var msg string
+	if t := e.Type; t != nil {
+		msg = "：" + e.Type.String()
+	}
+
+	return "无效的空类型数据" + msg
 }

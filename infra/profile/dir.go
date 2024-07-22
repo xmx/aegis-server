@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func Readdir(root, pattern string) iter.Seq2[string, error] {
+func readdir(root, pattern string) iter.Seq2[string, error] {
 	return func(yield func(string, error) bool) {
 		dir, err := os.Open(root)
 		if err != nil {

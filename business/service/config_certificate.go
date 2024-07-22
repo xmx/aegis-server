@@ -148,7 +148,7 @@ func (svc *configCertificateService) Refresh(ctx context.Context) error {
 		certs = append(certs, cert)
 	}
 	if len(certs) == 0 {
-		svc.log.Error("证书被清空，可能导致程序无法被外部访问。")
+		svc.log.Error("当前证书表未启用任何证书，程序将无法通过网络访问。")
 	}
 	svc.pool.Replace(certs)
 
