@@ -32,13 +32,13 @@ func TagNameFunc(tagNames []string) validator.TagNameFunc {
 	return func(field reflect.StructField) string {
 		var value string
 		for _, tag := range tags {
-			values := field.Tag.Get(tag)
-			if value = strings.SplitN(values, ",", 2)[0]; value == "" {
+			if value = field.Tag.Get(tag); value == "" || value == "-" {
 				continue
 			}
-		}
-		if value == "-" {
-			return ""
+			if str := strings.SplitN(value, ",", 2)[0]; str != "" && str != "-" {
+				value = str
+				break
+			}
 		}
 
 		return value

@@ -13,7 +13,7 @@ import (
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
-	"github.com/xmx/aegis-server/infra/gormlog"
+	"github.com/xmx/aegis-server/infra/logext"
 	"github.com/xmx/aegis-server/infra/profile"
 	"github.com/xmx/aegis-server/library/credential"
 	"github.com/xmx/aegis-server/library/sqldb"
@@ -58,7 +58,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	defer db.Close()
 
 	glogCfg := logger.Config{SlowThreshold: 300 * time.Millisecond, LogLevel: logger.Info}
-	gormLog := gormlog.NewLog(logHandler, glogCfg)
+	gormLog := logext.Gorm(logHandler, glogCfg)
 	mysqlCfg := &mysql.Config{Conn: db}
 	gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg}, &gorm.Config{Logger: gormLog})
 	if err != nil {
@@ -87,6 +87,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	routeRegisters := make([]shipx.Register, 0, 50)
 	configCertificateService := service.ConfigCertificate(poolTLS, qry, log)
 	if err = configCertificateService.Refresh(ctx); err != nil { // 初始化刷新证书池。
+		log.Error("初始化证书错误", slog.Any("error", err))
 		return err
 	}
 
@@ -98,6 +99,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	sh.Validator = valid
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
+	sh.Logger = logext.Ship(logHandler)
 	if dir := srvCfg.Static; dir != "" {
 		sh.Route("/").Static(dir)
 	}
@@ -108,6 +110,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	route := shipx.NewRouter(anon, auth)
 	for _, reg := range routeRegisters {
 		if err = reg.Register(route); err != nil {
+			log.Error("注册路由错误", slog.Any("error", err))
 			return err
 		}
 	}

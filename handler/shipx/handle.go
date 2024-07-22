@@ -12,6 +12,7 @@ import (
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/response"
+	"github.com/xmx/aegis-server/library/validation"
 	"gorm.io/gorm"
 )
 
@@ -21,7 +22,6 @@ func NotFound(_ *ship.Context) error {
 
 func HandleError(c *ship.Context, e error) {
 	pd := &response.ProblemDetails{
-		Type:     c.Host(),
 		Title:    "请求错误",
 		Status:   http.StatusBadRequest,
 		Detail:   e.Error(),
@@ -35,8 +35,8 @@ func HandleError(c *ship.Context, e error) {
 		pd.Status = err.Code
 	case *ship.HTTPServerError:
 		pd.Status = err.Code
-	// case *validate.TranError:
-	//	pd.Title = "参数校验错误"
+	case *validation.Error, *validation.NilError:
+		pd.Title = "参数校验错误"
 	case *time.ParseError:
 		pd.Detail = "时间格式错误，正确格式：" + err.Layout
 	case *net.ParseError:

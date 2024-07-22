@@ -1,4 +1,4 @@
-package gormlog
+package logext
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-func NewLog(h slog.Handler, cfg logger.Config) logger.Interface {
-	lh := &slogHandler{h: h}
+func Gorm(h slog.Handler, cfg logger.Config) logger.Interface {
+	lh := &gormHandler{h: h}
 	log := slog.New(lh)
 
 	threshold := cfg.SlowThreshold
@@ -107,15 +107,15 @@ func (l *gormLog) printf(ctx context.Context, lvl slog.Level, attrs []slog.Attr)
 	l.log.LogAttrs(ctx, lvl, "gorm", attrs...)
 }
 
-type slogHandler struct {
+type gormHandler struct {
 	h slog.Handler
 }
 
-func (g *slogHandler) Enabled(ctx context.Context, level slog.Level) bool {
+func (g *gormHandler) Enabled(ctx context.Context, level slog.Level) bool {
 	return g.h.Enabled(ctx, level)
 }
 
-func (g *slogHandler) Handle(ctx context.Context, record slog.Record) error {
+func (g *gormHandler) Handle(ctx context.Context, record slog.Record) error {
 	pcs := [13]uintptr{}
 	size := runtime.Callers(6, pcs[:])
 	frames := runtime.CallersFrames(pcs[:size])
@@ -132,10 +132,10 @@ func (g *slogHandler) Handle(ctx context.Context, record slog.Record) error {
 	return g.h.Handle(ctx, record)
 }
 
-func (g *slogHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+func (g *gormHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return g.h.WithAttrs(attrs)
 }
 
-func (g *slogHandler) WithGroup(name string) slog.Handler {
+func (g *gormHandler) WithGroup(name string) slog.Handler {
 	return g.h.WithGroup(name)
 }

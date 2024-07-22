@@ -11,6 +11,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/quic-go/quic-go v0.45.1
 	github.com/xgfone/ship/v5 v5.3.1
+	golang.org/x/oauth2 v0.21.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gen v0.3.26
@@ -23,7 +24,6 @@ require (
 	github.com/dlclark/regexp2 v1.10.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.4 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
-	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/pprof v0.0.0-20240711041743-f6c9dda6c6da // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect

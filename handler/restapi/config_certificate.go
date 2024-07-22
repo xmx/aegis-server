@@ -22,6 +22,7 @@ type configCertificateAPI struct {
 func (cc *configCertificateAPI) Register(r shipx.Router) error {
 	auth := r.Auth()
 	auth.Route("/config/certificates").GET(cc.List)
+	auth.Route("/config/certificate/refresh").GET(cc.Refresh)
 	auth.Route("/config/certificate").
 		GET(cc.Download).
 		POST(cc.Create).
@@ -112,4 +113,9 @@ func (cc *configCertificateAPI) Download(c *ship.Context) error {
 	_, err = cw.Write([]byte(dat.PrivateKey))
 
 	return err
+}
+
+func (cc *configCertificateAPI) Refresh(c *ship.Context) error {
+	ctx := c.Request().Context()
+	return cc.svc.Refresh(ctx)
 }
