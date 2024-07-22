@@ -6,16 +6,35 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/go-sql-driver/mysql"
 )
 
-func TiDB(dsn string) (*sql.DB, error) {
+type Config struct {
+	DSN         string
+	MaxOpenConn int
+	MaxIdleConn int
+	MaxLifetime time.Duration
+	MaxIdleTime time.Duration
+}
+
+func TiDB(cfg Config) (*sql.DB, error) {
+	dsn := cfg.DSN
 	if err := autoTLS(dsn); err != nil {
 		return nil, err
 	}
 
-	return sql.Open("mysql", dsn)
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(cfg.MaxOpenConn)
+	db.SetMaxIdleConns(cfg.MaxIdleConn)
+	db.SetConnMaxLifetime(cfg.MaxLifetime)
+	db.SetConnMaxIdleTime(cfg.MaxLifetime)
+
+	return db, nil
 }
 
 func autoTLS(dsn string) error {

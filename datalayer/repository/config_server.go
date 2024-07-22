@@ -39,7 +39,7 @@ func (c *configServerRepository) Create(ctx context.Context, cert *model.ConfigS
 func (c *configServerRepository) Delete(ctx context.Context, id int64) (bool, error) {
 	var enabled bool
 	err := c.qry.Transaction(func(tx *query.Query) error {
-		tbl := tx.ConfigLogger
+		tbl := tx.ConfigServer
 		dat, err := tbl.WithContext(ctx).Where(tbl.ID.Eq(id)).First()
 		if err != nil {
 			return err

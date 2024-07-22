@@ -5,11 +5,13 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/quic-go/quic-go/http3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/query"
+	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/infra/config"
@@ -50,23 +52,32 @@ func Exec(ctx context.Context, cfg config.Config) error {
 	log := slog.New(logHandler)
 
 	// 连接数据库
-	db, err := sqldb.TiDB(cfg.Database.DSN)
+	db, err := sqldb.TiDB(cfg.Database.TiDB())
 	if err != nil {
 		return fmt.Errorf("连接数据库错误：%w", err)
 	}
 	defer db.Close()
 
+	glogCfg := logger.Config{SlowThreshold: 300 * time.Millisecond, LogLevel: logger.Info}
+	gormLog := gormlog.NewLog(logHandler, glogCfg)
 	mysqlCfg := &mysql.Config{Conn: db}
-	gormLog := gormlog.NewLog(logHandler, logger.Config{})
 	gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg}, &gorm.Config{Logger: gormLog})
 	if err != nil {
 		return fmt.Errorf("gorm.Open 错误：%w", err)
 	}
 	qry := query.Use(gdb)
 
-	//if err = autoMigrate(gdb); err != nil {
-	//	return fmt.Errorf("auto migration 错误：%w", err)
-	//}
+	if err = autoMigrate(gdb); err != nil {
+		return fmt.Errorf("auto migration 错误：%w", err)
+	}
+
+	// 查询 server 配置
+	configServerRepository := repository.ConfigServer(qry)
+
+	srvCfg, err := configServerRepository.Enabled(ctx)
+	if err != nil {
+		return fmt.Errorf("查询服务配置错误：%w", err)
+	}
 
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
 	poolTLS := credential.Pool(baseTLS)
@@ -85,6 +96,10 @@ func Exec(ctx context.Context, cfg config.Config) error {
 	sh.Validator = valid
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
+	if dir := srvCfg.Static; dir != "" {
+		sh.Route("/").Static(dir)
+	}
+
 	baseAPI := sh.Group("/api")
 	anon := baseAPI.Clone()
 	auth := baseAPI.Clone()
@@ -96,7 +111,7 @@ func Exec(ctx context.Context, cfg config.Config) error {
 	}
 
 	srv := &http3.Server{
-		Addr:    ":1443",
+		Addr:    srvCfg.Addr,
 		Handler: sh,
 		TLSConfig: &tls.Config{
 			GetConfigForClient: poolTLS.Match,

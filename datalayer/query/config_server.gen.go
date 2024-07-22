@@ -31,7 +31,6 @@ func newConfigServer(db *gorm.DB, opts ...gen.DOOption) configServer {
 	_configServer.Enabled = field.NewBool(tableName, "enabled")
 	_configServer.Addr = field.NewString(tableName, "addr")
 	_configServer.Static = field.NewString(tableName, "static")
-	_configServer.Vhosts = field.NewString(tableName, "vhosts")
 	_configServer.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_configServer.CreatedAt = field.NewTime(tableName, "created_at")
 
@@ -48,7 +47,6 @@ type configServer struct {
 	Enabled   field.Bool
 	Addr      field.String
 	Static    field.String
-	Vhosts    field.String
 	UpdatedAt field.Time
 	CreatedAt field.Time
 
@@ -71,7 +69,6 @@ func (c *configServer) updateTableName(table string) *configServer {
 	c.Enabled = field.NewBool(table, "enabled")
 	c.Addr = field.NewString(table, "addr")
 	c.Static = field.NewString(table, "static")
-	c.Vhosts = field.NewString(table, "vhosts")
 	c.UpdatedAt = field.NewTime(table, "updated_at")
 	c.CreatedAt = field.NewTime(table, "created_at")
 
@@ -102,12 +99,11 @@ func (c *configServer) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (c *configServer) fillFieldMap() {
-	c.fieldMap = make(map[string]field.Expr, 7)
+	c.fieldMap = make(map[string]field.Expr, 6)
 	c.fieldMap["id"] = c.ID
 	c.fieldMap["enabled"] = c.Enabled
 	c.fieldMap["addr"] = c.Addr
 	c.fieldMap["static"] = c.Static
-	c.fieldMap["vhosts"] = c.Vhosts
 	c.fieldMap["updated_at"] = c.UpdatedAt
 	c.fieldMap["created_at"] = c.CreatedAt
 }
