@@ -115,11 +115,12 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		sh.Route("/").Static(dir)
 	}
 
-	baseAPI := sh.Group("/api").Use(middle.WAF(log))
-	anon := baseAPI.Clone().Use(middleware.CORS(nil))
-	auth := baseAPI.Clone().Use(middleware.CORS(nil))
-	route := shipx.NewRouter(anon, auth)
+	baseAPI := sh.Group("/api").Use(middle.WAF(log), middleware.CORS(nil))
+	anon := baseAPI.Clone()
+	auth := baseAPI.Clone()
+
 	for _, reg := range routeRegisters {
+		route := shipx.NewRouter(anon, auth)
 		if err = reg.Register(route); err != nil {
 			log.Error("注册路由错误", slog.Any("error", err))
 			return err
