@@ -111,15 +111,15 @@ func (lwc *logWriteCloser) warp(w io.Writer) io.Writer {
 	return &atomicWriter{w: w}
 }
 
-type nopCloseWriter struct {
+type nopWriteCloser struct {
 	w io.Writer
 }
 
-func (ncw *nopCloseWriter) Write(p []byte) (int, error) {
+func (ncw *nopWriteCloser) Write(p []byte) (int, error) {
 	return ncw.w.Write(p)
 }
 
-func (ncw *nopCloseWriter) Close() error {
+func (ncw *nopWriteCloser) Close() error {
 	return nil
 }
 
