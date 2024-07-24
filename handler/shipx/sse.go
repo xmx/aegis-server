@@ -39,9 +39,6 @@ func SSE(c *ship.Context) (EventSource, error) {
 	ctx, cancel := context.WithCancel(parent)
 
 	sse := &sseWriter{
-		write:  nil,
-		flush:  nil,
-		close:  nil,
 		ctx:    ctx,
 		cancel: cancel,
 	}
