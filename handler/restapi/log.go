@@ -39,9 +39,11 @@ func (api *logAPI) Level(c *ship.Context) error {
 		return err
 	}
 
+	lvl := req.Level
 	level := api.level.Level()
-	c.Errorf("修改日志级别：%s -> %s", level, req.Level)
-	_ = api.level.UnmarshalText([]byte(req.Level))
+	if err := api.level.UnmarshalText([]byte(lvl)); err == nil {
+		c.Errorf("修改日志级别从 %s 修改到 %s", level, lvl)
+	}
 
 	return nil
 }

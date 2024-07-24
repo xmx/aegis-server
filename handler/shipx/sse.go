@@ -1,15 +1,18 @@
 package shipx
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/xgfone/ship/v5"
 )
 
-func SSE(c *ship.Context) (*EventSource, error) {
+func SSE(c *ship.Context) (EventSource, error) {
 	// 粗略的检查一下是不是 EventSource 请求
 	w, r := c.Response().ResponseWriter, c.Request()
 	f, ok := w.(http.Flusher)
@@ -18,86 +21,138 @@ func SSE(c *ship.Context) (*EventSource, error) {
 		return nil, ship.ErrUnsupportedMediaType
 	}
 
+	var gz *gzip.Writer
+	encodings := r.Header.Get(ship.HeaderAcceptEncoding)
+	for _, str := range strings.Split(encodings, ",") {
+		if strings.TrimSpace(str) == "gzip" {
+			w.Header().Set(ship.HeaderContentEncoding, "gzip")
+			gz = gzip.NewWriter(w)
+		}
+	}
 	w.Header().Set(ship.HeaderContentType, "text/event-stream; charset=utf-8")
 	w.Header().Set(ship.HeaderCacheControl, "no-cache")
 	w.Header().Set(ship.HeaderConnection, "keep-alive")
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte{'\n'})
 	f.Flush()
 
 	parent := r.Context()
 	ctx, cancel := context.WithCancel(parent)
 
-	sse := &EventSource{
-		flush:  f,
-		write:  w,
+	sse := &sseWriter{
+		write:  nil,
+		flush:  nil,
+		close:  nil,
 		ctx:    ctx,
 		cancel: cancel,
+	}
+	if gz == nil {
+		sse.write = w
+		sse.flush = f
+	} else {
+		sse.write = gz
+		sse.close = gz
+		sse.flush = &gzipFlusher{write: gz, flush: f}
 	}
 
 	return sse, nil
 }
 
-type EventSource struct {
+type EventSource interface {
+	io.WriteCloser
+	Done() <-chan struct{}
+	JSON(event string, data any) error
+}
+
+type sseWriter struct {
 	mutex  sync.Mutex
+	write  io.Writer
 	flush  http.Flusher
-	write  http.ResponseWriter
+	close  io.Closer
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func (e *EventSource) Write(p []byte) (int, error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
+func (sw *sseWriter) Write(p []byte) (int, error) {
+	sw.mutex.Lock()
+	defer sw.mutex.Unlock()
 
-	_, err := e.write.Write([]byte("data: "))
-	if err == nil {
-		if _, err = e.write.Write(p); err == nil {
-			_, err = e.write.Write([]byte("\n\n"))
-			e.flush.Flush()
-		}
-	}
-	if err != nil {
-		_ = e.Close()
+	n := len(p)
+	if err := sw.writeData(p); err != nil {
 		return 0, err
 	}
 
-	return len(p), nil
+	return n, nil
 }
 
-func (e *EventSource) Close() error {
-	e.cancel()
-	return nil
-}
-
-func (e *EventSource) JSON(event string, data any) error {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
+func (sw *sseWriter) Close() error {
 	var err error
-	if event != "" {
-		event = "event: " + event + "\n"
-		_, err = e.write.Write([]byte(event))
+	if c := sw.close; c != nil {
+		err = c.Close()
 	}
+	sw.cancel()
+
+	return err
+}
+
+func (sw *sseWriter) JSON(event string, data any) error {
+	msg, err := json.Marshal(data)
 	if err != nil {
-		_ = e.Close()
 		return err
 	}
 
-	if _, err = e.write.Write([]byte("data: ")); err == nil {
-		if err = json.NewEncoder(e.write).Encode(data); err == nil {
-			_, err = e.write.Write([]byte("\n\n"))
+	sw.mutex.Lock()
+	defer sw.mutex.Unlock()
+
+	if event != "" {
+		if err = sw.writeEvent([]byte(event)); err != nil {
+			return err
 		}
 	}
-	e.flush.Flush()
+	err = sw.writeData(msg)
+
+	return err
+}
+
+func (sw *sseWriter) Done() <-chan struct{} {
+	return sw.ctx.Done()
+}
+
+func (sw *sseWriter) writeEvent(evt []byte) error {
+	_, err := sw.write.Write([]byte("event: "))
+	if err == nil {
+		if _, err = sw.write.Write(evt); err == nil {
+			_, err = sw.write.Write([]byte{'\n'})
+		}
+	}
 	if err != nil {
-		_ = e.Close()
+		_ = sw.Close()
+	}
+
+	return err
+}
+
+func (sw *sseWriter) writeData(data []byte) error {
+	_, err := sw.write.Write([]byte("data: "))
+	if err == nil {
+		if _, err = sw.write.Write(data); err == nil {
+			_, err = sw.write.Write([]byte{'\n', '\n'})
+		}
+	}
+	if err != nil {
+		_ = sw.Close()
 		return err
 	}
+	sw.flush.Flush()
 
 	return nil
 }
 
-func (e *EventSource) Done() <-chan struct{} {
-	return e.ctx.Done()
+type gzipFlusher struct {
+	write *gzip.Writer
+	flush http.Flusher
+}
+
+func (gf *gzipFlusher) Flush() {
+	_ = gf.write.Flush()
+	gf.flush.Flush()
 }
