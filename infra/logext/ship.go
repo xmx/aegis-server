@@ -39,8 +39,30 @@ func (s *shipLog) Errorf(format string, args ...any) {
 }
 
 func (s *shipLog) logf(level slog.Level, format string, args ...any) {
-	if s.log.Enabled(nil, level) {
+	if !s.log.Enabled(nil, level) {
+		return
+	}
+
+	size := len(args)
+	if size == 0 {
+		s.log.Log(nil, level, format)
+		return
+	}
+
+	var not bool
+	attrs := make([]slog.Attr, 0, size)
+	for _, arg := range args {
+		if attr, ok := arg.(slog.Attr); ok {
+			attrs = append(attrs, attr)
+		} else {
+			not = true
+			break
+		}
+	}
+	if not {
 		msg := fmt.Sprintf(format, args...)
 		s.log.Log(nil, level, msg)
+	} else {
+		s.log.LogAttrs(nil, level, format, attrs...)
 	}
 }

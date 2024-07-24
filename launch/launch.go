@@ -4,13 +4,15 @@ import (
 	"context"
 	"crypto/tls"
 	"log/slog"
+	"net/http"
 	"time"
 
-	"github.com/quic-go/quic-go/http3"
 	"github.com/xgfone/ship/v5"
+	"github.com/xgfone/ship/v5/middleware"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/datalayer/repository"
+	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/infra/logext"
@@ -44,8 +46,14 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	// 初始化日志组件。
-	logOpt, logWC := cfg.Logger.Option()
+	logWC := cfg.Logger.Writer()
 	defer logWC.Close()
+
+	logLevel := new(slog.LevelVar)
+	logLevel.Set(slog.LevelWarn) // 默认日志级别
+	_ = logLevel.UnmarshalText([]byte(cfg.Logger.Level))
+	logOpt := &slog.HandlerOptions{AddSource: true, Level: logLevel}
+
 	logHandler := slog.NewJSONHandler(logWC, logOpt)
 	log := slog.New(logHandler)
 
@@ -67,14 +75,17 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	qry := query.Use(gdb)
 
-	if err = autoMigrate(gdb); err != nil {
-		log.Error("合并数据库错误", slog.Any("error", err))
-		return err
+	if cfg.Database.Migrate {
+		log.Info("准备检查合并数据库表结构")
+		if err = autoMigrate(gdb); err != nil {
+			log.Error("合并数据库错误", slog.Any("error", err))
+			return err
+		}
+		log.Info("检查合并数据库表结构结束")
 	}
 
 	// 查询 server 配置
 	configServerRepository := repository.ConfigServer(qry)
-
 	srvCfg, err := configServerRepository.Enabled(ctx)
 	if err != nil {
 		log.Error("查询 server 配置错误", slog.Any("error", err))
@@ -92,8 +103,8 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	configCertificateAPI := restapi.ConfigCertificate(configCertificateService)
-	transportAPI := restapi.Transport()
-	routeRegisters = append(routeRegisters, configCertificateAPI, transportAPI)
+	logAPI := restapi.Log(logWC, logLevel)
+	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI)
 
 	sh := ship.Default()
 	sh.Validator = valid
@@ -104,9 +115,9 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		sh.Route("/").Static(dir)
 	}
 
-	baseAPI := sh.Group("/api")
-	anon := baseAPI.Clone()
-	auth := baseAPI.Clone()
+	baseAPI := sh.Group("/api").Use(middle.WAF(log))
+	anon := baseAPI.Clone().Use(middleware.CORS(nil))
+	auth := baseAPI.Clone().Use(middleware.CORS(nil))
 	route := shipx.NewRouter(anon, auth)
 	for _, reg := range routeRegisters {
 		if err = reg.Register(route); err != nil {
@@ -115,12 +126,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		}
 	}
 
-	srv := &http3.Server{
-		Addr:    srvCfg.Addr,
-		Handler: sh,
-		TLSConfig: &tls.Config{
-			GetConfigForClient: poolTLS.Match,
-		},
+	srv := &http.Server{
+		Addr:      srvCfg.Addr,
+		Handler:   sh,
+		TLSConfig: &tls.Config{GetConfigForClient: poolTLS.Match},
 	}
 	errs := make(chan error)
 	go serveHTTP(srv, errs)
@@ -133,6 +142,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	return err
 }
 
-func serveHTTP(srv *http3.Server, errs chan<- error) {
-	errs <- srv.ListenAndServe()
+func serveHTTP(srv *http.Server, errs chan<- error) {
+	errs <- srv.ListenAndServeTLS("", "")
 }

@@ -7,8 +7,13 @@ import (
 )
 
 type Config struct {
+	Server   Server   `json:"server"`
 	Database Database `json:"database"`
 	Logger   Logger   `json:"logger"`
+}
+
+type Server struct {
+	Addr string `json:"addr"`
 }
 
 type Database struct {
@@ -17,6 +22,7 @@ type Database struct {
 	MaxIdleConn int      `json:"max_idle_conn"`
 	MaxLifetime Duration `json:"max_lifetime"`
 	MaxIdleTime Duration `json:"max_idle_time"`
+	Migrate     bool     `json:"migrate"`
 }
 
 func (d Database) TiDB() sqldb.Config {

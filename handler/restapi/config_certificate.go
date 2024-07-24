@@ -19,22 +19,22 @@ type configCertificateAPI struct {
 	svc service.ConfigCertificateService
 }
 
-func (cc *configCertificateAPI) Register(r shipx.Router) error {
+func (api *configCertificateAPI) Register(r shipx.Router) error {
 	auth := r.Auth()
-	auth.Route("/config/certificates").GET(cc.List)
-	auth.Route("/config/certificate/refresh").GET(cc.Refresh)
+	auth.Route("/config/certificates").GET(api.List)
+	auth.Route("/config/certificate/refresh").GET(api.Refresh)
 	auth.Route("/config/certificate").
-		GET(cc.Download).
-		POST(cc.Create).
-		PUT(cc.Update).
-		DELETE(cc.Delete)
+		GET(api.Download).
+		POST(api.Create).
+		PUT(api.Update).
+		DELETE(api.Delete)
 
 	return nil
 }
 
-func (cc *configCertificateAPI) List(c *ship.Context) error {
+func (api *configCertificateAPI) List(c *ship.Context) error {
 	ctx := c.Request().Context()
-	ret, err := cc.svc.List(ctx)
+	ret, err := api.svc.List(ctx)
 	if err != nil {
 		return err
 	}
@@ -42,44 +42,44 @@ func (cc *configCertificateAPI) List(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (cc *configCertificateAPI) Create(c *ship.Context) error {
+func (api *configCertificateAPI) Create(c *ship.Context) error {
 	req := new(request.ConfigCertificateCreate)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return cc.svc.Create(ctx, req)
+	return api.svc.Create(ctx, req)
 }
 
-func (cc *configCertificateAPI) Update(c *ship.Context) error {
+func (api *configCertificateAPI) Update(c *ship.Context) error {
 	req := new(request.ConfigCertificateUpdate)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return cc.svc.Update(ctx, req)
+	return api.svc.Update(ctx, req)
 }
 
-func (cc *configCertificateAPI) Delete(c *ship.Context) error {
+func (api *configCertificateAPI) Delete(c *ship.Context) error {
 	req := new(request.Int64ID)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return cc.svc.Delete(ctx, req.ID)
+	return api.svc.Delete(ctx, req.ID)
 }
 
-func (cc *configCertificateAPI) Download(c *ship.Context) error {
+func (api *configCertificateAPI) Download(c *ship.Context) error {
 	req := new(request.Int64ID)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	dat, err := cc.svc.Find(ctx, req.ID)
+	dat, err := api.svc.Find(ctx, req.ID)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func (cc *configCertificateAPI) Download(c *ship.Context) error {
 	return err
 }
 
-func (cc *configCertificateAPI) Refresh(c *ship.Context) error {
+func (api *configCertificateAPI) Refresh(c *ship.Context) error {
 	ctx := c.Request().Context()
-	return cc.svc.Refresh(ctx)
+	return api.svc.Refresh(ctx)
 }
