@@ -3,7 +3,7 @@ module github.com/xmx/aegis-server
 go 1.23
 
 require (
-	github.com/dop251/goja v0.0.0-20240627195025-eb1f15ee67d2
+	github.com/dop251/goja v0.0.0-20240707163329-b1681fb2a2f5
 	github.com/dop251/goja_nodejs v0.0.0-20240418154818-2aae10d4cbcf
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
