@@ -34,8 +34,13 @@ func (api *configCertificateAPI) Register(r shipx.Router) error {
 }
 
 func (api *configCertificateAPI) List(c *ship.Context) error {
+	req := new(request.OptionalInt64IDs)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+
 	ctx := c.Request().Context()
-	ret, err := api.svc.List(ctx)
+	ret, err := api.svc.Find(ctx, req.ID)
 	if err != nil {
 		return err
 	}

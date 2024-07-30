@@ -6,19 +6,19 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
-	"fmt"
 	"log/slog"
 	"sync"
 
+	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/library/credential"
+	"gorm.io/gen"
 )
 
 type ConfigCertificateService interface {
 	Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
-	List(ctx context.Context) ([]*model.ConfigCertificate, error)
 	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
 	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
 	Delete(ctx context.Context, id int64) error
@@ -46,11 +46,12 @@ type configCertificateService struct {
 
 func (svc *configCertificateService) Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error) {
 	tbl := svc.qry.ConfigCertificate
-	return tbl.WithContext(ctx).Where(tbl.ID.In(ids...)).Find()
-}
+	cond := make([]gen.Condition, 0, 2)
+	if len(ids) != 0 {
+		cond = append(cond, tbl.ID.In(ids...))
+	}
 
-func (svc *configCertificateService) List(ctx context.Context) ([]*model.ConfigCertificate, error) {
-	return svc.qry.ConfigCertificate.WithContext(ctx).Find()
+	return tbl.WithContext(ctx).Where(cond...).Find()
 }
 
 func (svc *configCertificateService) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
@@ -69,7 +70,7 @@ func (svc *configCertificateService) Create(ctx context.Context, req *request.Co
 		if cnt, exx := dao.Count(); exx != nil {
 			return exx
 		} else if cnt >= svc.limit {
-			return fmt.Errorf("证书个数超限制 %d", svc.limit)
+			return errcode.FmtTooManyCertificate.Fmt(svc.limit)
 		}
 
 		return dao.Create(dat)
