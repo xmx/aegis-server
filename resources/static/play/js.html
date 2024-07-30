@@ -68,13 +68,8 @@
 
     require(['vs/editor/editor.main.nls.zh-cn', 'vs/editor/editor.main'], function () {
         var editor = monaco.editor.create(document.getElementById('editor'), {
-            value: 'import os from "os";\n' +
-                'import time from "time";\n' +
-                '\n' +
-                'for (let i = 0; i < 10; i++) {\n' +
-                '    time.sleep(time.second);\n' +
-                '    console.log(new Date() + ": PID is " + os.getpid());\n' +
-                '}',
+            value: 'import args from "args";\n' +
+                'console.log("%j", args);',
             language: 'javascript',
             theme: 'vs-dark', // 设置为 dark 主题
             locale: 'zh-cn',

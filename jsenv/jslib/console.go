@@ -15,7 +15,7 @@ func Console(w io.Writer) jsvm.Loader {
 
 	return &writerConsole{
 		w: w,
-		f: new(stdFormat),
+		f: new(consoleFormat),
 	}
 }
 
