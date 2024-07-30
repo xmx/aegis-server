@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/dop251/goja v0.0.0-20240707163329-b1681fb2a2f5
-	github.com/dop251/goja_nodejs v0.0.0-20240418154818-2aae10d4cbcf
+	github.com/dop251/goja_nodejs v0.0.0-20240728170619-29b559befffc
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.22.0
@@ -21,9 +21,9 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/dlclark/regexp2 v1.10.0 // indirect
+	github.com/dlclark/regexp2 v1.11.2 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.5 // indirect
-	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
+	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/google/pprof v0.0.0-20240727154555-813a5fbdbec8 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
