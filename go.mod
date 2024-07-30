@@ -9,7 +9,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.22.0
 	github.com/go-sql-driver/mysql v1.8.1
-	github.com/gorilla/websocket v1.5.3
 	github.com/quic-go/quic-go v0.45.1
 	github.com/xgfone/ship/v5 v5.3.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -17,6 +16,7 @@ require (
 	gorm.io/gen v0.3.26
 	gorm.io/gorm v1.25.11
 	gorm.io/plugin/dbresolver v1.5.2
+	nhooyr.io/websocket v1.8.11
 )
 
 require (

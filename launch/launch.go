@@ -3,9 +3,13 @@ package launch
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/xmx/aegis-server/jsenv/jslib"
+	"github.com/xmx/aegis-server/jsenv/jsvm"
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xgfone/ship/v5/middleware"
@@ -105,6 +109,17 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	configCertificateAPI := restapi.ConfigCertificate(configCertificateService)
 	logAPI := restapi.Log(logWC, logLevel)
 	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI)
+
+	{
+		loads := []jsvm.Loader{
+			jslib.OS(),
+			jslib.Time(),
+			jslib.Context(),
+			jslib.Console(io.Discard), // 认识丢弃输出数据。
+		}
+		playAPI := restapi.Play(loads)
+		routeRegisters = append(routeRegisters, playAPI)
+	}
 
 	sh := ship.Default()
 	sh.Validator = valid

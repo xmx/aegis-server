@@ -24,6 +24,7 @@ func (l *stdTime) Global(vm *goja.Runtime) error {
 		"hour":        time.Hour,
 		"utc":         time.UTC,
 		"local":       time.Local,
+		"sleep":       time.Sleep,
 	}
 
 	return vm.Set("time", fields)

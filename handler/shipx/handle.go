@@ -21,53 +21,62 @@ func NotFound(_ *ship.Context) error {
 }
 
 func HandleError(c *ship.Context, e error) {
+	statusCode, title, detail := UnpackError(e)
+
 	pd := &response.ProblemDetails{
-		Title:    "请求错误",
-		Status:   http.StatusBadRequest,
-		Detail:   e.Error(),
+		Title:    title,
+		Status:   statusCode,
+		Detail:   detail,
 		Instance: c.Path(),
 		Method:   c.Method(),
 		Datetime: time.Now().UTC(),
 	}
+	_ = c.JSON(pd.Status, pd)
+}
 
-	switch err := e.(type) {
+func UnpackError(err error) (statusCode int, title string, detail string) {
+	statusCode = http.StatusBadRequest
+	title = "请求错误"
+	detail = err.Error()
+
+	switch ce := err.(type) {
 	case ship.HTTPServerError:
-		pd.Status = err.Code
+		statusCode = ce.Code
 	case *ship.HTTPServerError:
-		pd.Status = err.Code
+		statusCode = ce.Code
 	case *validation.Error, *validation.NilError:
-		pd.Title = "参数校验错误"
+		title = "参数校验错误"
 	case *time.ParseError:
-		pd.Detail = "时间格式错误，正确格式：" + err.Layout
+		detail = "时间格式错误，正确格式：" + ce.Layout
 	case *net.ParseError:
-		pd.Detail = err.Text + " 不是有效的 " + err.Type
+		detail = ce.Text + " 不是有效的 " + ce.Type
 	case base64.CorruptInputError:
-		pd.Detail = "base64 编码错误：" + err.Error()
+		detail = "Base64 编码错误：" + ce.Error()
 	case *json.SyntaxError:
-		pd.Detail = "请求报错必须是 JSON 格式"
+		detail = "错误的 JSON 格式"
 	case *json.UnmarshalTypeError:
-		pd.Detail = err.Field + " 收到无效的数据类型"
+		detail = ce.Field + " 收到无效的数据类型"
 	case *strconv.NumError:
 		var msg string
-		if sn := strings.SplitN(err.Func, "Parse", 2); len(sn) == 2 {
-			msg = err.Num + " 不是 " + strings.ToLower(sn[1]) + " 类型"
+		if sn := strings.SplitN(ce.Func, "Parse", 2); len(sn) == 2 {
+			msg = ce.Num + " 不是 " + strings.ToLower(sn[1]) + " 类型"
 		} else {
-			msg = "类型错误：" + err.Num
+			msg = "类型错误：" + ce.Num
 		}
-		pd.Detail = msg
+		detail = msg
 	case *http.MaxBytesError:
-		limit := strconv.FormatInt(err.Limit, 10)
-		pd.Detail = "请求报文超过 " + limit + " 个字节限制"
-		pd.Status = http.StatusRequestEntityTooLarge
+		limit := strconv.FormatInt(ce.Limit, 10)
+		detail = "请求报文超过 " + limit + " 个字节限制"
+		statusCode = http.StatusRequestEntityTooLarge
 	default:
 		switch {
 		case errors.Is(err, gorm.ErrRecordNotFound):
-			pd.Detail = "数据不存在"
+			detail = "数据不存在"
 		case errors.Is(err, ship.ErrSessionNotExist), errors.Is(err, ship.ErrInvalidSession):
-			pd.Status = http.StatusUnauthorized
-			pd.Detail = "认证无效"
+			statusCode = http.StatusUnauthorized
+			detail = "认证无效"
 		}
 	}
 
-	_ = c.JSON(pd.Status, pd)
+	return
 }
