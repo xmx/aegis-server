@@ -9,7 +9,7 @@ import (
 
 var (
 	//go:embed babel.min.js
-	gzipBabelJS      string
+	babelJS          string
 	onceCompileBabel = sync.OnceValues(compileBabel)
 	pool             = &transPool{pool: sync.Pool{New: newBabelFunc}}
 )
@@ -33,20 +33,7 @@ func Transform(script string, opt map[string]any) (string, error) {
 }
 
 func compileBabel() (*goja.Program, error) {
-	//reader := bytes.NewReader(gzipBabelJS)
-	//zip, err := gzip.NewReader(reader)
-	//if err != nil {
-	//	return nil, err
-	//}
-	////goland:noinspection GoUnhandledErrorResult
-	//defer zip.Close()
-	//
-	//code, err := io.ReadAll(zip)
-	//if err != nil {
-	//	return nil, err
-	//}
-
-	return goja.Compile("babel.min.js", gzipBabelJS, false)
+	return goja.Compile("babel.min.js", babelJS, false)
 }
 
 type transformer struct {
