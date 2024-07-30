@@ -65,7 +65,7 @@ func (api *playAPI) JS(c *ship.Context) error {
 			continue
 		}
 
-		// 暂时不确实如何处理变量污染问题，所以每次都 New 一个。
+		// 暂时不确定如何处理变量污染问题，所以每次都 New 一个。
 		vm := jsvm.New()
 		if err = jsvm.Register(vm, loads); err != nil {
 			c.Warnf("初始化 js 虚拟机注册组件出错： %v", err)
