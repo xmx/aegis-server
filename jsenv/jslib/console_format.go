@@ -17,7 +17,7 @@ func (cf *consoleFormat) parse(f rune, val goja.Value, w *bytes.Buffer) bool {
 	case 'd':
 		w.WriteString(val.ToNumber().String())
 	case 'j':
-		err := json.NewEncoder(w).Encode(val)
+		err := json.NewEncoder(w).Encode(val.Export())
 		return err == nil
 	case '%':
 		w.WriteByte('%')
