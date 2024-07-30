@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"mime"
 	"net/http"
+	"strconv"
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/request"
@@ -73,20 +74,24 @@ func (api *configCertificateAPI) Delete(c *ship.Context) error {
 }
 
 func (api *configCertificateAPI) Download(c *ship.Context) error {
-	req := new(request.Int64ID)
+	req := new(request.Int64IDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	dat, err := api.svc.Find(ctx, req.ID)
+	dats, err := api.svc.Find(ctx, req.ID)
 	if err != nil {
 		return err
 	}
 
+	size := len(dats)
+	name := "certificate"
 	extension := ".zip"
-	commonName := dat.CommonName
-	filename := commonName + extension
+	if size == 1 {
+		name = dats[0].CommonName
+	}
+	filename := name + extension
 	contentType := mime.TypeByExtension(extension)
 	if contentType == "" {
 		contentType = ship.MIMEOctetStream
@@ -99,18 +104,29 @@ func (api *configCertificateAPI) Download(c *ship.Context) error {
 	zw := zip.NewWriter(c.ResponseWriter())
 	//goland:noinspection GoUnhandledErrorResult
 	defer zw.Close()
-	cw, err := zw.Create(commonName + ".crt")
-	if err != nil {
-		return err
+
+	unique := make(map[string]struct{}, size)
+	for _, dat := range dats {
+		commonName := dat.CommonName
+		if _, ok := unique[commonName]; ok {
+			sid := strconv.FormatInt(dat.ID, 10)
+			commonName = sid + "-" + commonName
+		}
+		unique[commonName] = struct{}{}
+
+		cw, err := zw.Create(commonName + ".crt")
+		if err != nil {
+			return err
+		}
+		if _, err = cw.Write([]byte(dat.PublicKey)); err != nil {
+			return err
+		}
+		cw, err = zw.Create(commonName + ".key")
+		if err != nil {
+			return err
+		}
+		_, err = cw.Write([]byte(dat.PrivateKey))
 	}
-	if _, err = cw.Write([]byte(dat.PublicKey)); err != nil {
-		return err
-	}
-	cw, err = zw.Create(commonName + ".key")
-	if err != nil {
-		return err
-	}
-	_, err = cw.Write([]byte(dat.PrivateKey))
 
 	return err
 }

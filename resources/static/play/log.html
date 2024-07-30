@@ -78,21 +78,10 @@
 </div>
 
 <script>
-    // 获取 query 参数中的 token。
-    const authorization = "authorization";
-    const args = window.location.href.split("?");
-    const query = args[1];
-    const params = new URLSearchParams(query)
-    let token = params.get(authorization);
-    if (!token) { // 如果从 query 中拿不到 token 就从 LocalStorage 中获取。
-        token = localStorage.getItem("token");
-    }
-    const queries = new URLSearchParams([[authorization, token]]);
-
     let serial = 0;
     let selected = false;
     let elements = [];
-    const es = new EventSource(`/api/log/tail?${queries.toString()}`);
+    const es = new EventSource(`/api/log/tail`);
     es.onmessage = function (evt) {
         serial++;
         if (elements.length > 200) {
