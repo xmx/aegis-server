@@ -15,7 +15,15 @@ func OS() jsvm.Loader {
 
 type stdOS struct{}
 
-func (o *stdOS) Global(vm *goja.Runtime) error {
+func (o *stdOS) Global(*goja.Runtime) error {
+	return nil
+}
+
+func (o *stdOS) Require() (string, require.ModuleLoader) {
+	return "os", o.require
+}
+
+func (o *stdOS) require(_ *goja.Runtime, obj *goja.Object) {
 	fields := map[string]any{
 		"args":     os.Args,
 		"getwd":    os.Getwd,
@@ -23,12 +31,9 @@ func (o *stdOS) Global(vm *goja.Runtime) error {
 		"environ":  o.environ(),
 		"hostname": os.Hostname,
 	}
-
-	return vm.Set("os", fields)
-}
-
-func (o *stdOS) Require() (string, require.ModuleLoader) {
-	return "", nil
+	for k, v := range fields {
+		_ = obj.Set(k, v)
+	}
 }
 
 func (o *stdOS) environ() map[string]string {

@@ -17,7 +17,15 @@ type stdContext struct {
 	vm *goja.Runtime
 }
 
-func (s *stdContext) Global(vm *goja.Runtime) error {
+func (s *stdContext) Global(*goja.Runtime) error {
+	return nil
+}
+
+func (s *stdContext) Require() (string, require.ModuleLoader) {
+	return "context", s.require
+}
+
+func (s *stdContext) require(_ *goja.Runtime, obj *goja.Object) {
 	fields := map[string]any{
 		"background":   context.Background,
 		"withCancel":   s.withCancel,
@@ -25,12 +33,9 @@ func (s *stdContext) Global(vm *goja.Runtime) error {
 		"withDeadline": s.withDeadline,
 		"withValue":    s.withValue,
 	}
-
-	return vm.Set("context", fields)
-}
-
-func (s *stdContext) Require() (string, require.ModuleLoader) {
-	return "", nil
+	for k, v := range fields {
+		_ = obj.Set(k, v)
+	}
 }
 
 func (s *stdContext) withCancel(parent context.Context) map[string]any {

@@ -8,9 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/xmx/aegis-server/jsenv/jslib"
-	"github.com/xmx/aegis-server/jsenv/jsvm"
-
 	"github.com/xgfone/ship/v5"
 	"github.com/xgfone/ship/v5/middleware"
 	"github.com/xmx/aegis-server/business/service"
@@ -21,6 +18,8 @@ import (
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/infra/logext"
 	"github.com/xmx/aegis-server/infra/profile"
+	"github.com/xmx/aegis-server/jsenv/jslib"
+	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"github.com/xmx/aegis-server/library/credential"
 	"github.com/xmx/aegis-server/library/sqldb"
 	"github.com/xmx/aegis-server/library/validation"
@@ -115,7 +114,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 			jslib.OS(),
 			jslib.Time(),
 			jslib.Context(),
-			jslib.Console(io.Discard), // 认识丢弃输出数据。
+			jslib.Console(io.Discard), // 默认丢弃输出数据。
 		}
 		playAPI := restapi.Play(loads)
 		routeRegisters = append(routeRegisters, playAPI)

@@ -14,7 +14,15 @@ func Time() jsvm.Loader {
 
 type stdTime struct{}
 
-func (l *stdTime) Global(vm *goja.Runtime) error {
+func (l *stdTime) Global(*goja.Runtime) error {
+	return nil
+}
+
+func (l *stdTime) Require() (string, require.ModuleLoader) {
+	return "time", l.require
+}
+
+func (l *stdTime) require(_ *goja.Runtime, obj *goja.Object) {
 	fields := map[string]any{
 		"nanosecond":  time.Nanosecond,
 		"microsecond": time.Microsecond,
@@ -26,10 +34,7 @@ func (l *stdTime) Global(vm *goja.Runtime) error {
 		"local":       time.Local,
 		"sleep":       time.Sleep,
 	}
-
-	return vm.Set("time", fields)
-}
-
-func (l *stdTime) Require() (string, require.ModuleLoader) {
-	return "", nil
+	for k, v := range fields {
+		_ = obj.Set(k, v)
+	}
 }

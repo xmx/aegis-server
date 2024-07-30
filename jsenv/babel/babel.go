@@ -14,11 +14,17 @@ var (
 	pool             = &transPool{pool: sync.Pool{New: newBabelFunc}}
 )
 
-func ES5(script string) (string, error) {
+func ES5(script string, iife bool) (string, error) {
 	opt := map[string]any{
 		"plugins": []string{"transform-modules-commonjs"},
 	}
-	return Transform(script, opt)
+	code, err := Transform(script, opt)
+	if err != nil || !iife {
+		return code, err
+	}
+	code = "(function() {\n" + code + "\n})()"
+
+	return code, nil
 }
 
 func Transform(script string, opt map[string]any) (string, error) {

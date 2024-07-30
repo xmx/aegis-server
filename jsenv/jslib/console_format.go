@@ -30,7 +30,7 @@ func (cf *consoleFormat) parse(f rune, val goja.Value, w *bytes.Buffer) bool {
 	return true
 }
 
-func (cf *consoleFormat) format(b *bytes.Buffer, f string, args ...goja.Value) {
+func (cf *consoleFormat) formatTo(b *bytes.Buffer, f string, args ...goja.Value) {
 	var pct bool
 	var argNum int
 	for _, chr := range f {
@@ -59,7 +59,7 @@ func (cf *consoleFormat) format(b *bytes.Buffer, f string, args ...goja.Value) {
 	}
 }
 
-func (cf *consoleFormat) Format(call goja.FunctionCall) []byte {
+func (cf *consoleFormat) format(call goja.FunctionCall) []byte {
 	buf := new(bytes.Buffer)
 	var format string
 	if arg := call.Argument(0); !goja.IsUndefined(arg) {
@@ -70,7 +70,7 @@ func (cf *consoleFormat) Format(call goja.FunctionCall) []byte {
 	if len(call.Arguments) > 0 {
 		args = call.Arguments[1:]
 	}
-	cf.format(buf, format, args...)
+	cf.formatTo(buf, format, args...)
 
 	return buf.Bytes()
 }
