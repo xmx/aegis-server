@@ -1,4 +1,4 @@
-package jsmod
+package jslib
 
 import (
 	"time"

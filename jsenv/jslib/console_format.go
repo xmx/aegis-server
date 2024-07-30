@@ -1,8 +1,9 @@
-package jsmod
+package jslib
 
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 
 	"github.com/dop251/goja"
 )
@@ -30,8 +31,8 @@ func (cf *consoleFormat) parse(f rune, val goja.Value, w *bytes.Buffer) bool {
 }
 
 func (cf *consoleFormat) format(b *bytes.Buffer, f string, args ...goja.Value) {
-	pct := false
-	argNum := 0
+	var pct bool
+	var argNum int
 	for _, chr := range f {
 		if pct {
 			if argNum < len(args) {
@@ -58,19 +59,43 @@ func (cf *consoleFormat) format(b *bytes.Buffer, f string, args ...goja.Value) {
 	}
 }
 
-func (cf *consoleFormat) Format(call goja.FunctionCall) string {
-	b := new(bytes.Buffer)
-
-	var fmt string
+func (cf *consoleFormat) Format(call goja.FunctionCall) []byte {
+	buf := new(bytes.Buffer)
+	var format string
 	if arg := call.Argument(0); !goja.IsUndefined(arg) {
-		fmt = arg.String()
+		format = arg.String()
 	}
 
 	var args []goja.Value
 	if len(call.Arguments) > 0 {
 		args = call.Arguments[1:]
 	}
-	cf.format(b, fmt, args...)
+	cf.format(buf, format, args...)
 
-	return b.String()
+	return buf.Bytes()
+}
+
+type formater interface {
+	format(call goja.FunctionCall) []byte
+}
+
+type stdFormat struct{}
+
+func (stdFormat) format(call goja.FunctionCall) []byte {
+	var format string
+	if arg := call.Argument(0); !goja.IsUndefined(arg) {
+		format = arg.String()
+	}
+
+	var vals []any
+	if args := call.Arguments; len(args) != 0 {
+		for _, arg := range args[1:] {
+			val := arg.Export()
+			vals = append(vals, val)
+		}
+	}
+	buf := new(bytes.Buffer)
+	_, _ = fmt.Fprintf(buf, format, vals...)
+
+	return buf.Bytes()
 }

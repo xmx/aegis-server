@@ -1,8 +1,7 @@
-package jsmod
+package jslib
 
 import (
 	"io"
-	"log"
 
 	"github.com/dop251/goja"
 	"github.com/dop251/goja_nodejs/require"
@@ -14,19 +13,15 @@ func Console(w io.Writer) jsvm.Loader {
 		return new(discardConsole)
 	}
 
-	l := log.New(w, "", log.LstdFlags)
-	f := new(consoleFormat)
-
-	return &printConsole{l: l, f: f}
+	return &writerConsole{w: w}
 }
 
-type printConsole struct {
-	l  *log.Logger
-	f  *consoleFormat
-	vm *goja.Runtime
+type writerConsole struct {
+	w io.Writer
+	f consoleFormat
 }
 
-func (p *printConsole) Global(vm *goja.Runtime) error {
+func (p *writerConsole) Global(vm *goja.Runtime) error {
 	fields := map[string]any{
 		"log":   p.print,
 		"error": p.print,
@@ -38,13 +33,13 @@ func (p *printConsole) Global(vm *goja.Runtime) error {
 	return vm.Set("console", fields)
 }
 
-func (p *printConsole) Require() (string, require.ModuleLoader) {
+func (p *writerConsole) Require() (string, require.ModuleLoader) {
 	return "", nil
 }
 
-func (p *printConsole) print(call goja.FunctionCall) goja.Value {
+func (p *writerConsole) print(call goja.FunctionCall) goja.Value {
 	msg := p.f.Format(call)
-	p.l.Print(msg)
+	_, _ = p.w.Write(msg)
 	return goja.Undefined()
 }
 
