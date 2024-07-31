@@ -22,7 +22,7 @@ type configCertificateAPI struct {
 
 func (api *configCertificateAPI) Register(r shipx.Router) error {
 	auth := r.Auth()
-	auth.Route("/config/certificates").GET(api.List)
+	auth.Route("/config/certificates").GET(api.Page)
 	auth.Route("/config/certificate/refresh").GET(api.Refresh)
 	auth.Route("/config/certificate").
 		GET(api.Download).
@@ -31,6 +31,20 @@ func (api *configCertificateAPI) Register(r shipx.Router) error {
 		DELETE(api.Delete)
 
 	return nil
+}
+
+func (api *configCertificateAPI) Page(c *ship.Context) error {
+	req := new(request.PageKeyword)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+	ctx := c.Request().Context()
+	ret, err := api.svc.Page(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
 }
 
 func (api *configCertificateAPI) List(c *ship.Context) error {

@@ -61,11 +61,11 @@ func (cf *consoleFormat) formatTo(b *bytes.Buffer, f string, args ...goja.Value)
 
 func (cf *consoleFormat) format(call goja.FunctionCall) []byte {
 	buf := new(bytes.Buffer)
-	var format string
-	if arg := call.Argument(0); !goja.IsUndefined(arg) {
-		format = arg.String()
-	}
-
+	//var format string
+	//if arg := call.Argument(0); !goja.IsUndefined(arg) {
+	//	format = arg.String()
+	//}
+	format := call.Argument(0).String()
 	var args []goja.Value
 	if len(call.Arguments) > 0 {
 		args = call.Arguments[1:]
@@ -82,11 +82,11 @@ type formater interface {
 type stdFormat struct{}
 
 func (stdFormat) format(call goja.FunctionCall) []byte {
-	var format string
-	if arg := call.Argument(0); !goja.IsUndefined(arg) {
-		format = arg.String()
-	}
-
+	//var format string
+	//if arg := call.Argument(0); !goja.IsUndefined(arg) {
+	//	format = arg.String()
+	//}
+	format := call.Argument(0).String()
 	var vals []any
 	if args := call.Arguments; len(args) != 0 {
 		for _, arg := range args[1:] {

@@ -10,7 +10,9 @@ import (
 	"sync"
 
 	"github.com/xmx/aegis-server/argument/errcode"
+	"github.com/xmx/aegis-server/argument/pscope"
 	"github.com/xmx/aegis-server/argument/request"
+	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/library/credential"
@@ -18,6 +20,7 @@ import (
 )
 
 type ConfigCertificateService interface {
+	Page(ctx context.Context, req *request.PageKeyword) (*response.Page[*model.ConfigCertificate], error)
 	Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
 	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
 	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
@@ -42,6 +45,33 @@ type configCertificateService struct {
 	log   *slog.Logger
 	limit int64      // 数据库最多可保存的证书数量。
 	mutex sync.Mutex // 确保证书新增/修改/删除操作的安全性。
+}
+
+func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*response.Page[*model.ConfigCertificate], error) {
+	tbl := svc.qry.ConfigCertificate
+	cond := make([]gen.Condition, 0, 2)
+	if like := req.Like(); like != "" {
+		commonName := tbl.CommonName.Like(like)
+		cond = append(cond, commonName)
+	}
+
+	dao := tbl.WithContext(ctx).Where(cond...)
+	cnt, err := dao.Count()
+	if err != nil {
+		return nil, err
+	}
+	if cnt == 0 {
+		return pscope.Zero[*model.ConfigCertificate](req.Page), nil
+	}
+
+	scope := pscope.With[*model.ConfigCertificate](req.Page, cnt)
+	dats, err := dao.Scopes(scope.Gen).Find()
+	if err != nil {
+		return nil, err
+	}
+	ret := scope.Records(dats)
+
+	return ret, nil
 }
 
 func (svc *configCertificateService) Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error) {

@@ -8,17 +8,28 @@ import (
 )
 
 type ConfigCertificateRepository interface {
+	Repository[*model.ConfigCertificate]
+
+	// Enables 查询已经启用的证书。
 	Enables(ctx context.Context) ([]*model.ConfigCertificate, error)
-	Create(ctx context.Context, cert *model.ConfigCertificate) (enabled bool, err error)
-	Update(ctx context.Context, cert *model.ConfigCertificate) (enabled bool, err error)
-	Delete(ctx context.Context, id int64) (enabled bool, err error)
+
+	// Update 更新证书内容，用 ID 作为搜索条件。
+	// 返回修改之前或修改之后是否启用。
+	Update(ctx context.Context, cert *model.ConfigCertificate) (bool, error)
+
+	// Delete 通过证书数据库 id 删除证书，并返回该证书删除时是否启用中。
+	Delete(ctx context.Context, id int64) (bool, error)
 }
 
 func ConfigCertificate(qry *query.Query) ConfigCertificateRepository {
-	return &configCertificateRepository{qry: qry}
+	return &configCertificateRepository{
+		Repository: Base[*model.ConfigCertificate](qry),
+		qry:        qry,
+	}
 }
 
 type configCertificateRepository struct {
+	Repository[*model.ConfigCertificate]
 	qry *query.Query
 }
 

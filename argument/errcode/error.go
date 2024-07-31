@@ -4,14 +4,6 @@ import "github.com/xgfone/ship/v5"
 
 var ErrConnectionHijack = ship.ErrBadRequest.Newf("不支持连接升级")
 
-type Formater interface {
-	Fmt() error
-}
-
-type Formatter interface {
-	Fmt(v ...any) error
-}
-
 const (
 	FmtTooManyCertificate = formatError("证书超过 %d 限制")
 )
