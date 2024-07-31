@@ -88,6 +88,9 @@ func (api *configCertificateAPI) Download(c *ship.Context) error {
 	if err != nil {
 		return err
 	}
+	if len(dats) == 0 {
+		return ship.ErrNotFound
+	}
 
 	size := len(dats)
 	name := "certificate"
