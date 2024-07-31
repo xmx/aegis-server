@@ -8,14 +8,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/xmx/aegis-server/jsenv/jsmod"
-
 	"github.com/dop251/goja"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/jsenv/babel"
 	"github.com/xmx/aegis-server/jsenv/jslib"
+	"github.com/xmx/aegis-server/jsenv/jsmod"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"github.com/xmx/aegis-server/protocol/wsocket"
 	"nhooyr.io/websocket"

@@ -15,16 +15,18 @@ func Console(w io.Writer) jsvm.Loader {
 
 	return &writerConsole{
 		w: w,
-		f: new(consoleFormat),
+		f: new(normalFormat),
 	}
 }
 
 type writerConsole struct {
-	w io.Writer
-	f formater
+	w  io.Writer
+	f  formatter
+	vm *goja.Runtime
 }
 
 func (p *writerConsole) Global(vm *goja.Runtime) error {
+	p.vm = vm
 	fields := map[string]any{
 		"log":   p.print,
 		"error": p.print,
@@ -41,8 +43,14 @@ func (p *writerConsole) Require() (string, require.ModuleLoader) {
 }
 
 func (p *writerConsole) print(call goja.FunctionCall) goja.Value {
-	msg := p.f.format(call)
-	_, _ = p.w.Write(msg)
+	msg, err := p.f.format(call)
+	if err == nil {
+		_, err = p.w.Write(msg)
+	}
+	if err != nil {
+		return p.vm.ToValue(err)
+	}
+
 	return goja.Undefined()
 }
 
