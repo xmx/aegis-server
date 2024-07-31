@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"log/slog"
-	"sync"
 
 	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/pscope"
@@ -42,8 +41,7 @@ type configCertificateService struct {
 	pool  credential.Certifier // 证书池。
 	repo  repository.ConfigCertificate
 	log   *slog.Logger
-	limit int64      // 数据库最多可保存的证书数量。
-	mutex sync.Mutex // 确保证书新增/修改/删除操作的安全性。
+	limit int64 // 数据库最多可保存的证书数量。
 }
 
 func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error) {

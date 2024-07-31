@@ -31,7 +31,7 @@ func HandleError(c *ship.Context, e error) {
 		Method:   c.Method(),
 		Datetime: time.Now().UTC(),
 	}
-	_ = c.JSON(pd.Status, pd)
+	_ = c.JSON(statusCode, pd)
 }
 
 func UnpackError(err error) (statusCode int, title string, detail string) {
