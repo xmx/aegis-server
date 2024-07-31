@@ -13,7 +13,26 @@ type Page[T any] struct {
 }
 
 type PageScope interface {
-	Orm(cnt int64) func(db *gorm.DB) *gorm.DB
-	Gen(cnt int64) func(dao gen.Dao) gen.Dao
+	Orm(count int64) func(db *gorm.DB) *gorm.DB
+	Gen(count int64) func(dao gen.Dao) gen.Dao
 	PageSize() (page, size int64)
+}
+
+func PageZero[T any](ps PageScope) *Page[T] {
+	page, size := ps.PageSize()
+	return &Page[T]{
+		Page:    page,
+		Size:    size,
+		Records: []T{},
+	}
+}
+
+func PageRecords[T any](ps PageScope, count int64, records []T) *Page[T] {
+	page, size := ps.PageSize()
+	return &Page[T]{
+		Page:    page,
+		Size:    size,
+		Count:   count,
+		Records: records,
+	}
 }

@@ -12,20 +12,20 @@ import (
 	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func ConfigCertificate(svc service.ConfigCertificateService) shipx.Register {
+func NewConfigCertificate(svc service.ConfigCertificate) shipx.Register {
 	return &configCertificateAPI{svc: svc}
 }
 
 type configCertificateAPI struct {
-	svc service.ConfigCertificateService
+	svc service.ConfigCertificate
 }
 
 func (api *configCertificateAPI) Register(r shipx.Router) error {
 	auth := r.Auth()
 	auth.Route("/config/certificates").GET(api.Page)
+	auth.Route("/config/certificate/download").GET(api.Download)
 	auth.Route("/config/certificate/refresh").GET(api.Refresh)
 	auth.Route("/config/certificate").
-		GET(api.Download).
 		POST(api.Create).
 		PUT(api.Update).
 		DELETE(api.Delete)
@@ -40,21 +40,6 @@ func (api *configCertificateAPI) Page(c *ship.Context) error {
 	}
 	ctx := c.Request().Context()
 	ret, err := api.svc.Page(ctx, req)
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, ret)
-}
-
-func (api *configCertificateAPI) List(c *ship.Context) error {
-	req := new(request.OptionalInt64IDs)
-	if err := c.BindQuery(req); err != nil {
-		return err
-	}
-
-	ctx := c.Request().Context()
-	ret, err := api.svc.Find(ctx, req.ID)
 	if err != nil {
 		return err
 	}

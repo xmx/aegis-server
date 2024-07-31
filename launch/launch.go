@@ -87,8 +87,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		log.Info("检查合并数据库表结构结束")
 	}
 
+	configServerRepository := repository.NewConfigServer(qry)
+	configCertificateRepository := repository.NewConfigCertificate(qry)
+
 	// 查询 server 配置
-	configServerRepository := repository.ConfigServer(qry)
 	srvCfg, err := configServerRepository.Enabled(ctx)
 	if err != nil {
 		log.Error("查询 server 配置错误", slog.Any("error", err))
@@ -99,13 +101,13 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	poolTLS := credential.Pool(baseTLS)
 
 	routeRegisters := make([]shipx.Register, 0, 50)
-	configCertificateService := service.ConfigCertificate(poolTLS, qry, log)
+	configCertificateService := service.NewConfigCertificate(poolTLS, configCertificateRepository, log)
 	if err = configCertificateService.Refresh(ctx); err != nil { // 初始化刷新证书池。
 		log.Error("初始化证书错误", slog.Any("error", err))
 		return err
 	}
 
-	configCertificateAPI := restapi.ConfigCertificate(configCertificateService)
+	configCertificateAPI := restapi.NewConfigCertificate(configCertificateService)
 	logAPI := restapi.Log(logWC, logLevel)
 	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI)
 

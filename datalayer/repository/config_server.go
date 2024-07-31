@@ -7,13 +7,13 @@ import (
 	"github.com/xmx/aegis-server/datalayer/query"
 )
 
-type ConfigServerRepository interface {
+type ConfigServer interface {
 	Enabled(ctx context.Context) (*model.ConfigServer, error)
 	Create(ctx context.Context, cert *model.ConfigServer) (enabled bool, err error)
 	Delete(ctx context.Context, id int64) (enabled bool, err error)
 }
 
-func ConfigServer(qry *query.Query) ConfigServerRepository {
+func NewConfigServer(qry *query.Query) ConfigServer {
 	return &configServerRepository{qry: qry}
 }
 

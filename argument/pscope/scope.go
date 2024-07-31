@@ -2,28 +2,24 @@ package pscope
 
 import (
 	"github.com/xmx/aegis-server/argument/request"
-	"github.com/xmx/aegis-server/argument/response"
+	"github.com/xmx/aegis-server/datalayer/repository"
 	"gorm.io/gen"
 	"gorm.io/gorm"
 )
 
-func Zero[T any](p request.Page) *response.Page[T] {
-	size := p.Size
-	if size <= 0 {
-		size = 10
+func With(p *request.Page) repository.PageScope {
+	if p == nil {
+		return Page(1, 10)
 	}
-	return &response.Page[T]{
-		Page:    1,
-		Size:    p.Size,
-		Records: []T{},
-	}
+
+	return From(*p)
 }
 
-func With[T any](p request.Page, cnt int64) Scope[T] {
-	return Page[T](p.Page, p.Size, cnt)
+func From(p request.Page) repository.PageScope {
+	return Page(p.Page, p.Size)
 }
 
-func Page[T any](page int64, size int64, cnt int64) Scope[T] {
+func Page(page, size int64) repository.PageScope {
 	if page < 1 {
 		page = 1
 	}
@@ -31,59 +27,49 @@ func Page[T any](page int64, size int64, cnt int64) Scope[T] {
 		size = 10
 	}
 
-	return &pageScope[T]{
-		page:  page,
-		size:  size,
-		count: cnt,
+	return &pageScope{
+		page: page,
+		size: size,
 	}
 }
 
-type Scope[T any] interface {
-	Orm(db *gorm.DB) *gorm.DB
-	Gen(dao gen.Dao) gen.Dao
-	Records(ts []T) *response.Page[T]
-}
-
-type pageScope[T any] struct {
+type pageScope struct {
 	page  int64
 	size  int64
 	count int64
 }
 
-func (p *pageScope[T]) Orm(db *gorm.DB) *gorm.DB {
-	offset, limit := p.LPR()
-	return db.Offset(offset).Limit(limit)
+func (ps *pageScope) Orm(count int64) func(db *gorm.DB) *gorm.DB {
+	offset, limit := ps.LPR(count)
+
+	return func(db *gorm.DB) *gorm.DB {
+		return db.Offset(offset).Limit(limit)
+	}
 }
 
-func (p *pageScope[T]) Gen(dao gen.Dao) gen.Dao {
-	offset, limit := p.LPR()
-	return dao.Offset(offset).Limit(limit)
+func (ps *pageScope) Gen(count int64) func(dao gen.Dao) gen.Dao {
+	offset, limit := ps.LPR(count)
+
+	return func(dao gen.Dao) gen.Dao {
+		return dao.Offset(offset).Limit(limit)
+	}
 }
 
-func (p *pageScope[T]) LPR() (offset int, limit int) {
-	if p.count >= 0 {
-		pg := (p.count + p.size - 1) / p.size
+func (ps *pageScope) PageSize() (page, size int64) {
+	return ps.size, ps.size
+}
+
+func (ps *pageScope) LPR(count int64) (offset int, limit int) {
+	if count >= 0 {
+		ps.count = count
+		pg := (count + ps.size - 1) / ps.size
 		if pg == 0 {
-			p.page = 1
-		} else if pg < p.page {
-			p.page = pg
+			ps.page = 1
+		} else if pg < ps.page {
+			ps.page = pg
 		}
 	}
-	offset, limit = int((p.page-1)*p.size), int(p.size)
+	offset, limit = int((ps.page-1)*ps.size), int(ps.size)
 
 	return
-}
-
-func (p *pageScope[T]) Records(ts []T) *response.Page[T] {
-	ret := &response.Page[T]{
-		Page:    p.page,
-		Size:    p.size,
-		Count:   p.count,
-		Records: ts,
-	}
-	if ts == nil {
-		ret.Records = []T{}
-	}
-
-	return ret
 }

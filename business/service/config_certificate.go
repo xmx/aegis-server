@@ -12,15 +12,14 @@ import (
 	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/pscope"
 	"github.com/xmx/aegis-server/argument/request"
-	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/aegis-server/datalayer/model"
-	"github.com/xmx/aegis-server/datalayer/query"
+	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/library/credential"
 	"gorm.io/gen"
 )
 
-type ConfigCertificateService interface {
-	Page(ctx context.Context, req *request.PageKeyword) (*response.Page[*model.ConfigCertificate], error)
+type ConfigCertificate interface {
+	Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error)
 	Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
 	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
 	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
@@ -30,10 +29,10 @@ type ConfigCertificateService interface {
 	Refresh(ctx context.Context) error
 }
 
-func ConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) ConfigCertificateService {
+func NewConfigCertificate(pool credential.Certifier, repo repository.ConfigCertificate, log *slog.Logger) ConfigCertificate {
 	return &configCertificateService{
 		pool:  pool,
-		qry:   qry,
+		repo:  repo,
 		log:   log,
 		limit: 100,
 	}
@@ -41,132 +40,72 @@ func ConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Lo
 
 type configCertificateService struct {
 	pool  credential.Certifier // 证书池。
-	qry   *query.Query
+	repo  repository.ConfigCertificate
 	log   *slog.Logger
 	limit int64      // 数据库最多可保存的证书数量。
 	mutex sync.Mutex // 确保证书新增/修改/删除操作的安全性。
 }
 
-func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*response.Page[*model.ConfigCertificate], error) {
-	tbl := svc.qry.ConfigCertificate
+func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error) {
+	qry := svc.repo.Query()
+	tbl := qry.ConfigCertificate
 	cond := make([]gen.Condition, 0, 2)
 	if like := req.Like(); like != "" {
-		commonName := tbl.CommonName.Like(like)
-		cond = append(cond, commonName)
+		cond = append(cond, tbl.CommonName.Like(like))
 	}
 
-	dao := tbl.WithContext(ctx).Where(cond...)
-	cnt, err := dao.Count()
-	if err != nil {
-		return nil, err
-	}
-	if cnt == 0 {
-		return pscope.Zero[*model.ConfigCertificate](req.Page), nil
-	}
-
-	scope := pscope.With[*model.ConfigCertificate](req.Page, cnt)
-	dats, err := dao.Scopes(scope.Gen).Find()
-	if err != nil {
-		return nil, err
-	}
-	ret := scope.Records(dats)
-
-	return ret, nil
+	return svc.repo.Page(ctx, cond, pscope.From(req.Page))
 }
 
 func (svc *configCertificateService) Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error) {
-	tbl := svc.qry.ConfigCertificate
-	cond := make([]gen.Condition, 0, 2)
-	if len(ids) != 0 {
-		cond = append(cond, tbl.ID.In(ids...))
-	}
-
-	return tbl.WithContext(ctx).Where(cond...).Find()
+	return svc.repo.FindIDs(ctx, ids)
 }
 
 func (svc *configCertificateService) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
-	enabled := req.Enabled
-	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
+	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, req.Enabled)
 	if err != nil {
 		return err
 	}
 
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
-
-	err = svc.qry.Transaction(func(tx *query.Query) error {
-		tbl := tx.ConfigCertificate
-		dao := tbl.WithContext(ctx)
-		if cnt, exx := dao.Count(); exx != nil {
-			return exx
-		} else if cnt >= svc.limit {
-			return errcode.FmtTooManyCertificate.Fmt(svc.limit)
-		}
-
-		return dao.Create(dat)
-	})
+	overflow, enabled, err := svc.repo.Create(ctx, dat, svc.limit)
+	if overflow {
+		return errcode.FmtTooManyCertificate.Fmt(svc.limit)
+	}
 	if err != nil || !enabled {
 		return err
 	}
-	if err = svc.Refresh(ctx); err != nil {
-		svc.log.Error("新增证书后刷新证书出错", "error", err)
-	}
 
-	return err
+	return svc.Refresh(ctx)
 }
 
 func (svc *configCertificateService) Update(ctx context.Context, req *request.ConfigCertificateUpdate) error {
-	enabled := req.Enabled
-	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
+	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, req.Enabled)
 	if err != nil {
 		return err
 	}
 
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
-	tbl := svc.qry.ConfigCertificate
-	dao := tbl.WithContext(ctx)
-	old, err := dao.Where(tbl.ID.Eq(req.ID)).First()
-	if err != nil {
+	dat.ID = req.ID
+	enabled, err := svc.repo.Update(ctx, dat)
+	if err != nil || !enabled {
 		return err
 	}
 
-	refresh := enabled || old.Enabled
-	dat.ID, dat.CreatedAt = old.ID, old.CreatedAt
-	err = dao.Save(dat)
-	if err != nil || !refresh {
-		return err
-	}
-	if err = svc.Refresh(ctx); err != nil {
-		svc.log.Error("更新证书后刷新证书出错", "error", err)
-	}
-
-	return err
+	return svc.Refresh(ctx)
 }
 
 func (svc *configCertificateService) Delete(ctx context.Context, id int64) error {
-	tbl := svc.qry.ConfigCertificate
-	dao := tbl.WithContext(ctx)
-	dat, err := dao.Where(tbl.ID.Eq(id)).First()
-	if err != nil {
-		return err
-	}
-	if _, err = dao.Delete(dat); err != nil || !dat.Enabled {
+	enabled, err := svc.repo.Delete(ctx, id)
+	if err != nil || !enabled {
 		return err
 	}
 
-	if err = svc.Refresh(ctx); err != nil {
-		svc.log.Error("删除证书后刷新证书出错", "error", err)
-	}
-
-	return err
+	return svc.Refresh(ctx)
 }
 
 func (svc *configCertificateService) Refresh(ctx context.Context) error {
-	tbl := svc.qry.ConfigCertificate
-	dao := tbl.WithContext(ctx)
-	dats, err := dao.Where(tbl.Enabled.Is(true)).Find()
+	dats, err := svc.repo.Enables(ctx)
 	if err != nil {
+		svc.log.Error("查询所有开启的证书错误", slog.Any("error", err))
 		return err
 	}
 
@@ -174,6 +113,7 @@ func (svc *configCertificateService) Refresh(ctx context.Context) error {
 	for _, dat := range dats {
 		cert, exx := tls.X509KeyPair([]byte(dat.PublicKey), []byte(dat.PrivateKey))
 		if exx != nil {
+			svc.log.Error("处理证书错误", slog.Any("error", err))
 			return exx
 		}
 		certs = append(certs, cert)
