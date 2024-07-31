@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+<<<<<<< HEAD
 	"fmt"
 	"io"
+=======
+>>>>>>> 9f53d52 (go get -u)
 	"strconv"
 
 	"github.com/dop251/goja"
@@ -14,6 +17,47 @@ import (
 type formatter interface {
 	format(call goja.FunctionCall) ([]byte, error)
 }
+<<<<<<< HEAD
+=======
+
+type notFormat struct{}
+
+func (f notFormat) format(call goja.FunctionCall) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	for _, arg := range call.Arguments {
+		if err := f.parse(buf, arg); err != nil {
+			return nil, err
+		}
+		buf.WriteByte(' ')
+	}
+
+	return buf.Bytes(), nil
+}
+
+func (notFormat) parse(buf *bytes.Buffer, val goja.Value) error {
+	if goja.IsUndefined(val) {
+		buf.WriteString(val.String())
+		return nil
+	}
+
+	switch dat := val.Export().(type) {
+	case string:
+		buf.WriteString(dat)
+	case int64:
+		buf.WriteString(strconv.FormatInt(dat, 10))
+	case float64:
+		buf.WriteString(strconv.FormatFloat(dat, 'g', -1, 64))
+	case bool:
+		buf.WriteString(strconv.FormatBool(dat))
+	default:
+		return json.NewEncoder(buf).Encode(dat)
+	}
+
+	return nil
+}
+
+type consoleFormat struct{}
+>>>>>>> 9f53d52 (go get -u)
 
 type normalFormat struct{}
 
@@ -67,5 +111,24 @@ func (normalFormat) parse(buf *bytes.Buffer, val goja.Value) error {
 		_, _ = buf.ReadFrom(io.LimitReader(tmp, int64(tmp.Len()-1)))
 	}
 
+<<<<<<< HEAD
 	return nil
+=======
+	for _, arg := range args[argNum:] {
+		b.WriteByte(' ')
+		b.WriteString(arg.String())
+	}
+}
+
+func (cf *consoleFormat) format(call goja.FunctionCall) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	format := call.Argument(0).String()
+	var args []goja.Value
+	if len(call.Arguments) > 0 {
+		args = call.Arguments[1:]
+	}
+	cf.formatTo(buf, format, args...)
+
+	return buf.Bytes(), nil
+>>>>>>> 9f53d52 (go get -u)
 }

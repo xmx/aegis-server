@@ -44,12 +44,21 @@ func (p *writerConsole) Require() (string, require.ModuleLoader) {
 
 func (p *writerConsole) print(call goja.FunctionCall) goja.Value {
 	msg, err := p.f.format(call)
+<<<<<<< HEAD
 	if err == nil {
 		_, err = p.w.Write(msg)
 	}
 	if err != nil {
 		return p.vm.ToValue(err)
 	}
+=======
+	if err != nil {
+		return p.vm.ToValue(err)
+	}
+	if _, err = p.w.Write(msg); err != nil {
+		return p.vm.ToValue(err)
+	}
+>>>>>>> 9f53d52 (go get -u)
 
 	return goja.Undefined()
 }
