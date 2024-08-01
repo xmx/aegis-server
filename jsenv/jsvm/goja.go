@@ -62,7 +62,7 @@ func detectOrRegister(vm *goja.Runtime) *hideRegistry {
 	return hide
 }
 
-// onceRandomRegistryID 程序每次随机生成一个 require 模块ID。
+// onceRandomRegistryID 程序每次随机生成一个 require 模块 ID。
 // 防止脚本层发现调用或恶意篡改。
 var onceRandomRegistryID = sync.OnceValue[string](func() string {
 	buf := make([]byte, 20)

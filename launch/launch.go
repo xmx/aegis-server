@@ -118,7 +118,8 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 			jslib.Context(),
 			jslib.Console(io.Discard), // 默认丢弃输出数据。
 		}
-		playAPI := restapi.NewPlay(loads)
+		playerService := service.NewPlayer(loads, log)
+		playAPI := restapi.NewPlay(playerService)
 		routeRegisters = append(routeRegisters, playAPI)
 	}
 

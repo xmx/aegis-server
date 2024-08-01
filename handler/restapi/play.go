@@ -11,22 +11,22 @@ import (
 	"github.com/dop251/goja"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/request"
+	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/handler/shipx"
-	"github.com/xmx/aegis-server/jsenv/babel"
 	"github.com/xmx/aegis-server/jsenv/jslib"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"github.com/xmx/aegis-server/protocol/wsocket"
 	"nhooyr.io/websocket"
 )
 
-func NewPlay(loads []jsvm.Loader) shipx.Register {
+func NewPlay(player service.Player) shipx.Register {
 	return &playAPI{
-		loads: loads,
+		player: player,
 	}
 }
 
 type playAPI struct {
-	loads []jsvm.Loader
+	player service.Player
 }
 
 func (api *playAPI) Register(rt shipx.Router) error {
@@ -50,15 +50,8 @@ func (api *playAPI) JS(c *ship.Context) error {
 	//goland:noinspection GoUnhandledErrorResult
 	defer conn.Close()
 
-	vm := jsvm.New()
-	args := jslib.ArgsPrototype(map[string]any{"msg": "你好"})
 	stdout := wsocket.JSWriter(conn, wsocket.KindStdout) // 重定向输出数据
-	loads := append(api.loads, jslib.Console(stdout), args)
-	if err = jsvm.Register(vm, loads); err != nil {
-		c.Warnf("初始化 js 虚拟机注册组件出错： %v", err)
-		_ = conn.CloseJSON(websocket.StatusAbnormalClosure, wsocket.ErrorBody(err))
-		return nil
-	}
+	player := api.player.NewGoja([]jsvm.Loader{jslib.Console(stdout)})
 
 	valid := c.Validator
 	for {
@@ -77,16 +70,8 @@ func (api *playAPI) JS(c *ship.Context) error {
 			continue
 		}
 
-		commonJS, err := babel.CommonJS(req.Script, true)
-		if err != nil {
-			_ = conn.WriteJSON(wsocket.ErrorBody(err))
-			continue
-		}
-		timer := time.AfterFunc(10*time.Second, func() {
-			vm.Interrupt(context.Canceled)
-		})
-		_, err = vm.RunString(commonJS)
-		timer.Stop()
+		args := []jsvm.Loader{jslib.ArgsPrototype(req.Args)}
+		_, err = player.Exec(context.Background(), args, req.Script)
 		if err != nil {
 			c.Infof("运行脚本错误： %v", err)
 			_ = conn.WriteJSON(wsocket.ErrorBody(err))

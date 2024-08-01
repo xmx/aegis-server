@@ -68,8 +68,8 @@
 
     require(['vs/editor/editor.main.nls.zh-cn', 'vs/editor/editor.main'], function () {
         var editor = monaco.editor.create(document.getElementById('editor'), {
-            value: 'import args from "args";\n' +
-                'console.log("%j", args);',
+            value: 'import {data} from "args";\n' +
+                'console.log(data);',
             language: 'javascript',
             theme: 'vs-dark', // 设置为 dark 主题
             locale: 'zh-cn',
@@ -118,6 +118,11 @@
             const script = editor.getValue();
             const req = {
                 script: script,
+                args: {
+                    data: {
+                        datetime: new Date().toJSON(),
+                    }
+                }
             }
             ws.send(JSON.stringify(req))
         });
