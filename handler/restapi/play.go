@@ -14,13 +14,12 @@ import (
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/jsenv/babel"
 	"github.com/xmx/aegis-server/jsenv/jslib"
-	"github.com/xmx/aegis-server/jsenv/jsmod"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"github.com/xmx/aegis-server/protocol/wsocket"
 	"nhooyr.io/websocket"
 )
 
-func Play(loads []jsvm.Loader) shipx.Register {
+func NewPlay(loads []jsvm.Loader) shipx.Register {
 	return &playAPI{
 		loads: loads,
 	}
@@ -47,12 +46,12 @@ func (api *playAPI) JS(c *ship.Context) error {
 	if err != nil {
 		return err
 	}
-	conn := wsocket.WarpConn(ws)
+	conn := wsocket.NewConn(ws)
 	//goland:noinspection GoUnhandledErrorResult
 	defer conn.Close()
 
 	vm := jsvm.New()
-	args := jsmod.Args(map[string]any{"msg": "你好"})
+	args := jslib.ArgsPrototype(map[string]any{"msg": "你好"})
 	stdout := wsocket.JSWriter(conn, wsocket.KindStdout) // 重定向输出数据
 	loads := append(api.loads, jslib.Console(stdout), args)
 	if err = jsvm.Register(vm, loads); err != nil {

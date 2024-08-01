@@ -1,8 +1,6 @@
 package wsocket
 
-import (
-	"io"
-)
+import "io"
 
 func JSWriter(conn *Conn, kind Kind) io.Writer {
 	if kind == "" {

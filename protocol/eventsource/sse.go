@@ -1,4 +1,4 @@
-package shipx
+package eventsource
 
 import (
 	"compress/gzip"
@@ -12,13 +12,11 @@ import (
 	"github.com/xgfone/ship/v5"
 )
 
-func SSE(c *ship.Context) (EventSource, error) {
-	// 粗略的检查一下是不是 EventSource 请求
-	w, r := c.Response().ResponseWriter, c.Request()
+func Accept(w http.ResponseWriter, r *http.Request) (EventSource, bool) {
 	f, ok := w.(http.Flusher)
-	if !ok || r.Header.Get(ship.HeaderAccept) != "text/event-stream" ||
-		r.Header.Get(ship.HeaderCacheControl) != "no-cache" {
-		return nil, ship.ErrUnsupportedMediaType
+	if !ok || r.Header.Get("Accept") != "text/event-stream" ||
+		r.Header.Get("Cache-Control") != "no-cache" {
+		return nil, false
 	}
 
 	var gz *gzip.Writer
@@ -51,7 +49,7 @@ func SSE(c *ship.Context) (EventSource, error) {
 		sse.flush = &gzipFlusher{write: gz, flush: f}
 	}
 
-	return sse, nil
+	return sse, true
 }
 
 type EventSource interface {

@@ -108,7 +108,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	configCertificateAPI := restapi.NewConfigCertificate(configCertificateService)
-	logAPI := restapi.Log(logWC, logLevel)
+	logAPI := restapi.NewLog(logWC, logLevel)
 	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI)
 
 	{
@@ -118,7 +118,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 			jslib.Context(),
 			jslib.Console(io.Discard), // 默认丢弃输出数据。
 		}
-		playAPI := restapi.Play(loads)
+		playAPI := restapi.NewPlay(loads)
 		routeRegisters = append(routeRegisters, playAPI)
 	}
 

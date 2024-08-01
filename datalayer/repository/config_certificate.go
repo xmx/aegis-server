@@ -118,7 +118,7 @@ func (ccr *configCertificateRepository) FindIDs(ctx context.Context, ids []int64
 	return tbl.WithContext(ctx).Where(tbl.ID.In(ids...)).Find()
 }
 
-func (ccr *configCertificateRepository) Page(ctx context.Context, cond []gen.Condition, scope PageScope) (*Page[*model.ConfigCertificate], error) {
+func (ccr *configCertificateRepository) Page(ctx context.Context, cond []gen.Condition, ps PageScope) (*Page[*model.ConfigCertificate], error) {
 	tbl := ccr.qry.ConfigCertificate
 	dao := tbl.WithContext(ctx).Where(cond...)
 	count, err := dao.Count()
@@ -126,14 +126,13 @@ func (ccr *configCertificateRepository) Page(ctx context.Context, cond []gen.Con
 		return nil, err
 	}
 	if count == 0 {
-		return PageZero[*model.ConfigCertificate](scope), nil
+		return ccr.emptyRecords(ps), nil
 	}
 
-	dats, err := dao.Scopes(scope.Gen(count)).Find()
+	dats, err := dao.Scopes(ps.Gen(count)).Find()
 	if err != nil {
 		return nil, err
 	}
-	ret := PageRecords(scope, count, dats)
 
-	return ret, nil
+	return ccr.withRecords(ps, count, dats), nil
 }

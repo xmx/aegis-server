@@ -8,9 +8,10 @@ import (
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/infra/profile"
+	"github.com/xmx/aegis-server/protocol/eventsource"
 )
 
-func Log(writers profile.LogWriteCloser, level *slog.LevelVar) shipx.Register {
+func NewLog(writers profile.LogWriteCloser, level *slog.LevelVar) shipx.Register {
 	return &logAPI{
 		writers: writers,
 		level:   level,
@@ -27,13 +28,19 @@ type logAPI struct {
 
 func (api *logAPI) Register(rt shipx.Router) error {
 	auth := rt.Auth()
-	auth.Route("/log/level").POST(api.Level)
+	auth.Route("/log/level").
+		GET(api.Level).
+		POST(api.SetLevel)
 	auth.Route("/log/tail").GET(api.Tail)
 
 	return nil
 }
 
 func (api *logAPI) Level(c *ship.Context) error {
+	return nil
+}
+
+func (api *logAPI) SetLevel(c *ship.Context) error {
 	req := new(request.LogLevel)
 	if err := c.Bind(req); err != nil {
 		return err
@@ -55,9 +62,10 @@ func (api *logAPI) Tail(c *ship.Context) error {
 		return ship.ErrTooManyRequests
 	}
 
-	sse, err := shipx.SSE(c)
-	if err != nil {
-		return err
+	w, r := c.ResponseWriter(), c.Request()
+	sse, ok := eventsource.Accept(w, r)
+	if !ok {
+		return ship.ErrBadRequest
 	}
 
 	api.writers.Append(sse)

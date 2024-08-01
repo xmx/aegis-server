@@ -8,7 +8,7 @@ import (
 	"nhooyr.io/websocket"
 )
 
-func WarpConn(ws *websocket.Conn) *Conn {
+func NewConn(ws *websocket.Conn) *Conn {
 	return &Conn{ws: ws}
 }
 
