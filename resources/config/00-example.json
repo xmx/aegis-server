@@ -1,0 +1,23 @@
+{
+  "server": {
+    "addr": ":1443"
+  },
+  "database": {
+    "dsn": "root:password@tcp(localhost:3306)/dbname?tls=yourTLS&parseTime=True&timeout=10s",
+    "max_open_conn": 100,
+    "max_idle_conn": 10,
+    "max_lifetime": "24h",
+    "max_idle_time": "1h",
+    "migrate": true
+  },
+  "logger": {
+    "level": "DEBUG",
+    "terminal": true,
+    "filename": "",
+    "max_age": 180,
+    "max_size": 1000,
+    "max_backup": 0,
+    "localtime": true,
+    "compress": true
+  }
+}

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>reSSH</title>
+    <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.8.0/dist/bundle/asciinema-player.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/asciinema-player@3.8.0/dist/bundle/asciinema-player.min.css"
+          rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* 使内容垂直居中 */
+            margin: 0;
+            background-color: #f4f4f4; /* 背景颜色可选 */
+        }
+    </style>
+</head>
+<body>
+<div id="player" style="width: 100vh"></div>
+<script>
+    const ele = document.querySelector("#player")
+    const opt = {
+        speed: 2,
+        theme: "dracula",
+        poster: "npt:1:00",
+        terminalFontSize: "14px",
+    };
+    AsciinemaPlayer.create(`ssh.cast?t=${Date.now()}`, ele, opt);
+</script>
+</body>
+</html>

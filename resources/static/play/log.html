@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实时日志观测</title>
+    <style>
+        body {
+            background-color: #333;
+            color: #fff;
+        }
+
+        #left-panel {
+            width: 40%;
+            height: 800px;
+            overflow: auto;
+            float: left;
+            padding: 20px;
+        }
+
+        #right-panel {
+            width: 55%;
+            float: right;
+            padding: 20px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            padding: 10px;
+            font-family: monospace;
+            border-bottom: 1px solid #555;
+        }
+
+        li:hover {
+            background-color: #555;
+        }
+
+        .debug {
+            color: #007bff; /* 蓝色 */
+        }
+
+        .info {
+            color: #28a745; /* 绿色 */
+        }
+
+        .warn {
+            color: #ffc107; /* 黄色 */
+        }
+
+        .error {
+            color: #dc3545; /* 红色 */
+        }
+    </style>
+
+    <!-- 引入 highlightjs 的 CSS 和 JavaScript 文件 -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
+    <script>
+        hljs.highlightAll();
+    </script>
+</head>
+
+<body>
+<div id="left-panel">
+    <ul id="message-list">
+        <!-- 这里将通过 SSE 动态添加条目 -->
+    </ul>
+</div>
+<div id="right-panel">
+    <pre id="message-detail"></pre>
+</div>
+
+<script>
+    let serial = 0;
+    let selected = false;
+    let elements = [];
+    const es = new EventSource(`/api/log/tail`);
+    es.onmessage = function (evt) {
+        serial++;
+        if (elements.length > 200) {
+            elements.pop();
+        }
+
+        let raw = evt.data;
+        const data = JSON.parse(raw);
+        let short = '';
+        if (data.oplog) {
+            const oplog = data.oplog;
+            let msgs = [];
+            if (oplog.username) {
+                msgs.push(oplog.username)
+            }
+            if (oplog.route_name) {
+                msgs.push(oplog.route_name)
+            }
+            short = msgs.join('-');
+        }
+        if (short.length === 0 && data.msg) {
+            short = substring(data.msg, 15);
+        }
+
+        elements.unshift({
+            id: serial,
+            time: new Date().toLocaleTimeString(),
+            data: data,
+            short: short,
+        })
+
+        // render
+        const msg = document.getElementById('message-list');
+        msg.innerHTML = ''
+        for (let i = 0; i < elements.length; i++) {
+            const elem = elements[i];
+            const li = document.createElement('li');
+            const level = elem.data.level;
+            li.innerHTML = `<span> ${elem.id}. ${elem.time} - <span class="${level.toLowerCase()}">${level}</span> - ${elem.short} </span>`
+            li.addEventListener('click', function () {
+                selected = true;
+                const fmt = JSON.stringify(elem.data, null, 2);
+                document.getElementById('message-detail').innerHTML = `<code>${fmt}</code>`;
+                hljs.highlightBlock(document.getElementById('message-detail').querySelector('code'));
+            })
+            msg.appendChild(li);
+            if (!selected && i === 0) {
+                const fmt = JSON.stringify(elem.data, null, 2);
+                document.getElementById('message-detail').innerHTML = `<code>${fmt}</code>`;
+                hljs.highlightBlock(document.getElementById('message-detail').querySelector('code'));
+            }
+        }
+    }
+
+    const substring = (msg, n) => {
+        if (!msg) {
+            return "";
+        }
+        if (msg.length <= n) {
+            return msg;
+        }
+
+        return msg.substring(0, n) + '...';
+    }
+</script>
+</body>
+
+</html>

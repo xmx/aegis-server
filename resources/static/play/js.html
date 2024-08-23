@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playground</title>
+    <style>
+        body {
+            background-color: #282c34;
+            color: #abb2bf;
+        }
+
+        #editor {
+            height: 60vh;
+        }
+
+        #output {
+            height: 32vh;
+            overflow-y: auto;
+            background-color: #282c34;
+            padding: 10px;
+            font-family: monospace, Consolas, 'Courier New', NSimsun, Simsun;
+        }
+
+        #runButton {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #cleanTerminal {
+            padding: 10px 20px;
+            background-color: #72705f;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+    </style>
+</head>
+
+<body>
+<div id="editor"></div>
+<div id="output">
+    <ul id="message-list">
+        <!-- 这里将通过 SSE 动态添加条目 -->
+    </ul>
+</div>
+<button id="runButton">运行</button>
+<button id="cleanTerminal">清理控制台</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs/loader.min.js"></script>
+<script>
+    require.config({
+        paths: {
+            'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs',
+        }
+    });
+
+    require(['vs/editor/editor.main.nls.zh-cn', 'vs/editor/editor.main'], function () {
+        var editor = monaco.editor.create(document.getElementById('editor'), {
+            value: 'import {data} from "args";\n' +
+                'console.log(data);',
+            language: 'javascript',
+            theme: 'vs-dark', // 设置为 dark 主题
+            locale: 'zh-cn',
+            fontFamily: "monospace, Consolas, 'Courier New', NSimsun, Simsun",
+        });
+
+        // 创建 WebSocket 连接
+        const ws = new WebSocket(`/api/play/js`);
+        // 处理连接打开事件
+        ws.onopen = function (event) {
+            console.log('WebSocket 连接已打开');
+        };
+
+        // 处理消息接收事件
+        const messageListElem = document.getElementById('message-list');
+        const parent = document.getElementById('output');
+        ws.onmessage = function (event) {
+            const msg = event.data;
+            const data = JSON.parse(msg);
+
+            let line = data.data;
+            if (data.kind === 'reply') {
+                line = JSON.stringify(data.data)
+            }
+            let preElem = document.createElement("pre");
+            let liElem = document.createElement("li");
+            preElem.innerText = line;
+            liElem.appendChild(preElem);
+            messageListElem.appendChild(liElem);
+            parent.scrollTop = parent.scrollHeight;
+        };
+
+        // 处理连接关闭事件
+        ws.onclose = function (event) {
+            console.log('WebSocket 连接已关闭');
+        };
+
+        // 处理错误事件
+        ws.onerror = function (event) {
+            console.error('WebSocket 错误:', event);
+        };
+
+        // 为运行按钮添加点击事件
+        document.getElementById('runButton').addEventListener('click', function () {
+            // 在这里添加运行代码的逻辑
+            const script = editor.getValue();
+            const req = {
+                script: script,
+                args: {
+                    data: {
+                        datetime: new Date().toJSON(),
+                    }
+                }
+            }
+            ws.send(JSON.stringify(req))
+        });
+        document.getElementById('cleanTerminal').addEventListener('click', function () {
+            messageListElem.innerHTML = "";
+        });
+    });
+</script>
+</body>
+
+</html>

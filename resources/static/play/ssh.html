@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连接服务器</title>
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ubuntu-mono@5.0.20/index.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/fira-mono@5.0.13/index.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/roboto-mono@5.0.18/index.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.20/400.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/sometype-mono@5.0.4/index.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/comic-mono@5.0.11/index.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/asciinema-player@3.8.0/dist/bundle/asciinema-player.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/asciinema-player@3.8.0/dist/bundle/asciinema-player.min.css"
+          rel="stylesheet">
+    <link rel="icon" href="term.svg">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh; /* 使内容垂直居中 */
+            margin: 0;
+            background-color: #f4f4f4; /* 背景颜色可选 */
+        }
+
+        .container {
+            background-color: #fff; /* 表单背景颜色 */
+            padding: 20px;
+            border-radius: 8px; /* 圆角效果 */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* 阴影效果 */
+            width: 300px; /* 固定宽度 */
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div id="main">
+    <div id="container" class="container">
+        <div id="form">
+            <div class="form-group">
+                <label for="bastion">服务器</label>
+                <select id="bastion" name="bastion">
+                    <option value="47.116.221.17:22">阿里云</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" placeholder="请输入用户名">
+            </div>
+
+            <div class="form-group">
+                <button id="button" type="button" onclick="connect()">连接</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function connect() {
+        const container = document.querySelector("#container")
+        const bastion = container.querySelector('select[name="bastion"]').value;
+        const username = container.querySelector('input[name="username"]').value;
+        if (!username) {
+            alert("请输入用户名");
+            return
+        }
+
+        const cols = 150;
+        const rows = 40;
+        const term = new Terminal({
+            cols: cols,
+            rows: rows,
+            fontFamily: "'Consolas', 'Comic Mono', monospace",
+            fontSize: 14,
+            lineHeight: 1.1,
+            theme: {
+                background: "#282a36",
+            }
+        });
+        const terminal = document.querySelector("#main");
+        term.open(terminal); // 挂载
+
+        const params = new URLSearchParams([
+            ["cols", cols],
+            ["rows", rows],
+            ["bastion", bastion],
+            ["username", username]
+        ]);
+        const ws = new WebSocket(`/api/ws/ssh?${params.toString()}`);
+        container.remove();
+        ws.onmessage = (evt) => {
+            const lines = JSON.parse(evt.data);
+            if (lines && lines.length >= 2 && lines[0] === "o") {
+                term.write(lines[1]);
+            }
+        };
+        ws.onclose = (evt) => {
+            console.log(evt);
+            const link = document.createElement("h3");
+            link.innerHTML = `连接已结束。 <a href='ressh.html'>录像查看请点击此处</a>`;
+            terminal.append(link);
+        }
+        ws.onerror = (evt) => {
+            terminal.innerHTML = "<h2>连接错误！</h2>"
+        }
+        term.onData((text) => { // 网页xterm窗口中有输入的数据
+            const lines = ["i", text]
+            let msg = JSON.stringify(lines);
+            ws.send(msg); // 通过WebSocket发送给服务器
+        });
+        term.onResize((evt) => {
+            const lines = ["r", evt.cols + "x" + evt.rows];
+            const msg = JSON.stringify(lines);
+            ws.send(msg);
+        })
+    }
+</script>
+</body>
+</html>
