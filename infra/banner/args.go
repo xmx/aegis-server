@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/user"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 )
@@ -73,7 +74,9 @@ func parseArgs() {
 
 	path = info.Main.Path
 	if version == "" {
-		version = info.Main.Version
+		v := info.Main.Version
+		v = strings.TrimLeft(v, "(")
+		version = strings.TrimRight(v, ")")
 	}
 
 	settings := info.Settings
