@@ -148,7 +148,11 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		routeRegisters = append(routeRegisters, staticAPI)
 	}
 
-	baseAPI := sh.Group("/api").Use(middle.WAF(log))
+	const basePrefix = "/api"
+	davAPI := restapi.NewDAV(basePrefix, "/", false)
+	routeRegisters = append(routeRegisters, davAPI)
+
+	baseAPI := sh.Group(basePrefix).Use(middle.WAF(log))
 	anon := baseAPI.Clone()
 	auth := baseAPI.Clone()
 
