@@ -21,10 +21,6 @@ func readStat(v any) sysStat {
 }
 
 func formatTime(at syscall.Filetime) time.Time {
-	nsec := at.Nanoseconds()
-	mod := int64(time.Second)
-	sec := nsec / mod
-	nano := nsec % mod
-
-	return time.Unix(sec, nano)
+	nano := at.Nanoseconds()
+	return time.Unix(0, nano)
 }
