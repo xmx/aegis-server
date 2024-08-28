@@ -27,7 +27,6 @@ func DAV(prefix, dir string) http.Handler {
 	d := http.Dir(dir)
 
 	return &davFS{
-		dir: dir,
 		dav: dav,
 		hfs: d,
 		han: http.FileServer(d),
@@ -35,7 +34,6 @@ func DAV(prefix, dir string) http.Handler {
 }
 
 type davFS struct {
-	dir string
 	dav *webdav.Handler
 	hfs http.FileSystem
 	han http.Handler
@@ -48,96 +46,95 @@ func (f *davFS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	path := strings.TrimPrefix(r.URL.Path, f.dav.Prefix)
-	accept := r.Header.Get("Accept")
-	var processed bool
-	if accept == "application/json" {
-		info, ok, err := f.readdir(path)
-		if err == nil && ok {
-			processed = true
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			_ = json.NewEncoder(w).Encode(info)
-		}
-	}
-	if !processed {
+	if !f.tryServeJSONDir(w, r, path) {
 		r.URL.Path = path
 		f.han.ServeHTTP(w, r)
 	}
 }
 
-func (f *davFS) readdir(path string) (*DirInfo, bool, error) {
-	info := &DirInfo{
-		Path:  path,
-		Files: make(FileInfos, 0, 100),
+func (f *davFS) tryServeJSONDir(w http.ResponseWriter, r *http.Request, path string) bool {
+	accept := r.Header.Get("Accept")
+	if accept != "application/json" {
+		return false
 	}
-
 	file, err := f.hfs.Open(path)
 	if err != nil {
-		return nil, false, err
+		return false
 	}
 	//goland:noinspection GoUnhandledErrorResult
 	defer file.Close()
 
 	stat, err := file.Stat()
 	if err != nil {
-		return nil, false, err
+		return false
 	}
 	if !stat.IsDir() {
-		return nil, false, nil
+		return false
 	}
 
-	infos, err := file.Readdir(4096)
-	for _, in := range infos {
-		name, mode := in.Name(), in.Mode()
-		inf := &FileInfo{
-			Name:      name,
-			Size:      in.Size(),
-			Mode:      mode.String(),
-			ModTime:   in.ModTime(),
-			Directory: in.IsDir(),
+	// 最多读取 maxsize 个文件，防止目录文件过多，影响内存安全。
+	const maxsize = 10000
+	infos, _ := file.Readdir(maxsize)
+	files := make(fileInfos, 0, len(infos))
+	for _, fi := range infos {
+		st := readStat(fi.Sys())
+		name, mode := fi.Name(), fi.Mode()
+		info := &fileInfo{
+			Name:       name,
+			Size:       fi.Size(),
+			Mode:       mode.String(),
+			Directory:  fi.IsDir(),
+			UpdatedAt:  fi.ModTime(),
+			CreatedAt:  st.CreatedAt,
+			AccessedAt: st.AccessedAt,
+			User:       st.User,
+			Group:      st.Group,
 		}
-		info.Files = append(info.Files, inf)
+
+		files = append(files, info)
 		if mode&os.ModeSymlink == 0 {
 			continue
 		}
-
-		link, err := os.Readlink(filepath.Join(path, name))
-		if err != nil {
-			continue
-		}
-		inf.Symlink = link
-		if !filepath.IsAbs(link) {
-			link = filepath.Join(path, link)
-		}
-		if fi, _ := os.Stat(link); fi != nil {
-			inf.Directory = fi.IsDir()
+		// 链接类型文件
+		if link, exx := os.Readlink(filepath.Join(path, name)); exx != nil {
+			info.Symlink = link
 		}
 	}
-	sort.Sort(info.Files)
+	sort.Sort(files)
+	ret := &dirInfo{Path: filepath.Clean(path), Files: files}
 
-	return info, true, nil
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	_ = json.NewEncoder(w).Encode(ret)
+
+	return true
 }
 
-type DirInfo struct {
+type dirInfo struct {
 	Path  string    `json:"path"`
-	Files FileInfos `json:"files"`
+	Files fileInfos `json:"files"`
 }
 
-type FileInfo struct {
-	Name      string    `json:"name"`
-	Size      int64     `json:"size"`
-	Mode      string    `json:"mode"`
-	ModTime   time.Time `json:"mod_time"`
-	Directory bool      `json:"directory"`
-	Symlink   string    `json:"symlink,omitempty"`
+type fileInfo struct {
+	Name       string    `json:"name"`
+	Size       int64     `json:"size"`
+	Mode       string    `json:"mode"`
+	Directory  bool      `json:"directory,omitempty"`
+	Symlink    string    `json:"symlink,omitempty"`
+	UpdatedAt  time.Time `json:"updated_at,omitempty"`
+	CreatedAt  time.Time `json:"created_at,omitempty"`
+	AccessedAt time.Time `json:"accessed_at,omitempty"`
+	User       string    `json:"user,omitempty"`
+	Group      string    `json:"group,omitempty"`
 }
 
-type FileInfos []*FileInfo
+type fileInfos []*fileInfo
 
-func (fis FileInfos) Len() int {
+func (fis fileInfos) Len() int {
 	return len(fis)
 }
 
-func (fis FileInfos) Less(i, j int) bool {
+// Less 目录靠前显示，按照文件名升序。
+func (fis fileInfos) Less(i, j int) bool {
 	fi, fj := fis[i], fis[j]
 	if fi.Directory == fj.Directory {
 		return fi.Name < fj.Name
@@ -148,6 +145,14 @@ func (fis FileInfos) Less(i, j int) bool {
 	}
 }
 
-func (fis FileInfos) Swap(i, j int) {
+func (fis fileInfos) Swap(i, j int) {
 	fis[i], fis[j] = fis[j], fis[i]
+}
+
+type sysStat struct {
+	AccessedAt time.Time `json:"accessed_at"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+	User       string    `json:"user,omitempty"`
+	Group      string    `json:"group,omitempty"`
 }

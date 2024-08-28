@@ -1,7 +1,4 @@
 {
-  "server": {
-    "addr": ":1443"
-  },
   "database": {
     "dsn": "root:password@tcp(localhost:3306)/dbname?tls=yourTLS&parseTime=True&timeout=10s",
     "max_open_conn": 100,
