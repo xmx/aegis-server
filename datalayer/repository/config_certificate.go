@@ -22,7 +22,7 @@ type ConfigCertificate interface {
 	Update(ctx context.Context, cert *model.ConfigCertificate) (bool, error)
 
 	// Delete 通过证书数据库 id 删除证书，并返回该证书删除时是否启用中。
-	Delete(ctx context.Context, id int64) (bool, error)
+	Delete(ctx context.Context, ids []int64) (bool, error)
 
 	FindIDs(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
 
@@ -91,21 +91,19 @@ func (ccr *configCertificateRepository) Update(ctx context.Context, cert *model.
 	return enabled, err
 }
 
-func (ccr *configCertificateRepository) Delete(ctx context.Context, id int64) (bool, error) {
+func (ccr *configCertificateRepository) Delete(ctx context.Context, ids []int64) (bool, error) {
 	ccr.mutex.Lock()
 	defer ccr.mutex.Unlock()
 
 	var enabled bool
 	err := ccr.qry.Transaction(func(tx *query.Query) error {
 		tbl := tx.ConfigCertificate
-		expr := tbl.ID.Eq(id)
-		dat, err := tbl.WithContext(ctx).Where(expr).First()
-		if err != nil {
-			return err
-		}
+		dao := tbl.WithContext(ctx)
+		expr := tbl.ID.In(ids...)
+		cnt, _ := dao.Where(expr, tbl.Enabled.Is(true)).Count()
+		enabled = cnt > 0
 
-		enabled = dat.Enabled
-		_, err = tbl.WithContext(ctx).Where(expr).Delete()
+		_, err := tbl.WithContext(ctx).Where(expr).Delete()
 
 		return err
 	})

@@ -1,0 +1,255 @@
+openapi: 3.1.0
+info:
+  title: 接口文档
+  description: '### TODO'
+  version: 1.0.0
+  summary: 接口文档
+  contact:
+    name: xmx
+    url: 'https://github.com/xmx'
+    email: fake@example.com
+  termsOfService: 'https://github.com/xmx'
+servers:
+  - url: /api
+    description: 当前服务
+  - url: 'https://lo.zzu.wiki:1443/api'
+    description: 本机服务
+tags:
+  - name: ⚙️ 系统设置
+    description: 系统设置
+paths:
+  /config/certificates:
+    get:
+      summary: TLS证书-分页查询
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          $ref: '#/components/responses/GetConfigCertificates'
+      operationId: get-config-certificates
+      description: TLS证书-分页查询
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+        - $ref: '#/components/parameters/keyword'
+  /config/certificate:
+    post:
+      summary: TLS证书-新增
+      operationId: post-config-certificate
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 添加证书
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCertificate'
+    put:
+      summary: TLS证书-修改
+      operationId: put-config-certificate
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 修改证书
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCertificate'
+        description: ''
+    delete:
+      summary: TLS证书-删除
+      operationId: delete-config-certificate
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 删除证书
+      parameters:
+        - $ref: '#/components/parameters/ids'
+  /config/certificate/download:
+    get:
+      summary: TLS证书-下载
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+          content:
+            application/zip:
+              schema:
+                type: object
+                format: binary
+                description: 文件下载流
+                additionalProperties: false
+      operationId: get-config-certificate-download
+      description: 下载证书和私钥
+      parameters:
+        - $ref: '#/components/parameters/ids'
+  /config/certificate/refresh:
+    get:
+      summary: TLS证书-刷新
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+      operationId: get-config-certificate-refresh
+      description: 刷新HTTP证书
+components:
+  securitySchemes:
+    Authorization:
+      type: http
+      scheme: bearer
+      description: 认证Token
+    authorization:
+      name: 认证Token
+      type: apiKey
+      in: query
+      description: 认证Token
+  parameters:
+    page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        example: 1
+      description: 分页页码
+    size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        example: 10
+        minimum: 0
+        maximum: 1000
+      description: 分页显示条数
+    keyword:
+      name: keyword
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 0
+        maxLength: 100
+      description: 搜索关键字
+    ids:
+      name: id
+      in: query
+      required: true
+      schema:
+        type: array
+        uniqueItems: true
+        minItems: 1
+        maxItems: 1000
+      description: '允许传入多个ID，ElementsUI 中输入示例：["1","2"] 或 [1,2]。'
+  responses:
+    GetConfigCertificates:
+      description: Example response
+      content:
+        application/json:
+          schema:
+            type: object
+  schemas:
+    CreateCertificate:
+      title: CreateCertificate
+      x-stoplight:
+        id: mutduei8eq83v
+      type: object
+      properties:
+        public_key:
+          $ref: '#/components/schemas/PublicKey'
+          x-stoplight:
+            id: yjpckptq04k7w
+        private_key:
+          $ref: '#/components/schemas/PrivateKey'
+          x-stoplight:
+            id: lhlhdvosfaiil
+        enabled:
+          type: boolean
+          x-stoplight:
+            id: cpaz624bh0aiy
+          description: 是否启用
+      required:
+        - public_key
+        - private_key
+    UpdateCertificate:
+      title: UpdateCertificate
+      x-stoplight:
+        id: 670mvn71w2s8d
+      type: object
+      properties:
+        id:
+          type: string
+          description: 证书ID
+        public_key:
+          $ref: '#/components/schemas/PublicKey'
+          x-stoplight:
+            id: m10mgs4lpzmez
+          description: 证书（公钥）
+        private_key:
+          $ref: '#/components/schemas/PrivateKey'
+          x-stoplight:
+            id: 83bcjs84berjt
+          description: 私钥
+        enabled:
+          type: boolean
+          x-stoplight:
+            id: ddkwc7k9ggyyt
+          description: 是否启用
+      required:
+        - id
+        - public_key
+        - private_key
+    PublicKey:
+      title: PublicKey
+      x-stoplight:
+        id: apo940rmnny05
+      type: string
+      description: |-
+        证书公钥，示例数据：
+        ```
+        -----BEGIN CERTIFICATE-----
+        MIIB3jCCAYSgAwIBAgIUPMsmYS19fCoKd7uvz6loieoVcwswCQYHKoZIzj0EATA7
+        MQwwCgYDVQQDDANXUjIxHjAcBgNVBAoMFUdvb2dsZSBUcnVzdCBTZXJ2aWNlczEL
+        MAkGA1UEBhMCQ04wHhcNMjQwODI5MTYwMDAwWhcNMjQwODMxMTUwMDAwWjCBhDEL
+        MAkGA1UEBhMCQ04xDzANBgNVBAgMBuW5v+ilvzEPMA0GA1UEBwwG5rKz5rGgMScw
+        JQYDVQQKDB7mvJTnpLror4Hkuabnp5HmioDmnInpmZDlhazlj7gxEjAQBgNVBAsM
+        CeaKgOacr+mDqDEWMBQGA1UEAwwNKi5leGFtcGxlLmNvbTBZMBMGByqGSM49AgEG
+        CCqGSM49AwEHA0IABP+APxK17Dy1dNj+/wMdmBd6jJYYRMp1RpSYFWRJ/Jy4mI4h
+        +O6GgZEWodac6GKzdq+0NVm2CsD5V+pyQkaMDOWjHTAbMAsGA1UdEQQEMAKCADAM
+        BgNVHRMBAf8EAjAAMAkGByqGSM49BAEDSQAwRgIhAOKcHC+xKppGi/o63PjMj+j3
+        mySras50HIcTeqa5mfogAiEAwaycXGblqerbfrqPr+TbE6bMUJiwx5Nx2YXl8kRO
+        qdg=
+        -----END CERTIFICATE-----
+        ```
+      examples: []
+      example: 请填写正确的证书公钥
+    PrivateKey:
+      title: PrivateKey
+      x-stoplight:
+        id: rg0crxe5m3g7d
+      type: string
+      description: |-
+        证书私钥，样例数据：
+        ```
+        -----BEGIN PRIVATE KEY-----
+        MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgmZQ95+LYpzS/XH/V
+        +3OZae+Ymwf1zuvAu2qNHLvNwzqhRANCAAT/gD8Stew8tXTY/v8DHZgXeoyWGETK
+        dUaUmBVkSfycuJiOIfjuhoGRFqHWnOhis3avtDVZtgrA+VfqckJGjAzl
+        -----END PRIVATE KEY-----
+        ```
+      examples: []
+      example: 请填写正确的证书私钥
+  requestBodies: {}
+security:
+  - Authorization: []

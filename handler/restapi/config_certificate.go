@@ -68,7 +68,7 @@ func (api *configCertificateAPI) Update(c *ship.Context) error {
 }
 
 func (api *configCertificateAPI) Delete(c *ship.Context) error {
-	req := new(request.Int64ID)
+	req := new(request.Int64IDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}

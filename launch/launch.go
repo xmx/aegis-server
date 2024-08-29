@@ -95,7 +95,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	configServerRepository := repository.NewConfigServer(qry)
-	configCertificateRepository := repository.NewConfigCertificate(qry)
+	// configCertificateRepository := repository.NewConfigCertificate(qry)
 
 	// 查询 server 配置
 	srvCfg, err := configServerRepository.Enabled(ctx)
@@ -107,7 +107,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
 	poolTLS := credential.Pool(baseTLS)
 
-	configCertificateService := service.NewConfigCertificate(poolTLS, configCertificateRepository, log)
+	configCertificateService := service.NewConfigCertificate(poolTLS, qry, log)
 	if err = configCertificateService.Refresh(ctx); err != nil { // 初始化刷新证书池。
 		log.Error("初始化证书错误", slog.Any("error", err))
 		return err

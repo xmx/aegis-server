@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <meta content="SwaggerUI" name="description"/>
+    <title>SwaggerUI</title>
+    <link href="https://cdn.jsdelivr.net/npm/swagger-ui-dist/swagger-ui.min.css" rel="stylesheet"/>
+    <link rel="icon" href="swagger.svg" type="image/svg+xml">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/swagger-ui-dist/swagger-ui-bundle.min.js"></script>
+<script>
+    window.onload = () => {
+        window.ui = SwaggerUIBundle({
+            url: 'api.oas3.yaml',
+            dom_id: '#swagger-ui',
+        });
+    };
+</script>
+</body>
+</html>

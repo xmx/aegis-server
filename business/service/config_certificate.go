@@ -7,14 +7,14 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"log/slog"
+	"sync"
 
 	"github.com/xmx/aegis-server/argument/errcode"
-	"github.com/xmx/aegis-server/argument/pscope"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/datalayer/model"
+	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/library/credential"
-	"gorm.io/gen"
 )
 
 type ConfigCertificate interface {
@@ -22,16 +22,16 @@ type ConfigCertificate interface {
 	Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
 	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
 	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
-	Delete(ctx context.Context, id int64) error
+	Delete(ctx context.Context, ids []int64) error
 
 	// Refresh 刷新证书。
 	Refresh(ctx context.Context) error
 }
 
-func NewConfigCertificate(pool credential.Certifier, repo repository.ConfigCertificate, log *slog.Logger) ConfigCertificate {
+func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) ConfigCertificate {
 	return &configCertificateService{
 		pool:  pool,
-		repo:  repo,
+		qry:   qry,
 		log:   log,
 		limit: 100,
 	}
@@ -39,37 +39,57 @@ func NewConfigCertificate(pool credential.Certifier, repo repository.ConfigCerti
 
 type configCertificateService struct {
 	pool  credential.Certifier // 证书池。
-	repo  repository.ConfigCertificate
 	log   *slog.Logger
+	qry   *query.Query
+	mutex sync.Mutex
 	limit int64 // 数据库最多可保存的证书数量。
 }
 
 func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error) {
-	qry := svc.repo.Query()
-	tbl := qry.ConfigCertificate
-	cond := make([]gen.Condition, 0, 2)
-	if like := req.Like(); like != "" {
-		cond = append(cond, tbl.CommonName.Like(like))
-	}
-
-	return svc.repo.Page(ctx, cond, pscope.From(req.Page))
+	//qry := svc.repo.Query()
+	//tbl := qry.ConfigCertificate
+	//cond := make([]gen.Condition, 0, 2)
+	//if like := req.Like(); like != "" {
+	//	cond = append(cond, tbl.CommonName.Like(like))
+	//}
+	//
+	//return svc.repo.Page(ctx, cond, pscope.From(req.Page))
+	return nil, nil
 }
 
 func (svc *configCertificateService) Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error) {
-	return svc.repo.FindIDs(ctx, ids)
+	if len(ids) == 0 {
+		return []*model.ConfigCertificate{}, nil
+	}
+	tbl := svc.qry.ConfigCertificate
+	dao := tbl.WithContext(ctx)
+	return dao.Where(tbl.ID.In(ids...)).Find()
 }
 
 func (svc *configCertificateService) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
-	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, req.Enabled)
+	enabled := req.Enabled
+	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
 	if err != nil {
 		return err
 	}
 
-	overflow, enabled, err := svc.repo.Create(ctx, dat, svc.limit)
-	if overflow {
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	// 检查证书指纹，避免出现证书重复。
+	tbl := svc.qry.ConfigCertificate
+	dao := tbl.WithContext(ctx)
+	if cnt, _ := dao.Where(tbl.CertificateSHA256.Eq(dat.CertificateSHA256)).
+		Count(); cnt > 0 {
+		return errcode.ErrCertificateExisted
+	}
+
+	// 检查证书是否已超过限制个数。
+	if cnt, _ := dao.Count(); cnt >= svc.limit {
 		return errcode.FmtTooManyCertificate.Fmt(svc.limit)
 	}
-	if err != nil || !enabled {
+	// 新增证书。
+	if err = dao.Create(dat); err != nil || !enabled {
 		return err
 	}
 
@@ -77,23 +97,53 @@ func (svc *configCertificateService) Create(ctx context.Context, req *request.Co
 }
 
 func (svc *configCertificateService) Update(ctx context.Context, req *request.ConfigCertificateUpdate) error {
-	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, req.Enabled)
+	id, enabled := req.ID, req.Enabled
+	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
 	if err != nil {
 		return err
 	}
 
-	dat.ID = req.ID
-	enabled, err := svc.repo.Update(ctx, dat)
-	if err != nil || !enabled {
+	tbl := svc.qry.ConfigCertificate
+	dao := tbl.WithContext(ctx)
+
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	// 查询数据库中的数据。
+	mod, err := dao.Select(tbl.Enabled, tbl.CertificateSHA256).Where(tbl.ID.Eq(id)).First()
+	if err != nil {
+		return err
+	}
+	// 指纹变了说明修改了证书
+	if mod.CertificateSHA256 != dat.CertificateSHA256 {
+		if cnt, _ := dao.Where(tbl.CertificateSHA256.Eq(dat.CertificateSHA256)).
+			Count(); cnt > 0 {
+			return errcode.ErrCertificateExisted
+		}
+	}
+
+	enabled = enabled || mod.Enabled
+	dat.ID, dat.CreatedAt = id, mod.CreatedAt
+	if err = dao.Where(tbl.ID.Eq(id)).Save(dat); err != nil || !enabled {
 		return err
 	}
 
 	return svc.Refresh(ctx)
 }
 
-func (svc *configCertificateService) Delete(ctx context.Context, id int64) error {
-	enabled, err := svc.repo.Delete(ctx, id)
-	if err != nil || !enabled {
+func (svc *configCertificateService) Delete(ctx context.Context, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+
+	svc.mutex.Lock()
+	defer svc.mutex.Unlock()
+
+	tbl := svc.qry.ConfigCertificate
+	dao := tbl.WithContext(ctx)
+	cnt, _ := dao.Where(tbl.ID.In(ids...), tbl.Enabled.Is(true)).Count()
+	_, err := dao.Where(tbl.ID.In(ids...)).Delete()
+	if err != nil || cnt == 0 {
 		return err
 	}
 
@@ -101,7 +151,11 @@ func (svc *configCertificateService) Delete(ctx context.Context, id int64) error
 }
 
 func (svc *configCertificateService) Refresh(ctx context.Context) error {
-	dats, err := svc.repo.Enables(ctx)
+	tbl := svc.qry.ConfigCertificate
+	dao := tbl.WithContext(ctx)
+	svc.mutex.Lock()
+	dats, err := dao.Where(tbl.Enabled.Is(true)).Find()
+	svc.mutex.Unlock()
 	if err != nil {
 		svc.log.Error("查询所有开启的证书错误", slog.Any("error", err))
 		return err
@@ -128,7 +182,8 @@ func (svc *configCertificateService) parseCertificate(publicKey, privateKey stri
 	publicKeyBlock, privateKeyBlock := []byte(publicKey), []byte(privateKey)
 	cert, err := tls.X509KeyPair(publicKeyBlock, privateKeyBlock)
 	if err != nil {
-		return nil, err
+		svc.log.Warn("证书解析错误", slog.Any("error", err))
+		return nil, errcode.ErrCertificateInvalid
 	}
 
 	leaf := cert.Leaf
@@ -157,10 +212,23 @@ func (svc *configCertificateService) parseCertificate(publicKey, privateKey stri
 		NotBefore:         leaf.NotBefore,
 		NotAfter:          leaf.NotAfter,
 	}
+	if dat.Organization == nil {
+		dat.Organization = []string{}
+	}
+	if dat.Country == nil {
+		dat.Country = []string{}
+	}
+	if dat.Province == nil {
+		dat.Province = []string{}
+	}
+	if dat.DNSNames == nil {
+		dat.DNSNames = []string{}
+	}
 
 	return dat, nil
 }
 
+// fingerprintSHA256 计算证书和私钥的 SHA256 指纹。
 func (*configCertificateService) fingerprintSHA256(cert tls.Certificate) (certSHA256, pubKeySHA256, priKeySHA256 string) {
 	leaf := cert.Leaf
 	sum256 := sha256.Sum256(leaf.Raw)
