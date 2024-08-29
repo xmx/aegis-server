@@ -52,22 +52,28 @@ func (api *logAPI) SetLevel(c *ship.Context) error {
 
 func (api *logAPI) Tail(c *ship.Context) error {
 	cnt := api.count.Add(1)
-	defer api.count.Add(-1)
-	if cnt > api.limit {
+	if lim := api.limit; cnt > lim {
+		api.count.Add(-1)
 		return ship.ErrTooManyRequests
 	}
+
+	defer func() {
+		num := api.count.Add(-1)
+		c.Infof("离开日志查看器，当前还有 %d 个查看窗口", num)
+	}()
 
 	w, r := c.ResponseWriter(), c.Request()
 	sse, ok := eventsource.Accept(w, r)
 	if !ok {
+		c.Warnf("不是 Server-Sent Events 连接")
 		return ship.ErrBadRequest
 	}
 
-	c.Warnf("进入日志查看器")
 	api.svc.Attach(sse)
 	defer api.svc.Leave(sse)
+
+	c.Warnf("进入日志查看器，当前共有 %d 个查看窗口", cnt)
 	<-sse.Done()
-	c.Warnf("离开日志查看器")
 
 	return nil
 }
