@@ -10,11 +10,13 @@ import (
 	"sync"
 
 	"github.com/xmx/aegis-server/argument/errcode"
+	"github.com/xmx/aegis-server/argument/pscope"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/library/credential"
+	"gorm.io/gen"
 )
 
 type ConfigCertificate interface {
@@ -46,15 +48,29 @@ type configCertificateService struct {
 }
 
 func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error) {
-	//qry := svc.repo.Query()
-	//tbl := qry.ConfigCertificate
-	//cond := make([]gen.Condition, 0, 2)
-	//if like := req.Like(); like != "" {
-	//	cond = append(cond, tbl.CommonName.Like(like))
-	//}
-	//
-	//return svc.repo.Page(ctx, cond, pscope.From(req.Page))
-	return nil, nil
+	tbl := svc.qry.ConfigCertificate
+	dao := tbl.WithContext(ctx)
+	cond := make([]gen.Condition, 0, 2)
+	if like := req.Like(); like != "" {
+		cond = append(cond, tbl.CommonName.Like(like))
+	}
+	cnt, err := dao.Where(cond...).Count()
+	if err != nil {
+		return nil, err
+	}
+
+	page := pscope.From(req.Page)
+	if cnt == 0 {
+		return repository.PageZero[*model.ConfigCertificate](page), nil
+	}
+
+	dats, err := dao.Where(cond...).Scopes(page.Gen(cnt)).Find()
+	if err != nil {
+		return nil, err
+	}
+	ret := repository.PageRecords(page, cnt, dats)
+
+	return ret, nil
 }
 
 func (svc *configCertificateService) Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error) {
@@ -153,9 +169,7 @@ func (svc *configCertificateService) Delete(ctx context.Context, ids []int64) er
 func (svc *configCertificateService) Refresh(ctx context.Context) error {
 	tbl := svc.qry.ConfigCertificate
 	dao := tbl.WithContext(ctx)
-	svc.mutex.Lock()
 	dats, err := dao.Where(tbl.Enabled.Is(true)).Find()
-	svc.mutex.Unlock()
 	if err != nil {
 		svc.log.Error("查询所有开启的证书错误", slog.Any("error", err))
 		return err
@@ -206,6 +220,7 @@ func (svc *configCertificateService) parseCertificate(publicKey, privateKey stri
 		Organization:      sub.Organization,
 		Country:           sub.Country,
 		Province:          sub.Province,
+		Locality:          sub.Locality,
 		DNSNames:          leaf.DNSNames,
 		IPAddresses:       ips,
 		Version:           leaf.Version,
@@ -220,6 +235,9 @@ func (svc *configCertificateService) parseCertificate(publicKey, privateKey stri
 	}
 	if dat.Province == nil {
 		dat.Province = []string{}
+	}
+	if dat.Locality == nil {
+		dat.Locality = []string{}
 	}
 	if dat.DNSNames == nil {
 		dat.DNSNames = []string{}

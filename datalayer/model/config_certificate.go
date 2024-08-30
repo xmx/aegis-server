@@ -15,6 +15,7 @@ type ConfigCertificate struct {
 	Organization      []string  `json:"organization"       gorm:"column:organization;type:json;serializer:json"`
 	Country           []string  `json:"country"            gorm:"column:country;type:json;serializer:json"`
 	Province          []string  `json:"province"           gorm:"column:province;type:json;serializer:json"`
+	Locality          []string  `json:"locality"           gorm:"column:locality;type:json;serializer:json"`
 	DNSNames          []string  `json:"dns_names"          gorm:"column:dns_names;type:json;serializer:json"`
 	IPAddresses       []string  `json:"ip_addresses"       gorm:"column:ip_addresses;type:json;serializer:json"`
 	Version           int       `json:"version"            gorm:"column:version"`

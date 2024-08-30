@@ -45,11 +45,17 @@ func (cp *certPool) Replace(certs []tls.Certificate) {
 	for _, cert := range certs {
 		leaf := cert.Leaf
 		for _, name := range leaf.DNSNames {
+			if name == "" {
+				continue
+			}
 			cfg := cp.base.Clone()
 			cfg.Certificates = []tls.Certificate{cert}
 			hm[name] = cfg
 		}
 		for _, ip := range leaf.IPAddresses {
+			if ip == nil {
+				continue
+			}
 			cfg := cp.base.Clone()
 			cfg.Certificates = []tls.Certificate{cert}
 			hm[ip.String()] = cfg

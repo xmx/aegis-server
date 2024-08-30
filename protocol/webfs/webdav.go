@@ -96,7 +96,7 @@ func (f *davFS) tryServeJSONDir(w http.ResponseWriter, r *http.Request, path str
 			continue
 		}
 		// 链接类型文件
-		if link, exx := os.Readlink(filepath.Join(path, name)); exx != nil {
+		if link, exx := os.Readlink(filepath.Join(path, name)); exx == nil {
 			info.Symlink = link
 		}
 	}

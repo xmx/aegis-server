@@ -81,7 +81,7 @@
     let serial = 0;
     let selected = false;
     let elements = [];
-    const es = new EventSource(`/api/log/tail`);
+    const es = new EventSource(`/api/sse/log/tail`);
     es.onmessage = function (evt) {
         serial++;
         if (elements.length > 200) {

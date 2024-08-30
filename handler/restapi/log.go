@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/aegis-server/business/service"
@@ -30,7 +31,7 @@ func (api *logAPI) Register(rt shipx.Router) error {
 	auth.Route("/log/level").
 		GET(api.Level).
 		POST(api.SetLevel)
-	auth.Route("/log/tail").GET(api.Tail)
+	auth.Route("/sse/log/tail").GET(api.Tail)
 
 	return nil
 }
@@ -54,7 +55,7 @@ func (api *logAPI) Tail(c *ship.Context) error {
 	cnt := api.count.Add(1)
 	if lim := api.limit; cnt > lim {
 		api.count.Add(-1)
-		return ship.ErrTooManyRequests
+		return errcode.ErrTooManyRequests
 	}
 
 	defer func() {
@@ -66,7 +67,7 @@ func (api *logAPI) Tail(c *ship.Context) error {
 	sse, ok := eventsource.Accept(w, r)
 	if !ok {
 		c.Warnf("不是 Server-Sent Events 连接")
-		return ship.ErrBadRequest
+		return errcode.ErrServerSentEvents
 	}
 
 	api.svc.Attach(sse)

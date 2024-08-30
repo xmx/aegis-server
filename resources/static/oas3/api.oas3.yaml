@@ -1,7 +1,14 @@
 openapi: 3.1.0
 info:
   title: 接口文档
-  description: '### TODO'
+  description: |
+    ### Websocket
+
+    `/ws` 前缀的路径是 websocket 协议接口。
+
+    ### Server-Sent Events
+
+    `/sse` 前缀路径是 Server-Sent Events 协议接口。
   version: 1.0.0
   summary: 接口文档
   contact:
@@ -102,6 +109,247 @@ paths:
           description: OK
       operationId: get-config-certificate-refresh
       description: 刷新HTTP证书
+  '/dav/{wildcard}':
+    parameters:
+      - $ref: '#/components/parameters/wildcard'
+    get:
+      summary: WebDAV-文件管理
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  path:
+                    type: string
+                    x-stoplight:
+                      id: k1e4wn16uc21c
+                    description: 当前所在路径
+                    example: /home/tom
+                  files:
+                    type: array
+                    x-stoplight:
+                      id: uqeot08v6zdb6
+                    description: 文件列表
+                    items:
+                      x-stoplight:
+                        id: isv2i0jgdf5dx
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          x-stoplight:
+                            id: l1zupoteadfw5
+                          example: sbin
+                          description: 文件名
+                        size:
+                          type: integer
+                          x-stoplight:
+                            id: r3hurjfv1te9u
+                          description: 文件大小
+                          example: 8
+                        mode:
+                          type: string
+                          x-stoplight:
+                            id: l6c8fd4a0iu7d
+                          example: Lrwxrwxrwx
+                          description: 权限mode
+                        directory:
+                          type: boolean
+                          x-stoplight:
+                            id: de3zyfp78927h
+                          description: 是否是目录类型
+                        updated_at:
+                          type: string
+                          x-stoplight:
+                            id: b7yvu35l4be7z
+                          example: '2024-06-25T09:34:40.204173373+08:00'
+                          description: 更新时间
+                        created_at:
+                          type: string
+                          x-stoplight:
+                            id: hlzcsxuw0cl0d
+                          example: '2024-06-25T09:34:40.204173373+08:00'
+                          description: 创建时间
+                        accessed_at:
+                          type: string
+                          x-stoplight:
+                            id: 0jzy5s7tt9p4e
+                          example: '2024-08-30T03:45:49.210773168+08:00'
+                          description: 最新访问时间
+                        user:
+                          type: string
+                          x-stoplight:
+                            id: 2njghtuiy8ygf
+                          example: root
+                          description: 所属用户
+                        group:
+                          type: string
+                          x-stoplight:
+                            id: 70a4wl95o1wqj
+                          example: root
+                          description: 所属用户组
+                        symlink:
+                          type: string
+                          x-stoplight:
+                            id: a1od8ps7dmlk3
+                          example: usr/sbin
+                          description: 链接类型文件的指向文件（链接类型文件才有该值）
+                      required:
+                        - name
+                        - size
+                        - mode
+                        - directory
+                required:
+                  - path
+      operationId: get-dav-wildcard
+      description: |
+        WebDAV 文件管理接口。
+
+        - 当请求的是个文件时，则会触发下载文件。
+
+        - 当请求的是个目录时，如果请求 Header 的 `Accept` 是 `application/json`，会响应 JSON 格式数据；否则响应 HTML 格式数据。
+      parameters: []
+    post:
+      summary: WebDAV-文件管理
+      operationId: post-dav-wildcard
+      responses:
+        '200':
+          description: OK
+      description: WebDAV 文件管理接口。
+      tags:
+        - ⚙️ 系统设置
+    put:
+      summary: WebDAV-文件管理
+      operationId: put-dav-wildcard
+      responses:
+        '200':
+          description: OK
+      description: WebDAV 文件管理接口。
+      tags:
+        - ⚙️ 系统设置
+    patch:
+      summary: WebDAV-文件管理
+      operationId: patch-dav-wildcard
+      responses:
+        '200':
+          description: OK
+      description: WebDAV 文件管理接口。
+      tags:
+        - ⚙️ 系统设置
+    delete:
+      summary: WebDAV-文件管理
+      operationId: delete-dav-wildcard
+      responses:
+        '200':
+          description: OK
+      description: WebDAV 文件管理接口。
+      tags:
+        - ⚙️ 系统设置
+    head:
+      summary: WebDAV-文件管理
+      operationId: head-dav-wildcard
+      responses:
+        '200':
+          description: OK
+      description: WebDAV 文件管理接口。
+      tags:
+        - ⚙️ 系统设置
+  /sse/log/tail:
+    get:
+      summary: 日志-观测
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+      operationId: get-sse-log-tail
+      description: |-
+        通过 SSE 观测运行日志。
+
+        > 该接口是 Server-Sent Events 协议。
+  /js/play/pprof:
+    get:
+      summary: JS-pprof 火焰图采集
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: pprof 下载流。
+      operationId: get-js-play-pprof
+      parameters:
+        - schema:
+            type: integer
+            example: 30
+          in: query
+          name: seconds
+          description: 采集秒数
+      description: goja js 引擎 pprof 火焰图采集
+  /ws/pty:
+    get:
+      summary: TERM-PTY
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+      operationId: get-ws-pty
+      description: pty 代理
+      parameters:
+        - schema:
+            type: integer
+          in: query
+          name: rows
+          description: 终端字符行数
+        - schema:
+            type: integer
+          in: query
+          name: cols
+          description: 终端字符列数
+  /ws/ssh:
+    get:
+      summary: TERM-SSH
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+      operationId: get-ws-ssh
+      description: ssh 代理
+      parameters:
+        - schema:
+            type: integer
+          in: query
+          name: rows
+          description: 终端字符行数
+        - schema:
+            type: integer
+          in: query
+          name: cols
+          description: 终端字符列数
+        - schema:
+            type: string
+            example: '10.23.44.32:22'
+          in: query
+          required: true
+          name: bastion
+          description: SSH 服务端地址（含端口号）
+        - schema:
+            type: string
+            example: root
+          in: query
+          name: username
+          required: true
+          description: SSH 登录用户名
+        - schema:
+            type: string
+          in: query
+          name: password
+          description: SSH 密码
 components:
   securitySchemes:
     Authorization:
@@ -152,6 +400,14 @@ components:
         minItems: 1
         maxItems: 1000
       description: '允许传入多个ID，ElementsUI 中输入示例：["1","2"] 或 [1,2]。'
+    wildcard:
+      name: wildcard
+      in: path
+      schema:
+        type: string
+        example: img/avatar/tom.png
+      description: 路径通配
+      required: true
   responses:
     GetConfigCertificates:
       description: Example response
@@ -189,7 +445,7 @@ components:
       type: object
       properties:
         id:
-          type: string
+          $ref: '#/components/schemas/Int64'
           description: 证书ID
         public_key:
           $ref: '#/components/schemas/PublicKey'
@@ -215,41 +471,42 @@ components:
       x-stoplight:
         id: apo940rmnny05
       type: string
-      description: |-
-        证书公钥，示例数据：
-        ```
-        -----BEGIN CERTIFICATE-----
-        MIIB3jCCAYSgAwIBAgIUPMsmYS19fCoKd7uvz6loieoVcwswCQYHKoZIzj0EATA7
-        MQwwCgYDVQQDDANXUjIxHjAcBgNVBAoMFUdvb2dsZSBUcnVzdCBTZXJ2aWNlczEL
-        MAkGA1UEBhMCQ04wHhcNMjQwODI5MTYwMDAwWhcNMjQwODMxMTUwMDAwWjCBhDEL
-        MAkGA1UEBhMCQ04xDzANBgNVBAgMBuW5v+ilvzEPMA0GA1UEBwwG5rKz5rGgMScw
-        JQYDVQQKDB7mvJTnpLror4Hkuabnp5HmioDmnInpmZDlhazlj7gxEjAQBgNVBAsM
-        CeaKgOacr+mDqDEWMBQGA1UEAwwNKi5leGFtcGxlLmNvbTBZMBMGByqGSM49AgEG
-        CCqGSM49AwEHA0IABP+APxK17Dy1dNj+/wMdmBd6jJYYRMp1RpSYFWRJ/Jy4mI4h
-        +O6GgZEWodac6GKzdq+0NVm2CsD5V+pyQkaMDOWjHTAbMAsGA1UdEQQEMAKCADAM
-        BgNVHRMBAf8EAjAAMAkGByqGSM49BAEDSQAwRgIhAOKcHC+xKppGi/o63PjMj+j3
-        mySras50HIcTeqa5mfogAiEAwaycXGblqerbfrqPr+TbE6bMUJiwx5Nx2YXl8kRO
-        qdg=
-        -----END CERTIFICATE-----
-        ```
+      description: 证书公钥。
       examples: []
-      example: 请填写正确的证书公钥
+      example: |-
+        -----BEGIN CERTIFICATE-----
+        MIIB5TCCAYugAwIBAgIUMeYkdlDj451ANDaCams6cZNqjIowCQYHKoZIzj0EATBT
+        MS0wKwYDVQQDDCRFbmNyeXB0aW9uIEV2ZXJ5d2hlcmUgRFYgVExTIENBIC0gRzIx
+        FTATBgNVBAoMDERpZ2lDZXJ0IEluYzELMAkGA1UEBhMCQ04wHhcNMjQwODMxMTYw
+        MDAwWhcNMjQwOTMwMTU1NTAwWjB0MQswCQYDVQQGEwJDTjEPMA0GA1UECAwG5bm/
+        6KW/MQ8wDQYDVQQHDAbljZflroExFTATBgNVBAoMDOa1i+ivleivgeS5pjESMBAG
+        A1UECwwJ5oqA5pyv6YOoMRgwFgYDVQQDDA94bXguZXhhbXBsZS5jb20wWTATBgcq
+        hkjOPQIBBggqhkjOPQMBBwNCAASFPzKC1OnoA/Csp+/fo+7yyWm5sisn81I4rKgz
+        61wb5BWvFmoHfwPAQaW9ntChbnuV0alwE8KQA1WmTk9L0jWJox0wGzALBgNVHREE
+        BDACggAwDAYDVR0TAQH/BAIwADAJBgcqhkjOPQQBA0kAMEYCIQDY1axQLDuwV6mU
+        tI8qJm9yE3llb/uwNMF3XmaaDbYj6QIhAMVzlqT6fhtMRYwzGeUlCBzpB4JLelke
+        QayXkSUs/PR7
+        -----END CERTIFICATE-----
     PrivateKey:
       title: PrivateKey
       x-stoplight:
         id: rg0crxe5m3g7d
       type: string
-      description: |-
-        证书私钥，样例数据：
-        ```
-        -----BEGIN PRIVATE KEY-----
-        MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgmZQ95+LYpzS/XH/V
-        +3OZae+Ymwf1zuvAu2qNHLvNwzqhRANCAAT/gD8Stew8tXTY/v8DHZgXeoyWGETK
-        dUaUmBVkSfycuJiOIfjuhoGRFqHWnOhis3avtDVZtgrA+VfqckJGjAzl
-        -----END PRIVATE KEY-----
-        ```
+      description: 证书私钥。
       examples: []
-      example: 请填写正确的证书私钥
+      example: |-
+        -----BEGIN PRIVATE KEY-----
+        MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgb4dsgSbjKkxzr+QX
+        RpriUIoInvWuBdY2Sa4zpoCC36ehRANCAASFPzKC1OnoA/Csp+/fo+7yyWm5sisn
+        81I4rKgz61wb5BWvFmoHfwPAQaW9ntChbnuV0alwE8KQA1WmTk9L0jWJ
+        -----END PRIVATE KEY-----
+    Int64:
+      title: Int64
+      x-stoplight:
+        id: yy957ay999vsy
+      type: string
+      pattern: '^[0-9]+'
+      example: '100023'
   requestBodies: {}
 security:
   - Authorization: []

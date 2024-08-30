@@ -176,6 +176,11 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	case <-ctx.Done():
 	}
 	_ = srv.Close()
+	if err != nil {
+		log.Error("程序运行错误", slog.Any("error", err))
+	} else {
+		log.Warn("程序结束运行")
+	}
 
 	return err
 }
