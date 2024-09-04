@@ -28,20 +28,22 @@ type File interface {
 
 func NewFS(qry *query.Query) FS {
 	return &gridFS{
-		qry:   qry,
-		burst: 63 * 1024, // 63KiB
+		qry:     qry,
+		burst:   63 * 1024, // 63KiB
+		timeout: time.Minute,
 	}
 }
 
 type gridFS struct {
-	qry   *query.Query
-	burst uint16
+	qry     *query.Query
+	burst   uint16
+	timeout time.Duration
 }
 
 // Open 请确保
 func (g *gridFS) Open(name string) (fs.File, error) {
 	tbl := g.qry.GridFile
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := g.getContext()
 	defer cancel()
 
 	file, err := tbl.WithContext(ctx).
@@ -59,7 +61,7 @@ func (g *gridFS) Open(name string) (fs.File, error) {
 
 func (g *gridFS) OpenID(fileID int64) (File, error) {
 	tbl := g.qry.GridFile
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := g.getContext()
 	defer cancel()
 
 	file, err := tbl.WithContext(ctx).
@@ -99,12 +101,13 @@ func (g *gridFS) Save(ctx context.Context, filename string, r io.Reader) (*model
 				length += int64(n)
 				chunk := &model.GridChunk{FileID: fileID, Sequence: sequence, Data: data[:n]}
 				sequence++
-				if err = cdao.Create(chunk); err != nil {
-					return err
+				if exx := cdao.Create(chunk); exx != nil {
+					return exx
 				}
 			}
 
 			if err != nil {
+				// io.ReadFull returned error
 				if err == io.EOF || err == io.ErrUnexpectedEOF {
 					break
 				}
@@ -133,7 +136,12 @@ func (g *gridFS) Save(ctx context.Context, filename string, r io.Reader) (*model
 
 func (g *gridFS) newFile(file *model.GridFile) File {
 	return &gridFile{
-		qry:  g.qry,
-		file: file,
+		qry:     g.qry,
+		file:    file,
+		timeout: g.timeout,
 	}
+}
+
+func (g *gridFS) getContext() (ctx context.Context, cancel context.CancelFunc) {
+	return context.WithTimeout(context.Background(), g.timeout)
 }

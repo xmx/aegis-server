@@ -7,22 +7,15 @@ import (
 	"io/fs"
 	"time"
 
-	"gorm.io/gorm"
-
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
+	"gorm.io/gorm"
 )
-
-func newFile(qry *query.Query, file *model.GridFile) *gridFile {
-	return &gridFile{
-		qry:  qry,
-		file: file,
-	}
-}
 
 type gridFile struct {
 	qry      *query.Query
 	file     *model.GridFile
+	timeout  time.Duration
 	sequence int64
 	data     []byte
 	cursor   int
@@ -40,23 +33,20 @@ func (g *gridFile) Read(b []byte) (int, error) {
 
 	size := len(b)
 	var n int
-	for n < size {
+	for n < size && g.err == nil {
 		num := copy(b[n:], g.data[g.cursor:])
-		if num == 0 {
+		if num > 0 {
+			n += num
+			g.cursor += num
+		} else {
 			g.err = g.readNext()
 		}
-		if err := g.err; err != nil {
-			if n > 0 {
-				return n, nil
-			} else {
-				return 0, err
-			}
-		}
-		n += num
-		g.cursor += num
+	}
+	if n > 0 {
+		return n, nil
 	}
 
-	return n, nil
+	return 0, g.err
 }
 
 func (g *gridFile) Close() error {
@@ -96,8 +86,18 @@ func (g *gridFile) SHA256() string {
 	return g.file.SHA256
 }
 
+func (g *gridFile) Seek(offset int64, whence int) (int64, error) {
+	switch whence {
+	case io.SeekStart:
+	case io.SeekCurrent:
+	case io.SeekEnd:
+	}
+	//TODO implement me
+	panic("implement me")
+}
+
 func (g *gridFile) readNext() error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := g.getContext()
 	defer cancel()
 
 	tbl := g.qry.GridChunk
@@ -116,4 +116,8 @@ func (g *gridFile) readNext() error {
 	g.cursor = 0
 
 	return nil
+}
+
+func (g *gridFile) getContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), g.timeout)
 }
