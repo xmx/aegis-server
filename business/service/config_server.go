@@ -1,4 +1,4 @@
-package repository
+package service
 
 import (
 	"context"
@@ -14,21 +14,21 @@ type ConfigServer interface {
 }
 
 func NewConfigServer(qry *query.Query) ConfigServer {
-	return &configServerRepository{qry: qry}
+	return &configServerService{qry: qry}
 }
 
-type configServerRepository struct {
+type configServerService struct {
 	qry *query.Query
 }
 
-func (c *configServerRepository) Enabled(ctx context.Context) (*model.ConfigServer, error) {
+func (c *configServerService) Enabled(ctx context.Context) (*model.ConfigServer, error) {
 	tbl := c.qry.ConfigServer
 	return tbl.WithContext(ctx).
 		Where(tbl.Enabled.Is(true)).
 		First()
 }
 
-func (c *configServerRepository) Create(ctx context.Context, cert *model.ConfigServer) (bool, error) {
+func (c *configServerService) Create(ctx context.Context, cert *model.ConfigServer) (bool, error) {
 	enabled := cert.Enabled
 	tbl := c.qry.ConfigServer
 	err := tbl.WithContext(ctx).Create(cert)
@@ -36,7 +36,7 @@ func (c *configServerRepository) Create(ctx context.Context, cert *model.ConfigS
 	return enabled, err
 }
 
-func (c *configServerRepository) Delete(ctx context.Context, id int64) (bool, error) {
+func (c *configServerService) Delete(ctx context.Context, id int64) (bool, error) {
 	var enabled bool
 	err := c.qry.Transaction(func(tx *query.Query) error {
 		tbl := tx.ConfigServer

@@ -11,8 +11,8 @@ import (
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
+	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
-	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
@@ -94,11 +94,9 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		log.Info("检查合并数据库表结构结束")
 	}
 
-	configServerRepository := repository.NewConfigServer(qry)
-	// configCertificateRepository := repository.NewConfigCertificate(qry)
-
 	// 查询 server 配置
-	srvCfg, err := configServerRepository.Enabled(ctx)
+	configServerService := service.NewConfigServer(qry)
+	srvCfg, err := configServerService.Enabled(ctx)
 	if err != nil {
 		log.Error("查询 server 配置错误", slog.Any("error", err))
 		return err
@@ -129,7 +127,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 			jslib.Time(),
 			jslib.Context(),
 			jslib.Console(io.Discard), // 默认丢弃输出数据。
-			logService,
 		}
 		playerService := service.NewPlayer(loads, log)
 		playAPI := restapi.NewPlay(playerService)
@@ -172,6 +169,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	errs := make(chan error)
 	go serveHTTP(srv, errs)
+	go save(qry)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
@@ -189,4 +187,15 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 func serveHTTP(srv *http.Server, errs chan<- error) {
 	errs <- srv.ListenAndServeTLS("", "")
 	// errs <- srv.ListenAndServe()
+}
+
+func save(qry *query.Query) {
+	pid := os.Getpid()
+	tbl := qry.Pressure
+	dao := tbl.WithContext(context.Background())
+	for {
+		dat := &model.Pressure{PID: pid}
+		_ = dao.Create(dat)
+		_ = dat
+	}
 }

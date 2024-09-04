@@ -38,6 +38,7 @@ func newConfigCertificate(db *gorm.DB, opts ...gen.DOOption) configCertificate {
 	_configCertificate.Organization = field.NewField(tableName, "organization")
 	_configCertificate.Country = field.NewField(tableName, "country")
 	_configCertificate.Province = field.NewField(tableName, "province")
+	_configCertificate.Locality = field.NewField(tableName, "locality")
 	_configCertificate.DNSNames = field.NewField(tableName, "dns_names")
 	_configCertificate.IPAddresses = field.NewField(tableName, "ip_addresses")
 	_configCertificate.Version = field.NewInt(tableName, "version")
@@ -66,6 +67,7 @@ type configCertificate struct {
 	Organization      field.Field
 	Country           field.Field
 	Province          field.Field
+	Locality          field.Field
 	DNSNames          field.Field
 	IPAddresses       field.Field
 	Version           field.Int
@@ -100,6 +102,7 @@ func (c *configCertificate) updateTableName(table string) *configCertificate {
 	c.Organization = field.NewField(table, "organization")
 	c.Country = field.NewField(table, "country")
 	c.Province = field.NewField(table, "province")
+	c.Locality = field.NewField(table, "locality")
 	c.DNSNames = field.NewField(table, "dns_names")
 	c.IPAddresses = field.NewField(table, "ip_addresses")
 	c.Version = field.NewInt(table, "version")
@@ -135,7 +138,7 @@ func (c *configCertificate) GetFieldByName(fieldName string) (field.OrderExpr, b
 }
 
 func (c *configCertificate) fillFieldMap() {
-	c.fieldMap = make(map[string]field.Expr, 18)
+	c.fieldMap = make(map[string]field.Expr, 19)
 	c.fieldMap["id"] = c.ID
 	c.fieldMap["enabled"] = c.Enabled
 	c.fieldMap["common_name"] = c.CommonName
@@ -147,6 +150,7 @@ func (c *configCertificate) fillFieldMap() {
 	c.fieldMap["organization"] = c.Organization
 	c.fieldMap["country"] = c.Country
 	c.fieldMap["province"] = c.Province
+	c.fieldMap["locality"] = c.Locality
 	c.fieldMap["dns_names"] = c.DNSNames
 	c.fieldMap["ip_addresses"] = c.IPAddresses
 	c.fieldMap["version"] = c.Version

@@ -9,5 +9,6 @@ func autoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		model.ConfigCertificate{},
 		model.ConfigServer{},
+		model.Pressure{},
 	)
 }

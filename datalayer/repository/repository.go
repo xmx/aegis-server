@@ -1,6 +1,11 @@
 package repository
 
-import "github.com/xmx/aegis-server/datalayer/query"
+import (
+	"database/sql"
+	"time"
+
+	"github.com/xmx/aegis-server/datalayer/query"
+)
 
 type Repository[T any] interface {
 	Query() *query.Query
@@ -39,4 +44,11 @@ func (*baseRepository[T]) withRecords(ps PageScope, count int64, records []T) *P
 		Count:   count,
 		Records: records,
 	}
+}
+
+type name struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt sql.NullTime
+	ExpiredAt sql.NullTime
 }

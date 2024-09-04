@@ -9,6 +9,9 @@ func main() {
 	tables := []any{
 		model.ConfigCertificate{},
 		model.ConfigServer{},
+		model.Pressure{},
+		model.GridChunk{},
+		model.GridFile{},
 	}
 
 	g := gen.NewGenerator(gen.Config{
