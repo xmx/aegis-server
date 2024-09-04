@@ -86,16 +86,6 @@ func (g *gridFile) SHA256() string {
 	return g.file.SHA256
 }
 
-func (g *gridFile) Seek(offset int64, whence int) (int64, error) {
-	switch whence {
-	case io.SeekStart:
-	case io.SeekCurrent:
-	case io.SeekEnd:
-	}
-	//TODO implement me
-	panic("implement me")
-}
-
 func (g *gridFile) readNext() error {
 	ctx, cancel := g.getContext()
 	defer cancel()
