@@ -118,9 +118,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	configCertificateAPI := restapi.NewConfigCertificate(configCertificateService)
 	logAPI := restapi.NewLog(logService)
 	termAPI := restapi.NewTerm(termService)
+	vncAPI := restapi.NewVNC()
 
 	routeRegisters := make([]shipx.Controller, 0, 50)
-	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI, termAPI)
+	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI, termAPI, vncAPI)
 
 	{
 		loads := []jsvm.Loader{
