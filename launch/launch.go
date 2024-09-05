@@ -11,6 +11,7 @@ import (
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
+	"github.com/xmx/aegis-server/datalayer/gridfs"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/handler/middle"
@@ -110,6 +111,9 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		log.Error("初始化证书错误", slog.Any("error", err))
 		return err
 	}
+
+	dbfs := gridfs.NewFS(qry)
+
 	logService := service.NewLog(logLevel, logWriter, log)
 	termService := service.NewTerm(log)
 
@@ -117,9 +121,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	logAPI := restapi.NewLog(logService)
 	termAPI := restapi.NewTerm(termService)
 	vncAPI := restapi.NewVNC()
+	fileAPI := restapi.NewFile(dbfs)
 
 	routeRegisters := make([]shipx.Controller, 0, 50)
-	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI, termAPI, vncAPI)
+	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI, termAPI, vncAPI, fileAPI)
 
 	{
 		loads := []jsvm.Loader{
@@ -169,7 +174,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	errs := make(chan error)
 	go serveHTTP(srv, errs)
-	go save(qry)
+	// go save(qry)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():

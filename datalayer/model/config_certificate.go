@@ -6,12 +6,12 @@ import "time"
 type ConfigCertificate struct {
 	ID                int64     `json:"id,string"          gorm:"column:id;primaryKey;autoIncrement"`
 	Enabled           bool      `json:"enabled"            gorm:"column:enabled"` // 是否启用证书。
-	CommonName        string    `json:"common_name"        gorm:"column:common_name;not null;index:idx_common_name"`
+	CommonName        string    `json:"common_name"        gorm:"column:common_name;not null;type:varchar(255);index:idx_common_name"`
 	PublicKey         string    `json:"public_key"         gorm:"column:public_key"`
 	PrivateKey        string    `json:"private_key"        gorm:"column:private_key"`
-	CertificateSHA256 string    `json:"certificate_sha256" gorm:"column:certificate_sha256;char(64)"` // 证书 SHA-256 指纹
-	PublicKeySHA256   string    `json:"public_key_sha256"  gorm:"column:public_key_sha256;char(64)"`  // 公钥 SHA-256 指纹
-	PrivateKeySHA256  string    `json:"private_key_sha256" gorm:"column:private_key_sha256;char(64)"` // 私钥 SHA-256 指纹
+	CertificateSHA256 string    `json:"certificate_sha256" gorm:"column:certificate_sha256;type:char(64)"` // 证书 SHA-256 指纹
+	PublicKeySHA256   string    `json:"public_key_sha256"  gorm:"column:public_key_sha256;type:char(64)"`  // 公钥 SHA-256 指纹
+	PrivateKeySHA256  string    `json:"private_key_sha256" gorm:"column:private_key_sha256;type:char(64)"` // 私钥 SHA-256 指纹
 	Organization      []string  `json:"organization"       gorm:"column:organization;type:json;serializer:json"`
 	Country           []string  `json:"country"            gorm:"column:country;type:json;serializer:json"`
 	Province          []string  `json:"province"           gorm:"column:province;type:json;serializer:json"`
