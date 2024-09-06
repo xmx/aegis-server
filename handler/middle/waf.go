@@ -22,13 +22,13 @@ func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
 
 		method, url := c.Method(), c.Request().URL
 		remoteAddr, clientIP := c.RemoteAddr(), c.ClientIP()
-		userAgent := c.UserAgent()
+		headers := c.ReqHeader()
 		attrs := []any{
 			slog.String("method", method),
 			slog.String("path", url.String()),
 			slog.String("remote_addr", remoteAddr),
 			slog.String("client_ip", clientIP),
-			slog.String("user_agent", userAgent),
+			slog.Any("headers", headers),
 			slog.Time("access_at", accessAt),
 		}
 

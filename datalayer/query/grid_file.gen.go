@@ -31,7 +31,8 @@ func newGridFile(db *gorm.DB, opts ...gen.DOOption) gridFile {
 	_gridFile.Filename = field.NewString(tableName, "filename")
 	_gridFile.Length = field.NewInt64(tableName, "length")
 	_gridFile.Burst = field.NewUint16(tableName, "burst")
-	_gridFile.Done = field.NewBool(tableName, "done")
+	_gridFile.SHA1 = field.NewString(tableName, "sha1")
+	_gridFile.SHA256 = field.NewString(tableName, "sha256")
 	_gridFile.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_gridFile.CreatedAt = field.NewTime(tableName, "created_at")
 
@@ -48,7 +49,8 @@ type gridFile struct {
 	Filename  field.String
 	Length    field.Int64
 	Burst     field.Uint16
-	Done      field.Bool
+	SHA1      field.String
+	SHA256    field.String
 	UpdatedAt field.Time
 	CreatedAt field.Time
 
@@ -71,7 +73,8 @@ func (g *gridFile) updateTableName(table string) *gridFile {
 	g.Filename = field.NewString(table, "filename")
 	g.Length = field.NewInt64(table, "length")
 	g.Burst = field.NewUint16(table, "burst")
-	g.Done = field.NewBool(table, "done")
+	g.SHA1 = field.NewString(table, "sha1")
+	g.SHA256 = field.NewString(table, "sha256")
 	g.UpdatedAt = field.NewTime(table, "updated_at")
 	g.CreatedAt = field.NewTime(table, "created_at")
 
@@ -98,12 +101,13 @@ func (g *gridFile) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (g *gridFile) fillFieldMap() {
-	g.fieldMap = make(map[string]field.Expr, 7)
+	g.fieldMap = make(map[string]field.Expr, 8)
 	g.fieldMap["id"] = g.ID
 	g.fieldMap["filename"] = g.Filename
 	g.fieldMap["length"] = g.Length
 	g.fieldMap["burst"] = g.Burst
-	g.fieldMap["done"] = g.Done
+	g.fieldMap["sha1"] = g.SHA1
+	g.fieldMap["sha256"] = g.SHA256
 	g.fieldMap["updated_at"] = g.UpdatedAt
 	g.fieldMap["created_at"] = g.CreatedAt
 }

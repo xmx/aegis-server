@@ -10,19 +10,20 @@ import (
 	"sync"
 )
 
-func Accept(w http.ResponseWriter, r *http.Request) (EventSource, bool) {
+// Accept 将请求转为 sse，如果不符合协议就返回 nil。
+func Accept(w http.ResponseWriter, r *http.Request) EventSource {
 	f, ok := w.(http.Flusher)
 	if !ok || r.Header.Get("Accept") != "text/event-stream" ||
 		r.Header.Get("Cache-Control") != "no-cache" {
-		return nil, false
+		return nil
 	}
 
-	var gz *gzip.Writer
+	var gzw *gzip.Writer
 	encodings := r.Header.Get("Accept-Encoding")
 	for _, str := range strings.Split(encodings, ",") {
 		if strings.TrimSpace(str) == "gzip" {
 			w.Header().Set("Content-Encoding", "gzip")
-			gz = gzip.NewWriter(w)
+			gzw = gzip.NewWriter(w)
 		}
 	}
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
@@ -38,16 +39,16 @@ func Accept(w http.ResponseWriter, r *http.Request) (EventSource, bool) {
 		ctx:    ctx,
 		cancel: cancel,
 	}
-	if gz == nil {
+	if gzw == nil {
 		sse.write = w
 		sse.flush = f
 	} else {
-		sse.write = gz
-		sse.close = gz
-		sse.flush = &gzipFlusher{write: gz, flush: f}
+		sse.write = gzw
+		sse.close = gzw
+		sse.flush = &gzipFlusher{write: gzw, flush: f}
 	}
 
-	return sse, true
+	return sse
 }
 
 type EventSource interface {

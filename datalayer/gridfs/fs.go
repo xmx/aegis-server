@@ -47,7 +47,7 @@ func (g *gridFS) Open(name string) (fs.File, error) {
 	defer cancel()
 
 	file, err := tbl.WithContext(ctx).
-		Where(tbl.Filename.Eq(name), tbl.Done.Is(true)).
+		Where(tbl.Filename.Eq(name)).
 		Order(tbl.CreatedAt.Desc()).
 		First()
 	if err != nil {
@@ -65,7 +65,7 @@ func (g *gridFS) OpenID(fileID int64) (File, error) {
 	defer cancel()
 
 	file, err := tbl.WithContext(ctx).
-		Where(tbl.ID.Eq(fileID), tbl.Done.Is(true)).
+		Where(tbl.ID.Eq(fileID)).
 		First()
 	if err != nil {
 		return nil, err
@@ -119,7 +119,6 @@ func (g *gridFS) Save(ctx context.Context, filename string, r io.Reader) (*model
 		h1sum, h256sum := h1.Sum(nil), h256.Sum(nil)
 		file.SHA1 = hex.EncodeToString(h1sum)
 		file.SHA256 = hex.EncodeToString(h256sum)
-		file.Done = true
 		file.Length = length
 		file.UpdatedAt = time.Now()
 

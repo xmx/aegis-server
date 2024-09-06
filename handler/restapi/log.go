@@ -64,8 +64,8 @@ func (api *logAPI) Tail(c *ship.Context) error {
 	}()
 
 	w, r := c.ResponseWriter(), c.Request()
-	sse, ok := eventsource.Accept(w, r)
-	if !ok {
+	sse := eventsource.Accept(w, r)
+	if sse == nil {
 		c.Warnf("不是 Server-Sent Events 连接")
 		return errcode.ErrServerSentEvents
 	}

@@ -21,7 +21,6 @@ var (
 	ConfigServer      *configServer
 	GridChunk         *gridChunk
 	GridFile          *gridFile
-	Pressure          *pressure
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
@@ -30,7 +29,6 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	ConfigServer = &Q.ConfigServer
 	GridChunk = &Q.GridChunk
 	GridFile = &Q.GridFile
-	Pressure = &Q.Pressure
 }
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
@@ -40,7 +38,6 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		ConfigServer:      newConfigServer(db, opts...),
 		GridChunk:         newGridChunk(db, opts...),
 		GridFile:          newGridFile(db, opts...),
-		Pressure:          newPressure(db, opts...),
 	}
 }
 
@@ -51,7 +48,6 @@ type Query struct {
 	ConfigServer      configServer
 	GridChunk         gridChunk
 	GridFile          gridFile
-	Pressure          pressure
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -63,7 +59,6 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		ConfigServer:      q.ConfigServer.clone(db),
 		GridChunk:         q.GridChunk.clone(db),
 		GridFile:          q.GridFile.clone(db),
-		Pressure:          q.Pressure.clone(db),
 	}
 }
 
@@ -82,7 +77,6 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		ConfigServer:      q.ConfigServer.replaceDB(db),
 		GridChunk:         q.GridChunk.replaceDB(db),
 		GridFile:          q.GridFile.replaceDB(db),
-		Pressure:          q.Pressure.replaceDB(db),
 	}
 }
 
@@ -91,7 +85,6 @@ type queryCtx struct {
 	ConfigServer      *configServerDo
 	GridChunk         *gridChunkDo
 	GridFile          *gridFileDo
-	Pressure          *pressureDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
@@ -100,7 +93,6 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		ConfigServer:      q.ConfigServer.WithContext(ctx),
 		GridChunk:         q.GridChunk.WithContext(ctx),
 		GridFile:          q.GridFile.WithContext(ctx),
-		Pressure:          q.Pressure.WithContext(ctx),
 	}
 }
 
