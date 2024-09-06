@@ -80,6 +80,16 @@ paths:
       description: 删除证书
       parameters:
         - $ref: '#/components/parameters/ids'
+  /config/certificate/cond:
+    get:
+      summary: TLS证书-查询条件
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+      operationId: get-config-certificate-cond
+      description: TLS证书-查询条件
   /config/certificate/download:
     get:
       summary: TLS证书-下载

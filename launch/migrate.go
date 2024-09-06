@@ -11,6 +11,5 @@ func autoMigrate(db *gorm.DB) error {
 		model.ConfigServer{},
 		model.GridChunk{},
 		model.GridFile{},
-		model.Pressure{},
 	)
 }

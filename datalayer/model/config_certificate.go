@@ -4,16 +4,16 @@ import "time"
 
 // ConfigCertificate 服务端证书。
 type ConfigCertificate struct {
-	ID                int64     `json:"id,string"          gorm:"column:id;primaryKey;autoIncrement"`
-	Enabled           bool      `json:"enabled"            gorm:"column:enabled"` // 是否启用证书。
-	CommonName        string    `json:"common_name"        gorm:"column:common_name;not null;type:varchar(255);index:idx_common_name"`
-	PublicKey         string    `json:"public_key"         gorm:"column:public_key"`
-	PrivateKey        string    `json:"private_key"        gorm:"column:private_key"`
-	CertificateSHA256 string    `json:"certificate_sha256" gorm:"column:certificate_sha256;type:char(64)"` // 证书 SHA-256 指纹
-	PublicKeySHA256   string    `json:"public_key_sha256"  gorm:"column:public_key_sha256;type:char(64)"`  // 公钥 SHA-256 指纹
-	PrivateKeySHA256  string    `json:"private_key_sha256" gorm:"column:private_key_sha256;type:char(64)"` // 私钥 SHA-256 指纹
-	Organization      []string  `json:"organization"       gorm:"column:organization;type:json;serializer:json"`
-	Country           []string  `json:"country"            gorm:"column:country;type:json;serializer:json"`
+	ID                int64     `json:"id,string"          gorm:"column:id;primaryKey;autoIncrement;comment:表ID"`
+	Enabled           bool      `json:"enabled"            gorm:"column:enabled;comment:是否启用"`
+	CommonName        string    `json:"common_name"        gorm:"column:common_name;not null;type:varchar(255);index:idx_common_name;comment:公用名"`
+	PublicKey         string    `json:"public_key"         gorm:"column:public_key;comment:证书"`
+	PrivateKey        string    `json:"private_key"        gorm:"column:private_key;comment:私钥"`
+	CertificateSHA256 string    `json:"certificate_sha256" gorm:"column:certificate_sha256;type:char(64);comment:证书指纹"`
+	PublicKeySHA256   string    `json:"public_key_sha256"  gorm:"column:public_key_sha256;type:char(64);comment:公钥指纹"`
+	PrivateKeySHA256  string    `json:"private_key_sha256" gorm:"column:private_key_sha256;type:char(64);comment:私钥指纹"`
+	Organization      []string  `json:"organization"       gorm:"column:organization;type:json;serializer:json;comment:组织"`
+	Country           []string  `json:"country"            gorm:"column:country;type:json;serializer:json;comment:国家"`
 	Province          []string  `json:"province"           gorm:"column:province;type:json;serializer:json"`
 	Locality          []string  `json:"locality"           gorm:"column:locality;type:json;serializer:json"`
 	DNSNames          []string  `json:"dns_names"          gorm:"column:dns_names;type:json;serializer:json"`

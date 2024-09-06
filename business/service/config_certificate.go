@@ -9,17 +9,19 @@ import (
 	"log/slog"
 	"sync"
 
+	"github.com/xmx/aegis-server/argument/bizdata"
 	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/pscope"
 	"github.com/xmx/aegis-server/argument/request"
+	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/library/credential"
-	"gorm.io/gen"
 )
 
 type ConfigCertificate interface {
+	Cond() *response.Cond
 	Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error)
 	Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
 	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
@@ -31,30 +33,39 @@ type ConfigCertificate interface {
 }
 
 func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) ConfigCertificate {
+	tbl := qry.ConfigCertificate
+	orders := new(bizdata.SearchOrders).
+		Add(tbl.CommonName, "公用名").
+		Add(tbl.NotAfter, "过期时间").
+		Add(tbl.CreatedAt, "创建时间").
+		Add(tbl.UpdatedAt, "更新时间")
+
 	return &configCertificateService{
-		pool:  pool,
-		qry:   qry,
-		log:   log,
-		limit: 100,
+		pool:   pool,
+		qry:    qry,
+		log:    log,
+		orders: orders,
+		limit:  100,
 	}
 }
 
 type configCertificateService struct {
-	pool  credential.Certifier // 证书池。
-	log   *slog.Logger
-	qry   *query.Query
-	mutex sync.Mutex
-	limit int64 // 数据库最多可保存的证书数量。
+	pool   credential.Certifier // 证书池。
+	log    *slog.Logger
+	qry    *query.Query
+	orders *bizdata.SearchOrders
+	mutex  sync.Mutex
+	limit  int64 // 数据库最多可保存的证书数量。
+}
+
+func (svc *configCertificateService) Cond() *response.Cond {
+	return &response.Cond{Orders: svc.orders.Fields()}
 }
 
 func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error) {
 	tbl := svc.qry.ConfigCertificate
-	dao := tbl.WithContext(ctx)
-	cond := make([]gen.Condition, 0, 2)
-	if like := req.Like(); like != "" {
-		cond = append(cond, tbl.CommonName.Like(like))
-	}
-	cnt, err := dao.Where(cond...).Count()
+	dao := tbl.WithContext(ctx).Scopes(req.LikeScope(tbl.CommonName))
+	cnt, err := dao.Count()
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +75,7 @@ func (svc *configCertificateService) Page(ctx context.Context, req *request.Page
 		return repository.PageZero[*model.ConfigCertificate](page), nil
 	}
 
-	dats, err := dao.Where(cond...).Scopes(page.Gen(cnt)).Find()
+	dats, err := dao.Scopes(page.Gen(cnt)).Find()
 	if err != nil {
 		return nil, err
 	}

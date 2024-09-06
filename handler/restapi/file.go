@@ -7,16 +7,22 @@ import (
 	"strconv"
 
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/argument/request"
+	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/gridfs"
 	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewFile(dbfs gridfs.FS) shipx.Controller {
-	return &fileAPI{dbfs: dbfs}
+func NewFile(dbfs gridfs.FS, svc service.File) shipx.Controller {
+	return &fileAPI{
+		dbfs: dbfs,
+		svc:  svc,
+	}
 }
 
 type fileAPI struct {
 	dbfs gridfs.FS
+	svc  service.File
 }
 
 func (api *fileAPI) Register(rt shipx.Router) error {
@@ -24,6 +30,9 @@ func (api *fileAPI) Register(rt shipx.Router) error {
 	auth.Route("/file").
 		PUT(api.Upload).
 		GET(api.Download)
+	auth.Route("/files").
+		GET(api.Page)
+
 	return nil
 }
 
@@ -66,3 +75,25 @@ func (api *fileAPI) Download(c *ship.Context) error {
 
 	return c.Stream(http.StatusOK, contentType, file)
 }
+
+func (api *fileAPI) Page(c *ship.Context) error {
+	req := new(request.PageKeywordOrder)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+
+	ctx := c.Request().Context()
+	ret, err := api.svc.Page(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
+}
+
+//func (api *fileAPI) Cond(c *ship.Context) error {
+//	fields := api.orders.Fields()
+//	ret := &response.Cond{Orders: fields}
+//
+//	return c.JSON(http.StatusOK, ret)
+//}

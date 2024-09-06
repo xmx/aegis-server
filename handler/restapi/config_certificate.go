@@ -25,12 +25,18 @@ func (api *configCertificateAPI) Register(r shipx.Router) error {
 	auth.Route("/config/certificates").GET(api.Page)
 	auth.Route("/config/certificate/download").GET(api.Download)
 	auth.Route("/config/certificate/refresh").GET(api.Refresh)
+	auth.Route("/config/certificate/cond").GET(api.Cond)
 	auth.Route("/config/certificate").
 		POST(api.Create).
 		PUT(api.Update).
 		DELETE(api.Delete)
 
 	return nil
+}
+
+func (api *configCertificateAPI) Cond(c *ship.Context) error {
+	ret := api.svc.Cond()
+	return c.JSON(http.StatusOK, ret)
 }
 
 func (api *configCertificateAPI) Page(c *ship.Context) error {

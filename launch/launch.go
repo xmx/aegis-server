@@ -12,7 +12,6 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/gridfs"
-	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
@@ -112,16 +111,22 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 
+	name := qry.GridFile.ID.ColumnName()
+	qry.GridFile.ID.Desc()
+	log.Info(string(name))
+	log.Info(name.String())
+
 	dbfs := gridfs.NewFS(qry)
 
 	logService := service.NewLog(logLevel, logWriter, log)
 	termService := service.NewTerm(log)
+	fileService := service.NewFile(qry, log)
 
 	configCertificateAPI := restapi.NewConfigCertificate(configCertificateService)
 	logAPI := restapi.NewLog(logService)
 	termAPI := restapi.NewTerm(termService)
 	vncAPI := restapi.NewVNC()
-	fileAPI := restapi.NewFile(dbfs)
+	fileAPI := restapi.NewFile(dbfs, fileService)
 
 	routeRegisters := make([]shipx.Controller, 0, 50)
 	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI, termAPI, vncAPI, fileAPI)
@@ -192,15 +197,4 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 func serveHTTP(srv *http.Server, errs chan<- error) {
 	errs <- srv.ListenAndServeTLS("", "")
 	// errs <- srv.ListenAndServe()
-}
-
-func save(qry *query.Query) {
-	pid := os.Getpid()
-	tbl := qry.Pressure
-	dao := tbl.WithContext(context.Background())
-	for {
-		dat := &model.Pressure{PID: pid}
-		_ = dao.Create(dat)
-		_ = dat
-	}
 }
