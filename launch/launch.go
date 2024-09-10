@@ -30,7 +30,7 @@ import (
 )
 
 func Run(ctx context.Context, path string) error {
-	cfg, err := profile.JSON(path)
+	cfg, err := profile.JSONC(path)
 	if err != nil {
 		return err
 	}

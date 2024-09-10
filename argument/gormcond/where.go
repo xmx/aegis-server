@@ -1,13 +1,5 @@
 package gormcond
 
-import (
-	"strings"
-
-	"gorm.io/gen/field"
-)
-
-type Where struct{}
-
 //  =          eq       1 string int bool time
 // !=          ne       1 string int bool time
 //  >          gt       1 string int      time
@@ -22,20 +14,3 @@ type Where struct{}
 // NOT BETWEEN notbtw   2 string int      time
 // REGEX       regex    1 string
 // NOT REGEX   notregex 1 string
-
-type Hi interface {
-	field.Bool | field.String | field.Int | field.Time | field.Float64
-}
-
-func Ass(f field.Expr) {
-	// string bool number
-	switch f.(type) {
-	case field.Bool:
-	case field.String:
-	case field.Int:
-	}
-}
-
-func Parse(str string) {
-	sn := strings.SplitN(str, ":", 3)
-}
