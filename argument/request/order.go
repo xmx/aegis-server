@@ -43,6 +43,7 @@ type Order struct {
 //
 //	<desc> 是未定义的值，或者是空（此时冒号可以省略），均按照升序排序：
 //		- age:hello    ORDER BY age
+//		- age:balabala ORDER BY age
 //		- age:         ORDER BY age
 //		- age	       ORDER BY age
 //	<desc> 可以是枚举：asc、desc：
