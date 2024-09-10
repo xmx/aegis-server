@@ -30,6 +30,7 @@ func (api *fileAPI) Register(rt shipx.Router) error {
 	auth.Route("/file").
 		PUT(api.Upload).
 		GET(api.Download)
+	auth.Route("/file/cond").GET(api.Cond)
 	auth.Route("/files").
 		GET(api.Page)
 
@@ -91,9 +92,7 @@ func (api *fileAPI) Page(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-//func (api *fileAPI) Cond(c *ship.Context) error {
-//	fields := api.orders.Fields()
-//	ret := &response.Cond{Orders: fields}
-//
-//	return c.JSON(http.StatusOK, ret)
-//}
+func (api *fileAPI) Cond(c *ship.Context) error {
+	ret := api.svc.Cond()
+	return c.JSON(http.StatusOK, ret)
+}

@@ -1,7 +1,6 @@
 package request
 
 import (
-	"github.com/xmx/aegis-server/argument/bizdata"
 	"gorm.io/gen"
 	"gorm.io/gen/field"
 )
@@ -54,9 +53,4 @@ func (o OptionalKeyword) RLike() string {
 
 func (o OptionalKeyword) String() string {
 	return o.Keyword
-}
-
-type PageKeywordOrder struct {
-	PageKeyword
-	Order []*bizdata.FieldDesc `json:"order" form:"order" query:"order" validate:"lte=100"`
 }

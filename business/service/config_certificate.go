@@ -9,8 +9,8 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/xmx/aegis-server/argument/bizdata"
 	"github.com/xmx/aegis-server/argument/errcode"
+	"github.com/xmx/aegis-server/argument/gormcond"
 	"github.com/xmx/aegis-server/argument/pscope"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
@@ -34,32 +34,32 @@ type ConfigCertificate interface {
 
 func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) ConfigCertificate {
 	tbl := qry.ConfigCertificate
-	orders := new(bizdata.SearchOrders).
+	order := gormcond.NewOrder().
 		Add(tbl.CommonName, "公用名").
 		Add(tbl.NotAfter, "过期时间").
 		Add(tbl.CreatedAt, "创建时间").
 		Add(tbl.UpdatedAt, "更新时间")
 
 	return &configCertificateService{
-		pool:   pool,
-		qry:    qry,
-		log:    log,
-		orders: orders,
-		limit:  100,
+		pool:  pool,
+		qry:   qry,
+		log:   log,
+		order: order,
+		limit: 100,
 	}
 }
 
 type configCertificateService struct {
-	pool   credential.Certifier // 证书池。
-	log    *slog.Logger
-	qry    *query.Query
-	orders *bizdata.SearchOrders
-	mutex  sync.Mutex
-	limit  int64 // 数据库最多可保存的证书数量。
+	pool  credential.Certifier // 证书池。
+	log   *slog.Logger
+	qry   *query.Query
+	order *gormcond.Order
+	mutex sync.Mutex
+	limit int64 // 数据库最多可保存的证书数量。
 }
 
 func (svc *configCertificateService) Cond() *response.Cond {
-	return &response.Cond{Orders: svc.orders.Fields()}
+	return &response.Cond{Orders: svc.order.Columns()}
 }
 
 func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error) {
