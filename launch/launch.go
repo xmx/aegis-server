@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/argument/mapstruct"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/gridfs"
 	"github.com/xmx/aegis-server/datalayer/query"
@@ -68,7 +69,8 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	log := slog.New(logHandler)
 
 	// 连接数据库
-	db, err := sqldb.TiDB(cfg.Database.TiDB())
+	dbCfg := mapstruct.ConfigDatabase(cfg.Database)
+	db, err := sqldb.TiDB(dbCfg)
 	if err != nil {
 		log.Error("数据库连接失败", slog.Any("error", err))
 		return err
@@ -170,6 +172,9 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 			log.Error("注册路由错误", slog.Any("error", err))
 			return err
 		}
+	}
+	for _, route := range sh.Routes() {
+		log.Info("路由", slog.Any("route", route))
 	}
 
 	srv := &http.Server{

@@ -1,8 +1,6 @@
 package gormcond
 
 import (
-	"slices"
-
 	"gorm.io/gen"
 	"gorm.io/gen/field"
 )
@@ -41,19 +39,11 @@ func (o *Order) Add(f field.OrderExpr, comment string) *Order {
 	if comment == "" {
 		comment = name
 	}
-	_, exist := o.mapping[name]
+	if _, exist := o.mapping[name]; exist {
+		o.deleteFirst(name)
+	}
 	o.mapping[name] = f
 	o.columns = append(o.columns, &ColumnComment{Column: name, Comment: comment})
-	if exist {
-		var found bool
-		o.columns = slices.DeleteFunc(o.columns, func(cc *ColumnComment) bool {
-			if !found && cc.Column == name {
-				found = true
-				return true
-			}
-			return false
-		})
-	}
 
 	return o
 }
@@ -96,5 +86,14 @@ func (o *Order) initial() {
 	}
 	if o.columns == nil {
 		o.columns = make([]*ColumnComment, 0, 8)
+	}
+}
+
+func (o *Order) deleteFirst(column string) {
+	for i, c := range o.columns {
+		if c.Column == column {
+			o.columns = append(o.columns[:i], o.columns[i+1:]...)
+			break
+		}
 	}
 }

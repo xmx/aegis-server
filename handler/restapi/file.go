@@ -28,6 +28,8 @@ type fileAPI struct {
 func (api *fileAPI) Register(rt shipx.Router) error {
 	auth := rt.Auth()
 	auth.Route("/file").
+		Name("文件管理").
+		Data(map[string]string{"key": "上传下载"}).
 		PUT(api.Upload).
 		GET(api.Download)
 	auth.Route("/file/cond").GET(api.Cond)

@@ -19,6 +19,7 @@ type File interface {
 func NewFile(qry *query.Query, log *slog.Logger) File {
 	tbl := qry.GridFile
 	order := gormcond.NewOrder().
+		Add(tbl.ID, "ID").
 		Add(tbl.Filename, "文件名").
 		Add(tbl.Length, "文件大小").
 		Add(tbl.CreatedAt, "上传时间").
