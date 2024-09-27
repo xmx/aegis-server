@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/coder/websocket v1.8.12
 	github.com/creack/pty v1.1.23
-	github.com/dop251/goja v0.0.0-20240919115326-6c7d1df7ff05
+	github.com/dop251/goja v0.0.0-20240926214742-e37b27fbbace
 	github.com/dop251/goja_nodejs v0.0.0-20240728170619-29b559befffc
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
