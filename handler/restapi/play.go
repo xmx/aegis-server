@@ -20,7 +20,7 @@ import (
 	"github.com/xmx/aegis-server/protocol/wsocket"
 )
 
-func NewPlay(player service.Player) shipx.Controller {
+func NewPlay(player service.Player) shipx.Router {
 	return &playAPI{
 		player: player,
 	}
@@ -30,10 +30,9 @@ type playAPI struct {
 	player service.Player
 }
 
-func (api *playAPI) Register(rt shipx.Router) error {
-	auth := rt.Auth()
-	auth.Route("/ws/js/play").GET(api.JS)
-	auth.Route("/js/play/pprof").GET(api.Pprof)
+func (api *playAPI) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/ws/js/play").GET(api.JS)
+	r.Route("/js/play/pprof").GET(api.Pprof)
 	return nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path"
 	"time"
 
 	"github.com/xgfone/ship/v5"
@@ -51,17 +52,18 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	// 初始化日志组件。
+	logCfg := cfg.Logger
 	logWriter := ioext.NewAttachWriter()
-	if lumber := cfg.Logger.Lumber(); lumber != nil {
+	if lumber := logCfg.Lumber(); lumber != nil {
 		defer lumber.Close()
 		logWriter.Attach(lumber)
 	}
-	if cfg.Logger.Terminal {
+	if logCfg.Terminal {
 		logWriter.Attach(os.Stdout)
 	}
 
 	logLevel := new(slog.LevelVar)
-	if err := logLevel.UnmarshalText([]byte(cfg.Logger.Level)); err != nil {
+	if err := logLevel.UnmarshalText([]byte(logCfg.Level)); err != nil {
 		logLevel.Set(slog.LevelWarn)
 	}
 	logOpt := &slog.HandlerOptions{AddSource: true, Level: logLevel}
@@ -86,6 +88,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 	qry := query.Use(gdb)
+	parseModel(gdb)
 
 	if cfg.Database.Migrate {
 		log.Info("准备检查合并数据库表结构")
@@ -113,36 +116,28 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 
-	name := qry.GridFile.ID.ColumnName()
-	qry.GridFile.ID.Desc()
-	log.Info(string(name))
-	log.Info(name.String())
-
 	dbfs := gridfs.NewFS(qry)
-
 	logService := service.NewLog(logLevel, logWriter, log)
 	termService := service.NewTerm(log)
 	fileService := service.NewFile(qry, log)
 
-	configCertificateAPI := restapi.NewConfigCertificate(configCertificateService)
-	logAPI := restapi.NewLog(logService)
-	termAPI := restapi.NewTerm(termService)
-	vncAPI := restapi.NewVNC()
-	fileAPI := restapi.NewFile(dbfs, fileService)
+	jsLoaders := []jsvm.Loader{
+		jslib.OS(),
+		jslib.Time(),
+		jslib.Context(),
+		jslib.Console(io.Discard),
+	}
+	playerService := service.NewPlayer(jsLoaders, log)
 
-	routeRegisters := make([]shipx.Controller, 0, 50)
-	routeRegisters = append(routeRegisters, configCertificateAPI, logAPI, termAPI, vncAPI, fileAPI)
-
-	{
-		loads := []jsvm.Loader{
-			jslib.OS(),
-			jslib.Time(),
-			jslib.Context(),
-			jslib.Console(io.Discard), // 默认丢弃输出数据。
-		}
-		playerService := service.NewPlayer(loads, log)
-		playAPI := restapi.NewPlay(playerService)
-		routeRegisters = append(routeRegisters, playAPI)
+	const basePath, webuiPath = "/api", "/webui"
+	staticPath := path.Join(basePath, webuiPath)
+	routes := []shipx.Router{
+		restapi.NewConfigCertificate(configCertificateService),
+		restapi.NewDAV(basePath, "/"),
+		restapi.NewFile(dbfs, fileService),
+		restapi.NewLog(logService),
+		restapi.NewTerm(termService),
+		restapi.NewPlay(playerService),
 	}
 
 	sh := ship.Default()
@@ -151,28 +146,17 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	sh.HandleError = shipx.HandleError
 	sh.Logger = logext.Ship(logHandler)
 	sh.Route("/").GET(func(c *ship.Context) error {
-		return c.Redirect(http.StatusPermanentRedirect, "/api/webui/")
+		return c.Redirect(http.StatusPermanentRedirect, staticPath)
 	})
 	if dir := srvCfg.Static; dir != "" {
-		staticAPI := restapi.NewStatic(dir)
-		routeRegisters = append(routeRegisters, staticAPI)
+		routes = append(routes, restapi.NewStatic(webuiPath, dir))
 	}
 
-	const basePrefix = "/api"
-	davAPI := restapi.NewDAV(basePrefix, "/", false)
-	routeRegisters = append(routeRegisters, davAPI)
-
-	baseAPI := sh.Group(basePrefix).Use(middle.WAF(log))
-	anon := baseAPI.Clone()
-	auth := baseAPI.Clone()
-
-	for _, reg := range routeRegisters {
-		route := shipx.NewRouter(anon, auth)
-		if err = reg.Register(route); err != nil {
-			log.Error("注册路由错误", slog.Any("error", err))
-			return err
-		}
+	baseAPI := sh.Group(basePath).Use(middle.WAF(log))
+	if err = shipx.BindRouters(baseAPI, routes); err != nil { // 注册路由
+		return err
 	}
+
 	for _, route := range sh.Routes() {
 		log.Info("路由", slog.Any("route", route))
 	}
@@ -184,7 +168,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	errs := make(chan error)
 	go serveHTTP(srv, errs)
-	// go save(qry)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
@@ -201,5 +184,4 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 func serveHTTP(srv *http.Server, errs chan<- error) {
 	errs <- srv.ListenAndServeTLS("", "")
-	// errs <- srv.ListenAndServe()
 }

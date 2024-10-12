@@ -6,8 +6,8 @@ import (
 )
 
 type ColumnComment struct {
-	Column  string
-	Comment string
+	Column  string `json:"column"`
+	Comment string `json:"comment"`
 }
 
 type ColumnDesc struct {

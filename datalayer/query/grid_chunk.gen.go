@@ -33,6 +33,11 @@ func newGridChunk(db *gorm.DB, opts ...gen.DOOption) gridChunk {
 	_gridChunk.Data = field.NewBytes(tableName, "data")
 	_gridChunk.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_gridChunk.CreatedAt = field.NewTime(tableName, "created_at")
+	_gridChunk.A = field.NewBytes(tableName, "a")
+	_gridChunk.B = field.NewInt(tableName, "b")
+	_gridChunk.C = field.NewInt8(tableName, "c")
+	_gridChunk.D = field.NewInt32(tableName, "d")
+	_gridChunk.F = field.NewTime(tableName, "f")
 
 	_gridChunk.fillFieldMap()
 
@@ -49,6 +54,11 @@ type gridChunk struct {
 	Data      field.Bytes
 	UpdatedAt field.Time
 	CreatedAt field.Time
+	A         field.Bytes
+	B         field.Int
+	C         field.Int8
+	D         field.Int32
+	F         field.Time
 
 	fieldMap map[string]field.Expr
 }
@@ -71,6 +81,11 @@ func (g *gridChunk) updateTableName(table string) *gridChunk {
 	g.Data = field.NewBytes(table, "data")
 	g.UpdatedAt = field.NewTime(table, "updated_at")
 	g.CreatedAt = field.NewTime(table, "created_at")
+	g.A = field.NewBytes(table, "a")
+	g.B = field.NewInt(table, "b")
+	g.C = field.NewInt8(table, "c")
+	g.D = field.NewInt32(table, "d")
+	g.F = field.NewTime(table, "f")
 
 	g.fillFieldMap()
 
@@ -97,13 +112,18 @@ func (g *gridChunk) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (g *gridChunk) fillFieldMap() {
-	g.fieldMap = make(map[string]field.Expr, 6)
+	g.fieldMap = make(map[string]field.Expr, 11)
 	g.fieldMap["id"] = g.ID
 	g.fieldMap["file_id"] = g.FileID
 	g.fieldMap["sequence"] = g.Sequence
 	g.fieldMap["data"] = g.Data
 	g.fieldMap["updated_at"] = g.UpdatedAt
 	g.fieldMap["created_at"] = g.CreatedAt
+	g.fieldMap["a"] = g.A
+	g.fieldMap["b"] = g.B
+	g.fieldMap["c"] = g.C
+	g.fieldMap["d"] = g.D
+	g.fieldMap["f"] = g.F
 }
 
 func (g gridChunk) clone(db *gorm.DB) gridChunk {

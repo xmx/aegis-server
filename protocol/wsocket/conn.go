@@ -37,7 +37,7 @@ func (c *Conn) WriteJSON(v any) error {
 
 func (c *Conn) Write(p []byte) (int, error) {
 	n := len(p)
-	v := &Body{Kind: c.kind, Data: p}
+	v := &Body{Kind: c.kind, Data: string(p)}
 	if err := c.WriteJSON(v); err != nil {
 		return 0, err
 	}

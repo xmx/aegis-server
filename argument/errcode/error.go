@@ -1,6 +1,10 @@
 package errcode
 
-import "github.com/xgfone/ship/v5"
+import (
+	"net/http"
+
+	"github.com/xgfone/ship/v5"
+)
 
 var (
 	ErrCertificateExisted = ship.ErrBadRequest.Newf("该证书已存在")
@@ -13,6 +17,11 @@ var (
 
 const (
 	FmtTooManyCertificate = formatError("证书超过 %d 限制")
+)
+
+var (
+	ErrNotFound           = NewI18nError(http.StatusNotFound, "not-found")
+	ErrTooManyCertificate = NewI18nError(http.StatusBadRequest, "too-many-certificate")
 )
 
 type formatError string

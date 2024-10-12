@@ -2,30 +2,28 @@ package restapi
 
 import (
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewStatic(dir string) shipx.Controller {
+func NewStatic(secPath, dir string) shipx.Router {
 	return &staticAPI{
-		fs: http.FileServer(http.Dir(dir)),
+		path: secPath,
+		fs:   http.FileServer(http.Dir(dir)),
 	}
 }
 
 type staticAPI struct {
-	fs http.Handler
+	path string
+	fs   http.Handler
 }
 
-func (api *staticAPI) Register(rt shipx.Router) error {
-	anon := rt.Anon()
-	anon.Route("/webui").
-		GET(api.FS).
-		HEAD(api.FS)
-	anon.Route("/webui/*path").
-		GET(api.FS).
-		HEAD(api.FS)
+func (api *staticAPI) Route(r *ship.RouteGroupBuilder) error {
+	r.Route(api.path).GET(api.FS).HEAD(api.FS)
+	r.Route(path.Join(api.path, "*path")).GET(api.FS).HEAD(api.FS)
 
 	return nil
 }

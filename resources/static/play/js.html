@@ -77,7 +77,7 @@
         });
 
         // 创建 WebSocket 连接
-        const ws = new WebSocket(`/api/play/js`);
+        const ws = new WebSocket(`/api/ws/js/play`);
         // 处理连接打开事件
         ws.onopen = function (event) {
             console.log('WebSocket 连接已打开');

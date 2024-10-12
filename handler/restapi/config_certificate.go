@@ -12,7 +12,7 @@ import (
 	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewConfigCertificate(svc service.ConfigCertificate) shipx.Controller {
+func NewConfigCertificate(svc service.ConfigCertificate) shipx.Router {
 	return &configCertificateAPI{svc: svc}
 }
 
@@ -20,13 +20,12 @@ type configCertificateAPI struct {
 	svc service.ConfigCertificate
 }
 
-func (api *configCertificateAPI) Register(r shipx.Router) error {
-	auth := r.Auth()
-	auth.Route("/config/certificates").GET(api.Page)
-	auth.Route("/config/certificate/download").GET(api.Download)
-	auth.Route("/config/certificate/refresh").GET(api.Refresh)
-	auth.Route("/config/certificate/cond").GET(api.Cond)
-	auth.Route("/config/certificate").
+func (api *configCertificateAPI) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/config/certificates").GET(api.Page)
+	r.Route("/config/certificate/download").GET(api.Download)
+	r.Route("/config/certificate/refresh").GET(api.Refresh)
+	r.Route("/config/certificate/cond").GET(api.Cond)
+	r.Route("/config/certificate").
 		POST(api.Create).
 		PUT(api.Update).
 		DELETE(api.Delete)

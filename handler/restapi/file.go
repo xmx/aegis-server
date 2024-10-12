@@ -13,7 +13,7 @@ import (
 	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewFile(dbfs gridfs.FS, svc service.File) shipx.Controller {
+func NewFile(dbfs gridfs.FS, svc service.File) shipx.Router {
 	return &fileAPI{
 		dbfs: dbfs,
 		svc:  svc,
@@ -25,16 +25,14 @@ type fileAPI struct {
 	svc  service.File
 }
 
-func (api *fileAPI) Register(rt shipx.Router) error {
-	auth := rt.Auth()
-	auth.Route("/file").
+func (api *fileAPI) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/file").
 		Name("文件管理").
 		Data(map[string]string{"key": "上传下载"}).
 		PUT(api.Upload).
 		GET(api.Download)
-	auth.Route("/file/cond").GET(api.Cond)
-	auth.Route("/files").
-		GET(api.Page)
+	r.Route("/file/cond").GET(api.Cond)
+	r.Route("/files").GET(api.Page)
 
 	return nil
 }

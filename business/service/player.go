@@ -26,3 +26,6 @@ func (pl *player) NewGoja(loads []jsvm.Loader) GojaPlayer {
 	pugs := append(pl.loads, loads...)
 	return NewGojaPlayer(pugs, pl.log)
 }
+
+func NewVM() {
+}

@@ -23,7 +23,7 @@ func NewFile(qry *query.Query, log *slog.Logger) File {
 		Add(tbl.Filename, "文件名").
 		Add(tbl.Length, "文件大小").
 		Add(tbl.CreatedAt, "上传时间").
-		Add(tbl.ID, "ID")
+		Add(tbl.UpdatedAt, "修改时间")
 
 	return &fileService{
 		qry:   qry,

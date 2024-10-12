@@ -1,4 +1,4 @@
-package profile
+package directory
 
 import (
 	"iter"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func readdir(root, pattern string) iter.Seq2[string, error] {
+func Walk(root, pattern string) iter.Seq2[string, error] {
 	return func(yield func(string, error) bool) {
 		dir, err := os.Open(root)
 		if err != nil {
@@ -28,17 +28,16 @@ func readdir(root, pattern string) iter.Seq2[string, error] {
 				continue
 			}
 			if pattern != "" {
-				matched, err := filepath.Match(pattern, name)
-				if err != nil {
-					yield("", err)
+				if matched, exx := filepath.Match(pattern, name); exx != nil {
+					yield("", exx)
 					break
-				}
-				if !matched {
+				} else if !matched {
 					continue
 				}
 			}
 
-			if !yield(filepath.Join(root, name), nil) {
+			path := filepath.Join(root, name)
+			if !yield(path, nil) {
 				break
 			}
 		}

@@ -13,7 +13,7 @@ import (
 	"github.com/xmx/aegis-server/protocol/eventsource"
 )
 
-func NewLog(svc service.Log) shipx.Controller {
+func NewLog(svc service.Log) shipx.Router {
 	return &logAPI{
 		svc:   svc,
 		limit: 5,
@@ -26,12 +26,11 @@ type logAPI struct {
 	count atomic.Int32 // tail 连接计数器。
 }
 
-func (api *logAPI) Register(rt shipx.Router) error {
-	auth := rt.Auth()
-	auth.Route("/log/level").
+func (api *logAPI) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/log/level").
 		GET(api.Level).
 		POST(api.SetLevel)
-	auth.Route("/sse/log/tail").GET(api.Tail)
+	r.Route("/sse/log/tail").GET(api.Tail)
 
 	return nil
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewTerm(svc service.Term) shipx.Controller {
+func NewTerm(svc service.Term) shipx.Router {
 	return &termAPI{svc: svc}
 }
 
@@ -16,10 +16,9 @@ type termAPI struct {
 	svc service.Term
 }
 
-func (api *termAPI) Register(rt shipx.Router) error {
-	auth := rt.Auth()
-	auth.Route("/ws/pty").GET(api.PTY)
-	auth.Route("/ws/ssh").GET(api.SSH)
+func (api *termAPI) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/ws/pty").GET(api.PTY)
+	r.Route("/ws/ssh").GET(api.SSH)
 	return nil
 }
 
