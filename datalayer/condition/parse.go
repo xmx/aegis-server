@@ -27,6 +27,7 @@ func ParseModel(db *gorm.DB, tbl any, opts *ParserOptions) (*Cond, error) {
 			comment = f.Name
 		}
 		cond := &CondField{name: name, comment: comment, expr: expr}
+		nameMap[name] = cond
 		conds = append(conds, cond)
 	}
 	ret := &Cond{fileds: conds, nameMap: nameMap}

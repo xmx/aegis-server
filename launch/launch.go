@@ -88,7 +88,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 	qry := query.Use(gdb)
-	parseModel(gdb)
 
 	if cfg.Database.Migrate {
 		log.Info("准备检查合并数据库表结构")
