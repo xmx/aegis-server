@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-func ParseModel(db *gorm.DB, tbl any) (*Cond, error) {
+func ParseModel(db *gorm.DB, tbl any, opts *ParserOptions) (*Cond, error) {
 	stmt := gorm.Statement{DB: db}
 	if err := stmt.Parse(tbl); err != nil {
 		return nil, err

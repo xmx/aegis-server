@@ -33,18 +33,10 @@ type ConfigCertificate interface {
 }
 
 func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) ConfigCertificate {
-	tbl := qry.ConfigCertificate
-	order := gormcond.NewOrder().
-		Add(tbl.CommonName, "公用名").
-		Add(tbl.NotAfter, "过期时间").
-		Add(tbl.CreatedAt, "创建时间").
-		Add(tbl.UpdatedAt, "更新时间")
-
 	return &configCertificateService{
 		pool:  pool,
 		qry:   qry,
 		log:   log,
-		order: order,
 		limit: 100,
 	}
 }
@@ -59,7 +51,7 @@ type configCertificateService struct {
 }
 
 func (svc *configCertificateService) Cond() *response.Cond {
-	return &response.Cond{Orders: svc.order.Columns()}
+	return nil
 }
 
 func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error) {

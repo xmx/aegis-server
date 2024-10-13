@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/xmx/aegis-server/argument/gormcond"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
+	"github.com/xmx/aegis-server/datalayer/condition"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
 )
@@ -17,29 +17,27 @@ type File interface {
 }
 
 func NewFile(qry *query.Query, log *slog.Logger) File {
+	mod := new(model.GridFile)
+	ctx := context.Background()
 	tbl := qry.GridFile
-	order := gormcond.NewOrder().
-		Add(tbl.ID, "ID").
-		Add(tbl.Filename, "文件名").
-		Add(tbl.Length, "文件大小").
-		Add(tbl.CreatedAt, "上传时间").
-		Add(tbl.UpdatedAt, "修改时间")
+	db := tbl.WithContext(ctx).UnderlyingDB()
+	cond, _ := condition.ParseModel(db, mod, nil)
 
 	return &fileService{
-		qry:   qry,
-		log:   log,
-		order: order,
+		qry:  qry,
+		log:  log,
+		cond: cond,
 	}
 }
 
 type fileService struct {
-	qry   *query.Query
-	log   *slog.Logger
-	order *gormcond.Order
+	qry  *query.Query
+	log  *slog.Logger
+	cond *condition.Cond
 }
 
 func (svc *fileService) Cond() *response.Cond {
-	return &response.Cond{Orders: svc.order.Columns()}
+	return response.ReadCond(svc.cond)
 }
 
 func (svc *fileService) Page(ctx context.Context, req *request.PageKeywordOrder) ([]*model.GridFile, error) {
@@ -47,5 +45,5 @@ func (svc *fileService) Page(ctx context.Context, req *request.PageKeywordOrder)
 	dao := tbl.WithContext(ctx)
 	orders := req.Order.Orders()
 
-	return dao.Scopes(svc.order.Scope(orders)).Find()
+	return dao.Scopes(svc.cond.Order(orders)).Find()
 }

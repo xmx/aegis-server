@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/xmx/aegis-server/argument/errcode"
-	"github.com/xmx/aegis-server/argument/gormcond"
+	"github.com/xmx/aegis-server/datalayer/condition"
 )
 
 type PageKeywordOrder struct {
@@ -16,12 +16,13 @@ type PageKeywordOrder struct {
 
 type Orders []*Order
 
-func (ods Orders) Orders() []*gormcond.ColumnDesc {
+func (ods Orders) Orders() condition.OrderInputs {
 	size := len(ods)
-	ret := make([]*gormcond.ColumnDesc, 0, size)
+	ret := make(condition.OrderInputs, 0, size)
 	for _, od := range ods {
 		if col := od.Column; col != "" {
-			ret = append(ret, &gormcond.ColumnDesc{Column: col, Desc: od.Desc})
+			data := &condition.OrderInput{Name: col, Desc: od.Desc}
+			ret = append(ret, data)
 		}
 	}
 	return ret

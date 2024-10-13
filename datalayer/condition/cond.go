@@ -47,6 +47,10 @@ func (c Cond) OrderFields() CondFields {
 	return ret
 }
 
+func (c Cond) WhereFields() CondFields {
+	return c.fileds
+}
+
 func (c Cond) Fields() CondFields {
 	return c.fileds
 }
