@@ -1,9 +1,6 @@
 package model
 
-import (
-	"encoding/json"
-	"time"
-)
+import "time"
 
 type GridChunk struct {
 	ID        int64     `gorm:"column:id;primaryKey;autoIncrement;comment:ID"`
@@ -12,12 +9,6 @@ type GridChunk struct {
 	Data      []byte    `gorm:"column:data;type:blob;comment:分片内容"`
 	UpdatedAt time.Time `gorm:"column:updated_at;not null;default:now(3);comment:更新时间"`
 	CreatedAt time.Time `gorm:"column:created_at;not null;default:now(3);comment:创建时间"`
-
-	A json.RawMessage
-	B int
-	C int8
-	D int32
-	F time.Time
 }
 
 func (GridChunk) TableName() string {

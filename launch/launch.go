@@ -79,7 +79,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	defer db.Close()
 
-	glogCfg := logger.Config{SlowThreshold: 300 * time.Millisecond, LogLevel: logger.Info}
+	glogCfg := logger.Config{SlowThreshold: 30 * time.Millisecond, LogLevel: logger.Info}
 	gormLog := logext.Gorm(logHandler, glogCfg)
 	mysqlCfg := &mysql.Config{Conn: db}
 	gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg}, &gorm.Config{Logger: gormLog})

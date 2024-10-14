@@ -16,9 +16,10 @@ func ParseModel(db *gorm.DB, tbl any, opts *ParserOptions) (*Cond, error) {
 
 	sch := stmt.Schema
 	table, fields := sch.Table, sch.Fields
-	size := len(fields)
-	conds := make(CondFields, 0, size)
-	nameMap := make(map[string]*CondField, size)
+	orders := make([]*OrderField, 0, 10)
+	wheres := make([]*WhereField, 0, 10)
+	ordersNameMap := make(map[string]*OrderField, 8)
+	wheresNameMap := make(map[string]*WhereField, 8)
 	for _, f := range fields {
 		expr := newField(table, f)
 		name := f.DBName
@@ -26,13 +27,40 @@ func ParseModel(db *gorm.DB, tbl any, opts *ParserOptions) (*Cond, error) {
 		if comment == "" {
 			comment = f.Name
 		}
-		cond := &CondField{name: name, comment: comment, expr: expr}
-		nameMap[name] = cond
-		conds = append(conds, cond)
+
+		if exp := parseOrderField(expr, opts); exp != nil {
+			cond := &OrderField{name: name, comment: comment, expr: exp}
+			orders = append(orders, cond)
+			ordersNameMap[name] = cond
+		}
+		if exp := parseWhereField(expr, opts); exp != nil {
+			cond := &WhereField{name: name, comment: comment, expr: exp}
+			wheres = append(wheres, cond)
+			wheresNameMap[name] = cond
+		}
 	}
-	ret := &Cond{fileds: conds, nameMap: nameMap}
+	ret := &Cond{
+		orders:        orders,
+		ordersNameMap: ordersNameMap,
+		wheres:        wheres,
+		wheresNameMap: wheresNameMap,
+	}
 
 	return ret, nil
+}
+
+func parseOrderField(f field.Expr, opts *ParserOptions) field.OrderExpr {
+	if expr, ok := f.(field.OrderExpr); ok && !opts.inIgnoreOrder(f) {
+		return expr
+	}
+	return nil
+}
+
+func parseWhereField(f field.Expr, opts *ParserOptions) field.Expr {
+	if opts.inIgnoreWhere(f) {
+		return nil
+	}
+	return f
 }
 
 // https://github.com/go-gorm/gen/blob/v0.3.26/internal/template/struct.go#L48
@@ -59,7 +87,7 @@ func newField(tbl string, f *schema.Field) field.Expr {
 	case "uint8":
 		return field.NewUint8(tbl, name)
 	case "uint16":
-		return field.NewInt16(tbl, name)
+		return field.NewUint16(tbl, name)
 	case "uin32":
 		return field.NewUint32(tbl, name)
 	case "uint64":

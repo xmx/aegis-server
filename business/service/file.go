@@ -9,11 +9,12 @@ import (
 	"github.com/xmx/aegis-server/datalayer/condition"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
+	"gorm.io/gen/field"
 )
 
 type File interface {
 	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageKeywordOrder) ([]*model.GridFile, error)
+	Page(ctx context.Context, req *request.PageKeywordCond) ([]*model.GridFile, error)
 }
 
 func NewFile(qry *query.Query, log *slog.Logger) File {
@@ -21,7 +22,11 @@ func NewFile(qry *query.Query, log *slog.Logger) File {
 	ctx := context.Background()
 	tbl := qry.GridFile
 	db := tbl.WithContext(ctx).UnderlyingDB()
-	cond, _ := condition.ParseModel(db, mod, nil)
+	opt := &condition.ParserOptions{
+		IgnoreOrder: []field.Expr{tbl.Burst, tbl.SHA1, tbl.SHA256},
+		IgnoreWhere: []field.Expr{tbl.Burst, tbl.SHA1, tbl.SHA256},
+	}
+	cond, _ := condition.ParseModel(db, mod, opt)
 
 	return &fileService{
 		qry:  qry,
@@ -40,10 +45,14 @@ func (svc *fileService) Cond() *response.Cond {
 	return response.ReadCond(svc.cond)
 }
 
-func (svc *fileService) Page(ctx context.Context, req *request.PageKeywordOrder) ([]*model.GridFile, error) {
+func (svc *fileService) Page(ctx context.Context, req *request.PageKeywordCond) ([]*model.GridFile, error) {
 	tbl := svc.qry.GridFile
 	dao := tbl.WithContext(ctx)
 	orders := req.Order.Orders()
+	wheres := req.Where.Wheres()
 
-	return dao.Scopes(svc.cond.Order(orders)).Find()
+	return dao.
+		Scopes(svc.cond.Order(orders)).
+		Scopes(svc.cond.Where(wheres)).
+		Find()
 }

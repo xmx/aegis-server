@@ -78,7 +78,7 @@ func (api *fileAPI) Download(c *ship.Context) error {
 }
 
 func (api *fileAPI) Page(c *ship.Context) error {
-	req := new(request.PageKeywordOrder)
+	req := new(request.PageKeywordCond)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}

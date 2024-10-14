@@ -10,10 +10,10 @@ import (
 	"sync"
 
 	"github.com/xmx/aegis-server/argument/errcode"
-	"github.com/xmx/aegis-server/argument/gormcond"
 	"github.com/xmx/aegis-server/argument/pscope"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
+	"github.com/xmx/aegis-server/datalayer/condition"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/datalayer/repository"
@@ -45,7 +45,7 @@ type configCertificateService struct {
 	pool  credential.Certifier // 证书池。
 	log   *slog.Logger
 	qry   *query.Query
-	order *gormcond.Order
+	cond  *condition.Cond
 	mutex sync.Mutex
 	limit int64 // 数据库最多可保存的证书数量。
 }
