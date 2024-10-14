@@ -1,21 +1,25 @@
 package condition
 
 var (
-	Eq         = Operator{name: "eq"}
-	Neq        = Operator{name: "neq"}
-	Gt         = Operator{name: "gt"}
-	Gte        = Operator{name: "gte"}
-	Lt         = Operator{name: "lt"}
-	Lte        = Operator{name: "lte"}
-	Like       = Operator{name: "like"}
-	NotLike    = Operator{name: "not-like"}
-	Regex      = Operator{name: "regex"}
-	NotRegex   = Operator{name: "not-regex"}
-	Between    = Operator{name: "between"}
-	NotBetween = Operator{name: "not-between"}
-	In         = Operator{name: "in"}
-	NotIn      = Operator{name: "not-in"}
+	Eq         = NewOperator("eq")
+	Neq        = NewOperator("neq")
+	Gt         = NewOperator("gt")
+	Gte        = NewOperator("gte")
+	Lt         = NewOperator("lt")
+	Lte        = NewOperator("lte")
+	Like       = NewOperator("like")
+	NotLike    = NewOperator("not-like")
+	Regex      = NewOperator("regex")
+	NotRegex   = NewOperator("not-regex")
+	Between    = NewOperator("between")
+	NotBetween = NewOperator("not-between")
+	In         = NewOperator("in")
+	NotIn      = NewOperator("not-in")
 )
+
+func NewOperator(name string) Operator {
+	return Operator{name: name}
+}
 
 type Operator struct {
 	name string

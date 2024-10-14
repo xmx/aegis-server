@@ -92,8 +92,31 @@ type CondWhere struct {
 	Values  []string `json:"values"`
 }
 
-func (c *CondWhere) UnmarshalBind(param string) error {
-	return json.Unmarshal([]byte(param), c)
+func (c *CondWhere) UnmarshalBind(str string) error {
+	if data := []byte(str); json.Valid(data) {
+		return json.Unmarshal(data, c)
+	}
+
+	// created_at:gte:2024-10-14T06:31:20.620Z
+	// size:between:1024,4096
+	// hobbies:in:sing,dance,rap
+
+	sn := strings.SplitN(str, ":", 3)
+	if len(sn) != 3 {
+		return errcode.ErrRequiredColumn
+	}
+	name, opera, val := sn[0], sn[1], sn[2]
+	c.Name, c.Operate = name, opera
+	op := condition.NewOperator(opera)
+	switch op {
+	case condition.Between, condition.NotBetween,
+		condition.In, condition.NotIn:
+		c.Values = strings.Split(val, ",")
+	default:
+		c.Values = []string{val}
+	}
+
+	return nil
 }
 
 type CondWheres []*CondWhere
@@ -105,31 +128,11 @@ func (cws CondWheres) Wheres() condition.WhereInputs {
 		if col := cw.Name; col != "" {
 			data := &condition.WhereInput{
 				Name:    col,
-				Operate: cws.operator(cw.Operate),
+				Operate: condition.NewOperator(cw.Operate),
 				Values:  cw.Values,
 			}
 			ret = append(ret, data)
 		}
 	}
 	return ret
-}
-
-func (CondWheres) operator(s string) condition.Operator {
-	hm := map[string]condition.Operator{
-		"=":   condition.Eq,
-		"!=":  condition.Neq,
-		">":   condition.Gt,
-		">=":  condition.Gte,
-		"<":   condition.Lt,
-		"<=":  condition.Lte,
-		"~=":  condition.Like,
-		"!~=": condition.NotLike,
-		"$=":  condition.Regex,
-		"!$=": condition.NotRegex,
-		"*=":  condition.In,
-		"!*=": condition.NotIn,
-		"^=":  condition.Between,
-		"!^=": condition.NotBetween,
-	}
-	return hm[s]
 }
