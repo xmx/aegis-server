@@ -23,7 +23,7 @@ func (vs stringValues) ints() []int {
 }
 
 func (vs stringValues) int64N(idx int) (int64, bool) {
-	str, ok := vs.getN(idx)
+	str, ok := vs.stringN(idx)
 	if !ok {
 		return 0, false
 	}
@@ -43,7 +43,7 @@ func (vs stringValues) int64s() []int64 {
 
 func (vs stringValues) timeN(idx int) (time.Time, bool) {
 	var at time.Time
-	str, ok := vs.getN(idx)
+	str, ok := vs.stringN(idx)
 	if !ok {
 		return at, false
 	}
@@ -64,7 +64,7 @@ func (vs stringValues) times() []time.Time {
 }
 
 func (vs stringValues) boolN(idx int) (bool, bool) {
-	str, ok := vs.getN(idx)
+	str, ok := vs.stringN(idx)
 	if !ok {
 		return false, false
 	}
@@ -73,7 +73,27 @@ func (vs stringValues) boolN(idx int) (bool, bool) {
 	return ret, err == nil
 }
 
-func (vs stringValues) getN(idx int) (string, bool) {
+func (vs stringValues) float64N(idx int) (float64, bool) {
+	str, ok := vs.stringN(idx)
+	if !ok {
+		return 0, false
+	}
+	ret, err := strconv.ParseFloat(str, 64)
+
+	return ret, err == nil
+}
+
+func (vs stringValues) float32N(idx int) (float32, bool) {
+	str, ok := vs.stringN(idx)
+	if !ok {
+		return 0, false
+	}
+	ret, err := strconv.ParseFloat(str, 32)
+
+	return float32(ret), err == nil
+}
+
+func (vs stringValues) stringN(idx int) (string, bool) {
 	sz := len(vs)
 	if sz <= idx {
 		return "", false

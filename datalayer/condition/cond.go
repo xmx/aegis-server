@@ -59,6 +59,14 @@ func (c Cond) WhereFields() WhereFields {
 	return c.wheres
 }
 
+func (c Cond) Scope(whereInputs WhereInputs, orderInputs OrderInputs) func(gen.Dao) gen.Dao {
+	return func(dao gen.Dao) gen.Dao {
+		wheres := c.parseWhereInputs(whereInputs)
+		orders := c.parseOrderInputs(orderInputs)
+		return dao.Where(wheres...).Order(orders...)
+	}
+}
+
 func (c Cond) Order(inputs OrderInputs) func(gen.Dao) gen.Dao {
 	return func(dao gen.Dao) gen.Dao {
 		exprs := c.parseOrderInputs(inputs)
@@ -123,7 +131,7 @@ func (c Cond) parseWhereInput(input *WhereInput) gen.Condition {
 
 func (c Cond) fieldString(f field.String, input *WhereInput) gen.Condition {
 	values, op := stringValues(input.Values), input.Operate
-	arg0, ok := values.getN(0)
+	arg0, ok := values.stringN(0)
 	if !ok {
 		return nil
 	}
@@ -150,7 +158,7 @@ func (c Cond) fieldString(f field.String, input *WhereInput) gen.Condition {
 	case NotRegex:
 		return f.NotRegxp(arg0)
 	case Between, NotBetween:
-		arg1, exist := values.getN(1)
+		arg1, exist := values.stringN(1)
 		if !exist {
 			return nil
 		}

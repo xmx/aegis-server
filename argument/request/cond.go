@@ -11,13 +11,23 @@ import (
 
 type PageKeywordCond struct {
 	PageKeyword
-	Order CondOrders `json:"order" form:"order" query:"order" validate:"lte=100"`
-	Where CondWheres `json:"where" form:"where" query:"where" validate:"lte=100"`
+	Condition
+}
+
+type Condition struct {
+	Order CondOrders `json:"order" form:"order" query:"order" validate:"lte=100,dive"`
+	Where CondWheres `json:"where" form:"where" query:"where" validate:"lte=100,dive"`
+}
+
+func (c Condition) Inputs() (condition.WhereInputs, condition.OrderInputs) {
+	whereInputs := c.Where.Inputs()
+	orderInputs := c.Order.Inputs()
+	return whereInputs, orderInputs
 }
 
 type CondOrders []*CondOrder
 
-func (ods CondOrders) Orders() condition.OrderInputs {
+func (ods CondOrders) Inputs() condition.OrderInputs {
 	size := len(ods)
 	ret := make(condition.OrderInputs, 0, size)
 	for _, od := range ods {
@@ -87,9 +97,9 @@ func (o *CondOrder) UnmarshalBind(str string) error {
 }
 
 type CondWhere struct {
-	Name    string   `json:"name"    validate:"required"`
-	Operate string   `json:"operate" validate:"required"`
-	Values  []string `json:"values"`
+	Name    string   `json:"name"    validate:"required,lte=100"`
+	Operate string   `json:"operate" validate:"oneof=eq neq gt gte lt lte like not-like regex not-regex between not-between in not-in"`
+	Values  []string `json:"values"  validate:"gt=0,lte=1000,dive,required"`
 }
 
 func (c *CondWhere) UnmarshalBind(str string) error {
@@ -121,7 +131,7 @@ func (c *CondWhere) UnmarshalBind(str string) error {
 
 type CondWheres []*CondWhere
 
-func (cws CondWheres) Wheres() condition.WhereInputs {
+func (cws CondWheres) Inputs() condition.WhereInputs {
 	size := len(cws)
 	ret := make(condition.WhereInputs, 0, size)
 	for _, cw := range cws {

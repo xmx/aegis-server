@@ -8,13 +8,14 @@ import (
 	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/aegis-server/datalayer/condition"
 	"github.com/xmx/aegis-server/datalayer/model"
+	"github.com/xmx/aegis-server/datalayer/pagination"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"gorm.io/gen/field"
 )
 
 type File interface {
 	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageKeywordCond) ([]*model.GridFile, error)
+	Page(ctx context.Context, req *request.PageKeywordCond) (*pagination.Result[*model.GridFile], error)
 }
 
 func NewFile(qry *query.Query, log *slog.Logger) File {
@@ -45,14 +46,25 @@ func (svc *fileService) Cond() *response.Cond {
 	return response.ReadCond(svc.cond)
 }
 
-func (svc *fileService) Page(ctx context.Context, req *request.PageKeywordCond) ([]*model.GridFile, error) {
+func (svc *fileService) Page(ctx context.Context, req *request.PageKeywordCond) (*pagination.Result[*model.GridFile], error) {
 	tbl := svc.qry.GridFile
-	dao := tbl.WithContext(ctx)
-	orders := req.Order.Orders()
-	wheres := req.Where.Wheres()
+	scope := svc.cond.Scope(req.Inputs())
+	dao := tbl.WithContext(ctx).Scopes(scope)
+	cnt, err := dao.Count()
+	if err != nil {
+		return nil, err
+	}
+	pager := pagination.NewPager[*model.GridFile](req.PageSize())
+	if cnt == 0 {
+		empty := pager.Empty()
+		return empty, nil
+	}
 
-	return dao.
-		Scopes(svc.cond.Order(orders)).
-		Scopes(svc.cond.Where(wheres)).
-		Find()
+	dats, err := dao.Scopes(pager.Scope(cnt)).Find()
+	if err != nil {
+		return nil, err
+	}
+	ret := pager.Result(dats)
+
+	return ret, nil
 }

@@ -10,19 +10,18 @@ import (
 	"sync"
 
 	"github.com/xmx/aegis-server/argument/errcode"
-	"github.com/xmx/aegis-server/argument/pscope"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/aegis-server/datalayer/condition"
 	"github.com/xmx/aegis-server/datalayer/model"
+	"github.com/xmx/aegis-server/datalayer/pagination"
 	"github.com/xmx/aegis-server/datalayer/query"
-	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/library/credential"
 )
 
 type ConfigCertificate interface {
 	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error)
+	Page(ctx context.Context, req *request.PageKeyword) (*pagination.Result[*model.ConfigCertificate], error)
 	Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
 	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
 	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
@@ -54,24 +53,24 @@ func (svc *configCertificateService) Cond() *response.Cond {
 	return nil
 }
 
-func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*repository.Page[*model.ConfigCertificate], error) {
+func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*pagination.Result[*model.ConfigCertificate], error) {
 	tbl := svc.qry.ConfigCertificate
 	dao := tbl.WithContext(ctx).Scopes(req.LikeScope(tbl.CommonName))
 	cnt, err := dao.Count()
 	if err != nil {
 		return nil, err
 	}
-
-	page := pscope.From(req.Page)
+	pager := pagination.NewPager[*model.ConfigCertificate](req.PageSize())
 	if cnt == 0 {
-		return repository.PageZero[*model.ConfigCertificate](page), nil
+		empty := pager.Empty()
+		return empty, nil
 	}
 
-	dats, err := dao.Scopes(page.Gen(cnt)).Find()
+	dats, err := dao.Scopes(pager.Scope(cnt)).Find()
 	if err != nil {
 		return nil, err
 	}
-	ret := repository.PageRecords(page, cnt, dats)
+	ret := pager.Result(dats)
 
 	return ret, nil
 }
