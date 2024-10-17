@@ -22,8 +22,7 @@ func ParseModel(db *gorm.DB, tbl any, opts *ParserOptions) (*Cond, error) {
 	wheresNameMap := make(map[string]*WhereField, 8)
 	for _, f := range fields {
 		expr := newField(table, f)
-		name := f.DBName
-		comment := f.Comment
+		name, comment := f.DBName, f.Comment
 		if comment == "" {
 			comment = f.Name
 		}
@@ -70,8 +69,6 @@ func newField(tbl string, f *schema.Field) field.Expr {
 	switch realType {
 	case "string":
 		return field.NewString(tbl, name)
-	case "bytes":
-		return field.NewBytes(tbl, name)
 	case "int":
 		return field.NewInt(tbl, name)
 	case "int8":
@@ -100,13 +97,31 @@ func newField(tbl string, f *schema.Field) field.Expr {
 		return field.NewBool(tbl, name)
 	case "time.Time":
 		return field.NewTime(tbl, name)
-	case "json.RawMessage", "[]byte":
+	case "bytes", "[]byte", "json.RawMessage":
 		return field.NewBytes(tbl, name)
 	case "serializer":
 		return field.NewSerializer(tbl, name)
 	default:
 		return field.NewField(tbl, name)
 	}
+}
+
+func typeAllowedOperator(realType string) operators {
+	switch realType {
+	case "string", "bytes", "[]byte", "json.RawMessage":
+		return operators{Eq, Neq, Gt, Gte, Lt, Lte, Like, NotLike, Regex, NotRegex, Between, NotBetween, In, NotIn}
+	case "int", "int8", "int16", "int32", "int64",
+		"uint", "uint8", "uint16", "uin32", "uint64",
+		"float32", "float64":
+		return operators{Eq, Neq, Gt, Gte, Lt, Lte, Like, NotLike, Between, NotBetween, In, NotIn}
+	case "bool":
+		return operators{Eq, Neq}
+	case "time.Time":
+		return operators{Eq, Neq, Gt, Gte, Lt, Lte, Between, NotBetween, In, NotIn}
+	case "serializer":
+		return operators{Eq, Neq, Gt, Gte, Lt, Lte, Like, Regex, In}
+	}
+	return operators{Eq, Neq, Gt, Gte, Lt, Lte, Like, In}
 }
 
 // getFieldRealType  get basic type of field.

@@ -5,6 +5,7 @@ import "time"
 type GridFile struct {
 	ID        int64     `json:"id,string"  gorm:"column:id;primaryKey;autoIncrement;comment:ID"`
 	Filename  string    `json:"filename"   gorm:"column:filename;varchar(255);not null;index:idx_filename;comment:文件名"`
+	Extension string    `json:"extension"  gorm:"column:extension;varchar(20);comment:扩展名"`
 	Length    int64     `json:"length"     gorm:"column:length;comment:文件大小"`
 	Burst     uint16    `json:"-"          gorm:"column:burst;comment:分片大小"`
 	SHA1      string    `json:"sha1"       gorm:"column:sha1;type:char(40);comment:SHA-1"`

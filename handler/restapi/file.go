@@ -33,6 +33,7 @@ func (api *fileAPI) Route(r *ship.RouteGroupBuilder) error {
 		GET(api.Download)
 	r.Route("/file/cond").GET(api.Cond)
 	r.Route("/files").GET(api.Page)
+	r.Route("/file/count").GET(api.Count)
 
 	return nil
 }
@@ -78,7 +79,7 @@ func (api *fileAPI) Download(c *ship.Context) error {
 }
 
 func (api *fileAPI) Page(c *ship.Context) error {
-	req := new(request.PageKeywordCond)
+	req := new(request.PageCond)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
@@ -94,5 +95,14 @@ func (api *fileAPI) Page(c *ship.Context) error {
 
 func (api *fileAPI) Cond(c *ship.Context) error {
 	ret := api.svc.Cond()
+	return c.JSON(http.StatusOK, ret)
+}
+
+func (api *fileAPI) Count(c *ship.Context) error {
+	ctx := c.Request().Context()
+	ret, err := api.svc.Count(ctx, 10)
+	if err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, ret)
 }

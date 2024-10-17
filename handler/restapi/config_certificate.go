@@ -39,7 +39,7 @@ func (api *configCertificateAPI) Cond(c *ship.Context) error {
 }
 
 func (api *configCertificateAPI) Page(c *ship.Context) error {
-	req := new(request.PageKeyword)
+	req := new(request.PageCond)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}

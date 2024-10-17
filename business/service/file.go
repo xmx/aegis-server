@@ -15,7 +15,8 @@ import (
 
 type File interface {
 	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageKeywordCond) (*pagination.Result[*model.GridFile], error)
+	Page(ctx context.Context, req *request.PageCond) (*pagination.Result[*model.GridFile], error)
+	Count(ctx context.Context, limit int) (response.NameCounts, error)
 }
 
 func NewFile(qry *query.Query, log *slog.Logger) File {
@@ -46,9 +47,9 @@ func (svc *fileService) Cond() *response.Cond {
 	return response.ReadCond(svc.cond)
 }
 
-func (svc *fileService) Page(ctx context.Context, req *request.PageKeywordCond) (*pagination.Result[*model.GridFile], error) {
+func (svc *fileService) Page(ctx context.Context, req *request.PageCond) (*pagination.Result[*model.GridFile], error) {
 	tbl := svc.qry.GridFile
-	scope := svc.cond.Scope(req.Inputs())
+	scope := svc.cond.Scope(req.AllInputs())
 	dao := tbl.WithContext(ctx).Scopes(scope)
 	cnt, err := dao.Count()
 	if err != nil {
@@ -67,4 +68,22 @@ func (svc *fileService) Page(ctx context.Context, req *request.PageKeywordCond) 
 	ret := pager.Result(dats)
 
 	return ret, nil
+}
+
+func (svc *fileService) Count(ctx context.Context, limit int) (response.NameCounts, error) {
+	if limit <= 0 {
+		limit = 1
+	}
+
+	ret := make(response.NameCounts, 0, limit)
+	nameAlias, countAlias, countField := ret.Aliases()
+
+	tbl := svc.qry.GridFile
+	err := tbl.WithContext(ctx).
+		Select(tbl.Extension.As(nameAlias), tbl.Extension.Count().As(countAlias)).
+		Group(tbl.Extension).
+		Order(countField.Desc(), tbl.Extension).
+		Limit(limit).
+		Scan(&ret)
+	return ret, err
 }

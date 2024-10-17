@@ -17,11 +17,12 @@ import (
 	"github.com/xmx/aegis-server/datalayer/pagination"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/library/credential"
+	"gorm.io/gen/field"
 )
 
 type ConfigCertificate interface {
 	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageKeyword) (*pagination.Result[*model.ConfigCertificate], error)
+	Page(ctx context.Context, req *request.PageCond) (*pagination.Result[*model.ConfigCertificate], error)
 	Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
 	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
 	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
@@ -32,9 +33,24 @@ type ConfigCertificate interface {
 }
 
 func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) ConfigCertificate {
+	mod := new(model.ConfigCertificate)
+	tbl := qry.ConfigCertificate
+	ctx := context.Background()
+	db := tbl.WithContext(ctx).UnderlyingDB()
+	ignores := []field.Expr{
+		tbl.PublicKey, tbl.PrivateKey, tbl.CertificateSHA256, tbl.PublicKeySHA256,
+		tbl.PrivateKeySHA256,
+	}
+	opt := &condition.ParserOptions{
+		IgnoreOrder: ignores,
+		IgnoreWhere: ignores,
+	}
+	cond, _ := condition.ParseModel(db, mod, opt)
+
 	return &configCertificateService{
 		pool:  pool,
 		qry:   qry,
+		cond:  cond,
 		log:   log,
 		limit: 100,
 	}
@@ -50,12 +66,13 @@ type configCertificateService struct {
 }
 
 func (svc *configCertificateService) Cond() *response.Cond {
-	return nil
+	return response.ReadCond(svc.cond)
 }
 
-func (svc *configCertificateService) Page(ctx context.Context, req *request.PageKeyword) (*pagination.Result[*model.ConfigCertificate], error) {
+func (svc *configCertificateService) Page(ctx context.Context, req *request.PageCond) (*pagination.Result[*model.ConfigCertificate], error) {
 	tbl := svc.qry.ConfigCertificate
-	dao := tbl.WithContext(ctx).Scopes(req.LikeScope(tbl.CommonName))
+	scope := svc.cond.Scope(req.AllInputs())
+	dao := tbl.WithContext(ctx).Scopes(scope)
 	cnt, err := dao.Count()
 	if err != nil {
 		return nil, err

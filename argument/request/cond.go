@@ -9,37 +9,35 @@ import (
 	"github.com/xmx/aegis-server/datalayer/condition"
 )
 
-type PageKeywordCond struct {
-	PageKeyword
-	Condition
+type PageCond struct {
+	Page
+	CondWhereInputs
+	CondOrderInputs
 }
 
-type Condition struct {
-	Order CondOrders `json:"order" form:"order" query:"order" validate:"lte=100,dive"`
-	Where CondWheres `json:"where" form:"where" query:"where" validate:"lte=100,dive"`
+func (c PageCond) AllInputs() (*condition.WhereInputs, *condition.OrderInputs) {
+	where := c.CondWhereInputs.Inputs()
+	order := c.CondOrderInputs.Inputs()
+	return where, order
 }
 
-func (c Condition) Inputs() (condition.WhereInputs, condition.OrderInputs) {
-	whereInputs := c.Where.Inputs()
-	orderInputs := c.Order.Inputs()
-	return whereInputs, orderInputs
+type CondOrderInputs struct {
+	Order []*CondOrderInput `json:"order" form:"order" query:"order" validate:"lte=10,dive"`
 }
 
-type CondOrders []*CondOrder
-
-func (ods CondOrders) Inputs() condition.OrderInputs {
-	size := len(ods)
-	ret := make(condition.OrderInputs, 0, size)
-	for _, od := range ods {
-		if col := od.Name; col != "" {
-			data := &condition.OrderInput{Name: col, Desc: od.Desc}
-			ret = append(ret, data)
+func (coi CondOrderInputs) Inputs() *condition.OrderInputs {
+	orders := coi.Order
+	inputs := make([]*condition.OrderInput, 0, len(orders))
+	for _, in := range orders {
+		if col := in.Name; col != "" {
+			data := &condition.OrderInput{Name: col, Desc: in.Desc}
+			inputs = append(inputs, data)
 		}
 	}
-	return ret
+	return &condition.OrderInputs{Inputs: inputs}
 }
 
-type CondOrder struct {
+type CondOrderInput struct {
 	Name string `json:"name"`
 	Desc bool   `json:"desc"`
 }
@@ -70,7 +68,7 @@ type CondOrder struct {
 // 错误格式：
 //   - :desc
 //   - :巴拉巴拉
-func (o *CondOrder) UnmarshalBind(str string) error {
+func (o *CondOrderInput) UnmarshalBind(str string) error {
 	if data := []byte(str); json.Valid(data) {
 		return json.Unmarshal(data, o)
 	}
@@ -96,13 +94,13 @@ func (o *CondOrder) UnmarshalBind(str string) error {
 	return nil
 }
 
-type CondWhere struct {
+type CondWhereInput struct {
 	Name    string   `json:"name"    validate:"required,lte=100"`
 	Operate string   `json:"operate" validate:"oneof=eq neq gt gte lt lte like not-like regex not-regex between not-between in not-in"`
-	Values  []string `json:"values"  validate:"gt=0,lte=1000,dive,required"`
+	Values  []string `json:"values"  validate:"gt=0,lte=1000"`
 }
 
-func (c *CondWhere) UnmarshalBind(str string) error {
+func (c *CondWhereInput) UnmarshalBind(str string) error {
 	if data := []byte(str); json.Valid(data) {
 		return json.Unmarshal(data, c)
 	}
@@ -129,20 +127,26 @@ func (c *CondWhere) UnmarshalBind(str string) error {
 	return nil
 }
 
-type CondWheres []*CondWhere
+type CondWhereInputs struct {
+	Or    bool              `json:"or"    form:"or"    query:"or"`
+	Where []*CondWhereInput `json:"where" form:"where" query:"where" validate:"lte=100,dive"`
+}
 
-func (cws CondWheres) Inputs() condition.WhereInputs {
-	size := len(cws)
-	ret := make(condition.WhereInputs, 0, size)
-	for _, cw := range cws {
+func (cws CondWhereInputs) Inputs() *condition.WhereInputs {
+	size := len(cws.Where)
+	inputs := make([]*condition.WhereInput, 0, size)
+	for _, cw := range cws.Where {
 		if col := cw.Name; col != "" {
 			data := &condition.WhereInput{
 				Name:    col,
 				Operate: condition.NewOperator(cw.Operate),
 				Values:  cw.Values,
 			}
-			ret = append(ret, data)
+			inputs = append(inputs, data)
 		}
 	}
-	return ret
+	return &condition.WhereInputs{
+		Or:     cws.Or,
+		Inputs: inputs,
+	}
 }

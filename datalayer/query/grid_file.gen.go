@@ -29,6 +29,7 @@ func newGridFile(db *gorm.DB, opts ...gen.DOOption) gridFile {
 	_gridFile.ALL = field.NewAsterisk(tableName)
 	_gridFile.ID = field.NewInt64(tableName, "id")
 	_gridFile.Filename = field.NewString(tableName, "filename")
+	_gridFile.Extension = field.NewString(tableName, "extension")
 	_gridFile.Length = field.NewInt64(tableName, "length")
 	_gridFile.Burst = field.NewUint16(tableName, "burst")
 	_gridFile.SHA1 = field.NewString(tableName, "sha1")
@@ -47,6 +48,7 @@ type gridFile struct {
 	ALL       field.Asterisk
 	ID        field.Int64
 	Filename  field.String
+	Extension field.String
 	Length    field.Int64
 	Burst     field.Uint16
 	SHA1      field.String
@@ -71,6 +73,7 @@ func (g *gridFile) updateTableName(table string) *gridFile {
 	g.ALL = field.NewAsterisk(table)
 	g.ID = field.NewInt64(table, "id")
 	g.Filename = field.NewString(table, "filename")
+	g.Extension = field.NewString(table, "extension")
 	g.Length = field.NewInt64(table, "length")
 	g.Burst = field.NewUint16(table, "burst")
 	g.SHA1 = field.NewString(table, "sha1")
@@ -101,9 +104,10 @@ func (g *gridFile) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (g *gridFile) fillFieldMap() {
-	g.fieldMap = make(map[string]field.Expr, 8)
+	g.fieldMap = make(map[string]field.Expr, 9)
 	g.fieldMap["id"] = g.ID
 	g.fieldMap["filename"] = g.Filename
+	g.fieldMap["extension"] = g.Extension
 	g.fieldMap["length"] = g.Length
 	g.fieldMap["burst"] = g.Burst
 	g.fieldMap["sha1"] = g.SHA1

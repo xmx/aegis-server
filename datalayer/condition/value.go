@@ -1,6 +1,7 @@
 package condition
 
 import (
+	"database/sql/driver"
 	"strconv"
 	"time"
 )
@@ -93,10 +94,33 @@ func (vs stringValues) float32N(idx int) (float32, bool) {
 	return float32(ret), err == nil
 }
 
+func (vs stringValues) valueN(idx int) (driver.Valuer, bool) {
+	str, ok := vs.stringN(idx)
+	if !ok {
+		return nil, false
+	}
+
+	return driverValue(str), true
+}
+
+func (vs stringValues) values() []driver.Valuer {
+	var ret []driver.Valuer
+	for _, v := range vs {
+		ret = append(ret, driverValue(v))
+	}
+	return ret
+}
+
 func (vs stringValues) stringN(idx int) (string, bool) {
 	sz := len(vs)
 	if sz <= idx {
 		return "", false
 	}
 	return vs[idx], true
+}
+
+type driverValue string
+
+func (v driverValue) Value() (driver.Value, error) {
+	return string(v), nil
 }

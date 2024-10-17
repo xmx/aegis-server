@@ -17,7 +17,7 @@ func (e I18nError) Error() string {
 	return e.Key
 }
 
-func (e I18nError) Fmt(args ...any) I18nError {
+func (e I18nError) With(args ...any) I18nError {
 	e.Args = args
 	return e
 }
