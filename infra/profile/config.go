@@ -3,6 +3,7 @@ package profile
 import "time"
 
 type Config struct {
+	Active   string   `json:"active"`
 	Database Database `json:"database"`
 	Logger   Logger   `json:"logger"`
 }

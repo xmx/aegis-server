@@ -16,7 +16,7 @@ func main() {
 	args := os.Args
 	set := flag.NewFlagSet(args[0], flag.ExitOnError)
 	ver := set.Bool("v", false, "打印版本")
-	cfg := set.String("c", "resources/config", "配置目录")
+	cfg := set.String("c", "resources/config/application.jsonc", "配置目录")
 	_ = set.Parse(args[1:])
 	if banner.ANSI(os.Stdout); *ver {
 		return

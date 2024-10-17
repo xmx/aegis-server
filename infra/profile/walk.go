@@ -3,20 +3,27 @@ package profile
 import (
 	"io"
 	"os"
+	"path/filepath"
 
-	"github.com/xmx/aegis-server/library/directory"
 	"github.com/xmx/aegis-server/library/jsonc"
 )
 
 func JSONC(path string) (*Config, error) {
 	cfg := new(Config)
-	for name, err := range directory.Walk(path, "*.jsonc") {
-		if err != nil {
-			return nil, err
-		}
-		if err = unmarshalJSONC(name, cfg); err != nil {
-			return nil, err
-		}
+	if err := unmarshalJSONC(path, cfg); err != nil {
+		return nil, err
+	}
+	if cfg.Active == "" {
+		return cfg, nil
+	}
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+	length, size := len(base), len(ext)
+	name := base[:length-size] + "-" + cfg.Active + ext
+	join := filepath.Join(dir, name)
+	if err := unmarshalJSONC(join, cfg); err != nil {
+		return nil, err
 	}
 
 	return cfg, nil
