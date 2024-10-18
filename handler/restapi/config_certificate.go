@@ -26,6 +26,7 @@ func (api *configCertificateAPI) Route(r *ship.RouteGroupBuilder) error {
 	r.Route("/config/certificate/refresh").GET(api.Refresh)
 	r.Route("/config/certificate/cond").GET(api.Cond)
 	r.Route("/config/certificate").
+		GET(api.Detail).
 		POST(api.Create).
 		PUT(api.Update).
 		DELETE(api.Delete)
@@ -39,7 +40,7 @@ func (api *configCertificateAPI) Cond(c *ship.Context) error {
 }
 
 func (api *configCertificateAPI) Page(c *ship.Context) error {
-	req := new(request.PageCond)
+	req := new(request.PageCondition)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
@@ -70,6 +71,21 @@ func (api *configCertificateAPI) Update(c *ship.Context) error {
 	ctx := c.Request().Context()
 
 	return api.svc.Update(ctx, req)
+}
+
+func (api *configCertificateAPI) Detail(c *ship.Context) error {
+	req := new(request.Int64ID)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+
+	ctx := c.Request().Context()
+	ret, err := api.svc.Detail(ctx, req.ID)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
 }
 
 func (api *configCertificateAPI) Delete(c *ship.Context) error {

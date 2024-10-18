@@ -109,6 +109,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
 	poolTLS := credential.Pool(baseTLS)
 
+	oplogService := service.NewOplog(qry, log)
 	configCertificateService := service.NewConfigCertificate(poolTLS, qry, log)
 	if err = configCertificateService.Refresh(ctx); err != nil { // 初始化刷新证书池。
 		log.Error("初始化证书错误", slog.Any("error", err))
@@ -135,6 +136,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		restapi.NewDAV(basePath, "/"),
 		restapi.NewFile(dbfs, fileService),
 		restapi.NewLog(logService),
+		restapi.NewOplog(oplogService),
 		restapi.NewTerm(termService),
 		restapi.NewPlay(playerService),
 	}
@@ -151,7 +153,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		routes = append(routes, restapi.NewStatic(webuiPath, dir))
 	}
 
-	baseAPI := sh.Group(basePath).Use(middle.WAF(log))
+	baseAPI := sh.Group(basePath).Use(middle.WAF(oplogService))
 	if err = shipx.BindRouters(baseAPI, routes); err != nil { // 注册路由
 		return err
 	}

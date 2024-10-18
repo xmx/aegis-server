@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -79,7 +80,7 @@ func (api *fileAPI) Download(c *ship.Context) error {
 }
 
 func (api *fileAPI) Page(c *ship.Context) error {
-	req := new(request.PageCond)
+	req := new(request.PageCondition)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
@@ -105,4 +106,26 @@ func (api *fileAPI) Count(c *ship.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, ret)
+}
+
+func saveFile(srcFile multipart.File, dst string) error {
+	//srcFile, err := upload.Open()
+	//if err != nil {
+	//	return err
+	//}
+	//defer srcFile.Close()
+
+	//if file, ok := srcFile.(*os.File); ok {
+	//	return os.Rename(file.Name(), dst)
+	//}
+	//
+	//dstFile, err := os.Create(dst)
+	//if err != nil {
+	//	return err
+	//}
+	//defer dstFile.Close()
+	//
+	//_, err = io.Copy(dstFile, srcFile)
+
+	return nil
 }

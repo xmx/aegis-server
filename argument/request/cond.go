@@ -9,13 +9,17 @@ import (
 	"github.com/xmx/aegis-server/datalayer/condition"
 )
 
-type PageCond struct {
+type PageCondition struct {
 	Page
+	Condition
+}
+
+type Condition struct {
 	CondWhereInputs
 	CondOrderInputs
 }
 
-func (c PageCond) AllInputs() (*condition.WhereInputs, *condition.OrderInputs) {
+func (c Condition) AllInputs() (*condition.WhereInputs, *condition.OrderInputs) {
 	where := c.CondWhereInputs.Inputs()
 	order := c.CondOrderInputs.Inputs()
 	return where, order

@@ -11,6 +11,7 @@ func main() {
 		model.ConfigServer{},
 		model.GridChunk{},
 		model.GridFile{},
+		model.Oplog{},
 	}
 
 	g := gen.NewGenerator(gen.Config{

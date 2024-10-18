@@ -15,7 +15,7 @@ import (
 
 type File interface {
 	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageCond) (*pagination.Result[*model.GridFile], error)
+	Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.GridFile], error)
 	Count(ctx context.Context, limit int) (response.NameCounts, error)
 }
 
@@ -24,10 +24,8 @@ func NewFile(qry *query.Query, log *slog.Logger) File {
 	ctx := context.Background()
 	tbl := qry.GridFile
 	db := tbl.WithContext(ctx).UnderlyingDB()
-	opt := &condition.ParserOptions{
-		IgnoreOrder: []field.Expr{tbl.Burst, tbl.SHA1, tbl.SHA256},
-		IgnoreWhere: []field.Expr{tbl.Burst, tbl.SHA1, tbl.SHA256},
-	}
+	ignores := []field.Expr{tbl.Burst, tbl.SHA1, tbl.SHA256}
+	opt := &condition.ParserOptions{IgnoreOrder: ignores, IgnoreWhere: ignores}
 	cond, _ := condition.ParseModel(db, mod, opt)
 
 	return &fileService{
@@ -47,7 +45,7 @@ func (svc *fileService) Cond() *response.Cond {
 	return response.ReadCond(svc.cond)
 }
 
-func (svc *fileService) Page(ctx context.Context, req *request.PageCond) (*pagination.Result[*model.GridFile], error) {
+func (svc *fileService) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.GridFile], error) {
 	tbl := svc.qry.GridFile
 	scope := svc.cond.Scope(req.AllInputs())
 	dao := tbl.WithContext(ctx).Scopes(scope)

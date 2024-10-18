@@ -21,7 +21,7 @@ func ParseModel(db *gorm.DB, tbl any, opts *ParserOptions) (*Cond, error) {
 	ordersNameMap := make(map[string]*OrderField, 8)
 	wheresNameMap := make(map[string]*WhereField, 8)
 	for _, f := range fields {
-		expr := newField(table, f)
+		expr, ops := newField(table, f)
 		name, comment := f.DBName, f.Comment
 		if comment == "" {
 			comment = f.Name
@@ -33,7 +33,8 @@ func ParseModel(db *gorm.DB, tbl any, opts *ParserOptions) (*Cond, error) {
 			ordersNameMap[name] = cond
 		}
 		if exp := parseWhereField(expr, opts); exp != nil {
-			cond := &WhereField{name: name, comment: comment, expr: exp}
+			opMap := ops.NameMap()
+			cond := &WhereField{name: name, comment: comment, expr: exp, operators: ops, opMap: opMap}
 			wheres = append(wheres, cond)
 			wheresNameMap[name] = cond
 		}
@@ -63,47 +64,51 @@ func parseWhereField(f field.Expr, opts *ParserOptions) field.Expr {
 }
 
 // https://github.com/go-gorm/gen/blob/v0.3.26/internal/template/struct.go#L48
-func newField(tbl string, f *schema.Field) field.Expr {
+func newField(tbl string, f *schema.Field) (field.Expr, operators) {
 	name := f.DBName
+	var expr field.Expr
 	realType := getFieldRealType(f.FieldType)
+	ops := typeAllowedOperator(realType)
 	switch realType {
 	case "string":
-		return field.NewString(tbl, name)
+		expr = field.NewString(tbl, name)
 	case "int":
-		return field.NewInt(tbl, name)
+		expr = field.NewInt(tbl, name)
 	case "int8":
-		return field.NewInt8(tbl, name)
+		expr = field.NewInt8(tbl, name)
 	case "int16":
-		return field.NewInt16(tbl, name)
+		expr = field.NewInt16(tbl, name)
 	case "int32":
-		return field.NewInt32(tbl, name)
+		expr = field.NewInt32(tbl, name)
 	case "int64":
-		return field.NewInt64(tbl, name)
+		expr = field.NewInt64(tbl, name)
 	case "uint":
-		return field.NewUint(tbl, name)
+		expr = field.NewUint(tbl, name)
 	case "uint8":
-		return field.NewUint8(tbl, name)
+		expr = field.NewUint8(tbl, name)
 	case "uint16":
-		return field.NewUint16(tbl, name)
+		expr = field.NewUint16(tbl, name)
 	case "uin32":
-		return field.NewUint32(tbl, name)
+		expr = field.NewUint32(tbl, name)
 	case "uint64":
-		return field.NewUint64(tbl, name)
+		expr = field.NewUint64(tbl, name)
 	case "float32":
-		return field.NewFloat32(tbl, name)
+		expr = field.NewFloat32(tbl, name)
 	case "float64":
-		return field.NewFloat64(tbl, name)
+		expr = field.NewFloat64(tbl, name)
 	case "bool":
-		return field.NewBool(tbl, name)
+		expr = field.NewBool(tbl, name)
 	case "time.Time":
-		return field.NewTime(tbl, name)
+		expr = field.NewTime(tbl, name)
 	case "bytes", "[]byte", "json.RawMessage":
-		return field.NewBytes(tbl, name)
+		expr = field.NewBytes(tbl, name)
 	case "serializer":
-		return field.NewSerializer(tbl, name)
+		expr = field.NewSerializer(tbl, name)
 	default:
-		return field.NewField(tbl, name)
+		expr = field.NewField(tbl, name)
 	}
+
+	return expr, ops
 }
 
 func typeAllowedOperator(realType string) operators {

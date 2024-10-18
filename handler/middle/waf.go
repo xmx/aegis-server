@@ -1,49 +1,118 @@
 package middle
 
 import (
+	"context"
+	"io"
 	"log/slog"
+	"net"
 	"time"
 
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/datalayer/model"
 )
 
-func WAF(log *slog.Logger) ship.Middleware {
-	waf := &wafMiddle{log: log}
+type OplogWriter interface {
+	Write(ctx context.Context, oplog *model.Oplog) error
+}
+
+func WAF(wrt OplogWriter) ship.Middleware {
+	waf := &wafMiddle{wrt: wrt}
 	return waf.middle
 }
 
 type wafMiddle struct {
-	log *slog.Logger
+	wrt OplogWriter
 }
 
 func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
 	return func(c *ship.Context) error {
-		accessAt := time.Now()
-
-		method, url := c.Method(), c.Request().URL
 		remoteAddr, clientIP := c.RemoteAddr(), c.ClientIP()
-		headers := c.ReqHeader()
-		attrs := []any{
-			slog.String("method", method),
-			slog.String("path", url.String()),
-			slog.String("remote_addr", remoteAddr),
-			slog.String("client_ip", clientIP),
-			slog.Any("headers", headers),
-			slog.Time("access_at", accessAt),
+		directIP, _, _ := net.SplitHostPort(remoteAddr)
+		if directIP == "" {
+			directIP = remoteAddr
 		}
 
-		err := h(c)
-		leaveAt := time.Now()
-		elapsed := leaveAt.Sub(accessAt)
-		attrs = append(attrs, slog.Time("leave_at", leaveAt), slog.String("elapsed", elapsed.String()))
+		host, method := c.Host(), c.Method()
+		req := c.Request()
+		ctx := req.Context()
+		reqURL := req.URL
+		body := wm.newRecordBody(req.Body, 4096)
+		req.Body = body
 
-		if err != nil {
-			attrs = append(attrs, slog.String("error", err.Error()))
-			wm.log.Warn("接口访问日志", attrs...)
-		} else {
-			wm.log.Info("接口访问日志", attrs...)
+		var err error
+		accessedAt := time.Now()
+		oplog := &model.Oplog{
+			// Name:       "",
+			Host:       host,
+			Method:     method,
+			Path:       reqURL.Path,
+			Query:      reqURL.Query(),
+			Body:       nil,
+			Header:     req.Header,
+			ClientIP:   clientIP,
+			DirectIP:   directIP,
+			AccessedAt: accessedAt,
 		}
+		defer func() {
+			var failed bool
+			if val := recover(); val != nil {
+				failed = true
+			}
+			if err != nil {
+				failed = true
+				oplog.Reason = err.Error()
+			}
+			oplog.FinishedAt = time.Now()
+			oplog.Succeed = !failed
+			oplog.Body = body.Data()
+			attr := slog.Any("oplog", oplog)
+
+			if exx := ctx.Err(); exx != nil {
+				ctx = context.Background()
+			}
+			ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
+			exx := wm.wrt.Write(ctx2, oplog)
+			cancel()
+			if exx != nil {
+				c.Errorf("保存访问日志出错", attr, slog.Any("error", exx))
+			}
+			if failed {
+				c.Warnf("接口访问", attr)
+			} else {
+				c.Infof("接口访问", attr)
+			}
+		}()
+
+		err = h(c)
 
 		return err
 	}
+}
+
+func (wm *wafMiddle) newRecordBody(body io.ReadCloser, size int) *recordBody {
+	return &recordBody{
+		body: body,
+		data: make([]byte, size),
+	}
+}
+
+type recordBody struct {
+	body io.ReadCloser
+	data []byte
+	pos  int
+}
+
+func (rb *recordBody) Read(p []byte) (int, error) {
+	n, err := rb.body.Read(p)
+	i := copy(rb.data[rb.pos:], p[:n])
+	rb.pos += i
+	return n, err
+}
+
+func (rb *recordBody) Close() error {
+	return rb.body.Close()
+}
+
+func (rb *recordBody) Data() []byte {
+	return rb.data[:rb.pos]
 }

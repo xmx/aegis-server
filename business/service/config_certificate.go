@@ -22,9 +22,10 @@ import (
 
 type ConfigCertificate interface {
 	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageCond) (*pagination.Result[*model.ConfigCertificate], error)
+	Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.ConfigCertificate], error)
 	Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
 	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
+	Detail(ctx context.Context, id int64) (*model.ConfigCertificate, error)
 	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
 	Delete(ctx context.Context, ids []int64) error
 
@@ -69,7 +70,7 @@ func (svc *configCertificateService) Cond() *response.Cond {
 	return response.ReadCond(svc.cond)
 }
 
-func (svc *configCertificateService) Page(ctx context.Context, req *request.PageCond) (*pagination.Result[*model.ConfigCertificate], error) {
+func (svc *configCertificateService) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.ConfigCertificate], error) {
 	tbl := svc.qry.ConfigCertificate
 	scope := svc.cond.Scope(req.AllInputs())
 	dao := tbl.WithContext(ctx).Scopes(scope)
@@ -83,7 +84,8 @@ func (svc *configCertificateService) Page(ctx context.Context, req *request.Page
 		return empty, nil
 	}
 
-	dats, err := dao.Scopes(pager.Scope(cnt)).Find()
+	omits := []field.Expr{tbl.PublicKey, tbl.PrivateKey}
+	dats, err := dao.Omit(omits...).Scopes(pager.Scope(cnt)).Find()
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +185,13 @@ func (svc *configCertificateService) Delete(ctx context.Context, ids []int64) er
 	}
 
 	return svc.Refresh(ctx)
+}
+
+func (svc *configCertificateService) Detail(ctx context.Context, id int64) (*model.ConfigCertificate, error) {
+	tbl := svc.qry.ConfigCertificate
+	return tbl.WithContext(ctx).
+		Where(tbl.ID.Eq(id)).
+		First()
 }
 
 func (svc *configCertificateService) Refresh(ctx context.Context) error {

@@ -3,13 +3,19 @@ package response
 import "github.com/xmx/aegis-server/datalayer/condition"
 
 type Cond struct {
-	Wheres []*CondOrder `json:"wheres,omitempty"`
+	Wheres []*CondWhere `json:"wheres,omitempty"`
 	Orders []*CondOrder `json:"orders,omitempty"`
 }
 
 type CondOrder struct {
 	Name    string `json:"name"`
 	Comment string `json:"comment"`
+}
+
+type CondWhere struct {
+	Name      string   `json:"name"`
+	Comment   string   `json:"comment"`
+	Operators []string `json:"operators"`
 }
 
 func ReadCond(c *condition.Cond) *Cond {
@@ -25,7 +31,12 @@ func ReadCond(c *condition.Cond) *Cond {
 	}
 	for _, f := range c.WhereFields() {
 		name, comment := f.NameComment()
-		data := &CondOrder{Name: name, Comment: comment}
+		data := &CondWhere{Name: name, Comment: comment}
+		ops := f.Operators()
+		for _, op := range ops {
+			data.Operators = append(data.Operators, op.String())
+		}
+
 		ret.Wheres = append(ret.Wheres, data)
 	}
 

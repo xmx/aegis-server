@@ -22,10 +22,15 @@ type WhereField struct {
 	comment   string
 	operators []Operator
 	expr      field.Expr
+	opMap     map[string]Operator
 }
 
 func (f WhereField) NameComment() (name, comment string) {
 	return f.name, f.comment
+}
+
+func (f WhereField) Operators() []Operator {
+	return f.operators
 }
 
 type WhereFields []*WhereField
@@ -67,36 +72,40 @@ func (c Cond) WhereFields() WhereFields {
 
 func (c Cond) Scope(whereInputs *WhereInputs, orderInputs *OrderInputs) func(gen.Dao) gen.Dao {
 	return func(dao gen.Dao) gen.Dao {
-		wheres := c.parseWhereInputs(whereInputs)
-		orders := c.parseOrderInputs(orderInputs)
+		wheres := c.CompileWheres(whereInputs)
+		orders := c.CompileOrders(orderInputs)
 		return dao.Where(wheres...).Order(orders...)
 	}
 }
 
-func (c Cond) Order(inputs *OrderInputs) func(gen.Dao) gen.Dao {
-	return func(dao gen.Dao) gen.Dao {
-		exprs := c.parseOrderInputs(inputs)
-		return dao.Order(exprs...)
-	}
-}
-
-func (c Cond) Where(inputs *WhereInputs) func(gen.Dao) gen.Dao {
-	return func(dao gen.Dao) gen.Dao {
-		exprs := c.parseWhereInputs(inputs)
-		return dao.Where(exprs...)
-	}
-}
-
-func (c Cond) parseOrderInputs(in *OrderInputs) []field.Expr {
-	if in == nil {
+func (c Cond) CompileWheres(ins *WhereInputs) []gen.Condition {
+	if ins == nil || len(ins.Inputs) == 0 {
 		return nil
 	}
-	inputs := in.Inputs
+
+	inputs := ins.Inputs
+	size := len(inputs)
+	exprs := make([]field.Expr, 0, size)
+	conds := make([]gen.Condition, 0, size)
+	for _, val := range inputs {
+		expr := c.parseWhereInput(val)
+		exprs = append(exprs, expr)
+		conds = append(conds, expr)
+	}
+	if ins.Or {
+		return []gen.Condition{field.Or(exprs...)}
+	}
+
+	return conds
+}
+
+func (c Cond) CompileOrders(ins *OrderInputs) []field.Expr {
+	if ins == nil || len(ins.Inputs) == 0 {
+		return nil
+	}
+	inputs := ins.Inputs
 	exprs := make([]field.Expr, 0, len(inputs))
 	for _, v := range inputs {
-		if in == nil {
-			continue
-		}
 		if fd := c.ordersNameMap[v.Name]; fd != nil {
 			exp := fd.expr
 			if v.Desc {
@@ -109,10 +118,11 @@ func (c Cond) parseOrderInputs(in *OrderInputs) []field.Expr {
 	return exprs
 }
 
-func (c Cond) parseWhereInputs(in *WhereInputs) []gen.Condition {
-	if in == nil {
+func (c Cond) compileWhereInputs(in *WhereInputs) []gen.Condition {
+	if in == nil || len(in.Inputs) == 0 {
 		return nil
 	}
+
 	or, inputs := in.Or, in.Inputs
 	size := len(inputs)
 	exprs := make([]field.Expr, 0, size)
@@ -125,6 +135,7 @@ func (c Cond) parseWhereInputs(in *WhereInputs) []gen.Condition {
 	if or {
 		return []gen.Condition{field.Or(exprs...)}
 	}
+
 	return conds
 }
 
