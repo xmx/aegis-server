@@ -39,5 +39,5 @@ resources/test/*
 
 aegis-server-*
 
-*/*.cast
+*.cast
 *.upx

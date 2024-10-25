@@ -161,5 +161,6 @@ func (api *configCertificateAPI) Download(c *ship.Context) error {
 
 func (api *configCertificateAPI) Refresh(c *ship.Context) error {
 	ctx := c.Request().Context()
-	return api.svc.Refresh(ctx)
+	_, err := api.svc.Refresh(ctx)
+	return err
 }

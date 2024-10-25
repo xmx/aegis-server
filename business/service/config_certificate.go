@@ -29,8 +29,8 @@ type ConfigCertificate interface {
 	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
 	Delete(ctx context.Context, ids []int64) error
 
-	// Refresh 刷新证书。
-	Refresh(ctx context.Context) error
+	// Refresh 刷新证书，返回有效证书个数。
+	Refresh(ctx context.Context) (int, error)
 }
 
 func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) ConfigCertificate {
@@ -129,8 +129,9 @@ func (svc *configCertificateService) Create(ctx context.Context, req *request.Co
 	if err = dao.Create(dat); err != nil || !enabled {
 		return err
 	}
+	_, err = svc.Refresh(ctx)
 
-	return svc.Refresh(ctx)
+	return err
 }
 
 func (svc *configCertificateService) Update(ctx context.Context, req *request.ConfigCertificateUpdate) error {
@@ -164,8 +165,9 @@ func (svc *configCertificateService) Update(ctx context.Context, req *request.Co
 	if err = dao.Where(tbl.ID.Eq(id)).Save(dat); err != nil || !enabled {
 		return err
 	}
+	_, err = svc.Refresh(ctx)
 
-	return svc.Refresh(ctx)
+	return err
 }
 
 func (svc *configCertificateService) Delete(ctx context.Context, ids []int64) error {
@@ -183,8 +185,9 @@ func (svc *configCertificateService) Delete(ctx context.Context, ids []int64) er
 	if err != nil || cnt == 0 {
 		return err
 	}
+	_, err = svc.Refresh(ctx)
 
-	return svc.Refresh(ctx)
+	return err
 }
 
 func (svc *configCertificateService) Detail(ctx context.Context, id int64) (*model.ConfigCertificate, error) {
@@ -194,13 +197,13 @@ func (svc *configCertificateService) Detail(ctx context.Context, id int64) (*mod
 		First()
 }
 
-func (svc *configCertificateService) Refresh(ctx context.Context) error {
+func (svc *configCertificateService) Refresh(ctx context.Context) (int, error) {
 	tbl := svc.qry.ConfigCertificate
 	dao := tbl.WithContext(ctx)
 	dats, err := dao.Where(tbl.Enabled.Is(true)).Find()
 	if err != nil {
 		svc.log.Error("查询所有开启的证书错误", slog.Any("error", err))
-		return err
+		return 0, err
 	}
 
 	certs := make([]tls.Certificate, 0, len(dats))
@@ -208,16 +211,17 @@ func (svc *configCertificateService) Refresh(ctx context.Context) error {
 		cert, exx := tls.X509KeyPair([]byte(dat.PublicKey), []byte(dat.PrivateKey))
 		if exx != nil {
 			svc.log.Error("处理证书错误", slog.Any("error", err))
-			return exx
+			return 0, exx
 		}
 		certs = append(certs, cert)
 	}
-	if len(certs) == 0 {
+	num := len(certs)
+	if num == 0 {
 		svc.log.Error("当前证书表未启用任何证书，程序将无法通过网络访问。")
 	}
 	svc.pool.Replace(certs)
 
-	return nil
+	return num, nil
 }
 
 func (svc *configCertificateService) parseCertificate(publicKey, privateKey string, enabled bool) (*model.ConfigCertificate, error) {

@@ -106,14 +106,17 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 
+	var useTLS bool
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
 	poolTLS := credential.Pool(baseTLS)
 
 	oplogService := service.NewOplog(qry, log)
 	configCertificateService := service.NewConfigCertificate(poolTLS, qry, log)
-	if err = configCertificateService.Refresh(ctx); err != nil { // 初始化刷新证书池。
-		log.Error("初始化证书错误", slog.Any("error", err))
-		return err
+	if num, exx := configCertificateService.Refresh(ctx); exx != nil { // 初始化刷新证书池。
+		log.Error("初始化证书错误", slog.Any("error", exx))
+		return exx
+	} else {
+		useTLS = num > 0
 	}
 
 	dbfs := gridfs.NewFS(qry)
@@ -169,7 +172,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		TLSConfig: &tls.Config{GetConfigForClient: poolTLS.Match},
 	}
 	errs := make(chan error)
-	go serveHTTP(srv, errs)
+	go serveHTTP(srv, useTLS, errs)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
@@ -184,6 +187,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	return err
 }
 
-func serveHTTP(srv *http.Server, errs chan<- error) {
-	errs <- srv.ListenAndServeTLS("", "")
+func serveHTTP(srv *http.Server, useTLS bool, errs chan<- error) {
+	if useTLS {
+		errs <- srv.ListenAndServeTLS("", "")
+	} else {
+		errs <- srv.ListenAndServe()
+	}
 }
