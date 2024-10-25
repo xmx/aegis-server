@@ -11,6 +11,10 @@ func autoMigrate(db *gorm.DB) error {
 		model.ConfigServer{},
 		model.GridChunk{},
 		model.GridFile{},
+		model.Menu{},
 		model.Oplog{},
+		model.Role{},
+		model.RoleMenu{},
+		model.User{},
 	)
 }

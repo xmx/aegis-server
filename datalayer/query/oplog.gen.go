@@ -37,8 +37,8 @@ func newOplog(db *gorm.DB, opts ...gen.DOOption) oplog {
 	_oplog.Header = field.NewField(tableName, "header")
 	_oplog.ClientIP = field.NewString(tableName, "client_ip")
 	_oplog.DirectIP = field.NewString(tableName, "direct_ip")
-	_oplog.Succeed = field.NewBool(tableName, "accessed_at")
-	_oplog.Reason = field.NewString(tableName, "accessed_at")
+	_oplog.Succeed = field.NewBool(tableName, "succeed")
+	_oplog.Reason = field.NewString(tableName, "reason")
 	_oplog.AccessedAt = field.NewTime(tableName, "accessed_at")
 	_oplog.FinishedAt = field.NewTime(tableName, "finished_at")
 
@@ -91,8 +91,8 @@ func (o *oplog) updateTableName(table string) *oplog {
 	o.Header = field.NewField(table, "header")
 	o.ClientIP = field.NewString(table, "client_ip")
 	o.DirectIP = field.NewString(table, "direct_ip")
-	o.Succeed = field.NewBool(table, "accessed_at")
-	o.Reason = field.NewString(table, "accessed_at")
+	o.Succeed = field.NewBool(table, "succeed")
+	o.Reason = field.NewString(table, "reason")
 	o.AccessedAt = field.NewTime(table, "accessed_at")
 	o.FinishedAt = field.NewTime(table, "finished_at")
 
@@ -130,8 +130,8 @@ func (o *oplog) fillFieldMap() {
 	o.fieldMap["header"] = o.Header
 	o.fieldMap["client_ip"] = o.ClientIP
 	o.fieldMap["direct_ip"] = o.DirectIP
-	o.fieldMap["accessed_at"] = o.Succeed
-	o.fieldMap["accessed_at"] = o.Reason
+	o.fieldMap["succeed"] = o.Succeed
+	o.fieldMap["reason"] = o.Reason
 	o.fieldMap["accessed_at"] = o.AccessedAt
 	o.fieldMap["finished_at"] = o.FinishedAt
 }

@@ -2,9 +2,11 @@ package gridfs
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"io/fs"
 	"path/filepath"
@@ -24,6 +26,10 @@ type FS interface {
 type File interface {
 	fs.File
 	fs.FileInfo
+}
+
+type Digester interface {
+	MD5() string
 	SHA1() string
 	SHA256() string
 }
@@ -81,8 +87,8 @@ func (g *gridFS) OpenID(fileID int64) (File, error) {
 func (g *gridFS) Save(ctx context.Context, filename string, r io.Reader) (*model.GridFile, error) {
 	ext := strings.ToLower(filepath.Ext(filename))
 	createdAt := time.Now()
-	h1, h256 := sha1.New(), sha256.New()
-	fr := io.TeeReader(r, io.MultiWriter(h1, h256))
+	m5, h1, h256 := md5.New(), sha1.New(), sha256.New()
+	fr := io.TeeReader(r, io.MultiWriter(m5, h1, h256))
 
 	var sequence int64
 	file := &model.GridFile{Filename: filename, Extension: ext, Burst: g.burst, CreatedAt: createdAt}
@@ -111,7 +117,7 @@ func (g *gridFS) Save(ctx context.Context, filename string, r io.Reader) (*model
 
 			if err != nil {
 				// io.ReadFull returned error
-				if err == io.EOF || err == io.ErrUnexpectedEOF {
+				if err == io.EOF || errors.Is(err, io.ErrUnexpectedEOF) {
 					break
 				}
 				return err
@@ -119,7 +125,8 @@ func (g *gridFS) Save(ctx context.Context, filename string, r io.Reader) (*model
 		}
 
 		// 更新文件信息
-		h1sum, h256sum := h1.Sum(nil), h256.Sum(nil)
+		m5sum, h1sum, h256sum := m5.Sum(nil), h1.Sum(nil), h256.Sum(nil)
+		file.MD5 = hex.EncodeToString(m5sum)
 		file.SHA1 = hex.EncodeToString(h1sum)
 		file.SHA256 = hex.EncodeToString(h256sum)
 		file.Length = length

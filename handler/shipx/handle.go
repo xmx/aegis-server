@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net"
 	"net/http"
 	"strconv"
@@ -11,8 +12,11 @@ import (
 	"time"
 
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/response"
+	"github.com/xmx/aegis-server/library/i18n"
 	"github.com/xmx/aegis-server/library/validation"
+	"golang.org/x/text/language"
 	"gorm.io/gorm"
 )
 
@@ -79,4 +83,46 @@ func UnpackError(err error) (statusCode int, title string, detail string) {
 	}
 
 	return
+}
+
+type ErrorHandler struct {
+	detector i18n.Detector
+}
+
+func (eh ErrorHandler) NotFound(_ *ship.Context) error {
+	return errcode.ErrNotFound
+}
+
+func (eh ErrorHandler) HandleError(e error, c *ship.Context) {
+	dat := eh.unpack(e, c)
+	if err := c.JSON(dat.Status, dat); err != nil {
+		c.Warnf("响应报文写入出错", slog.Any("error", err), slog.Any("details", dat))
+	}
+}
+
+func (eh ErrorHandler) unpack(e error, c *ship.Context) *response.ProblemDetails {
+	req := c.Request()
+	dat := &response.ProblemDetails{
+		Status:   http.StatusBadRequest,
+		Instance: req.URL.Path,
+		Method:   c.Method(),
+		Datetime: time.Now().UTC(),
+	}
+
+	switch ev := e.(type) {
+	case *errcode.I18nError:
+		tags := eh.acceptLanguages(c.GetReqHeader(ship.HeaderAcceptLanguage))
+		msg := eh.detector.Detect(tags, ev.Key, ev.Args...)
+		dat.Status = ev.Code
+		dat.Detail = msg
+	}
+	if dat.Detail == "" {
+		dat.Detail = e.Error()
+	}
+
+	return dat
+}
+
+func (eh ErrorHandler) acceptLanguages(value string) []language.Tag {
+	return nil
 }

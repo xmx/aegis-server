@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
@@ -100,4 +101,54 @@ func (svc *oplogService) Write(ctx context.Context, oplog *model.Oplog) error {
 	dao := svc.qry.Oplog.WithContext(ctx)
 
 	return dao.Create(oplog)
+}
+
+func (svc *oplogService) Trend(ctx context.Context, startedAt time.Time, maximum int) (*model.Oplog, error) {
+	//if maximum < 10 {
+	//	maximum = 10
+	//} else if maximum > 1000 {
+	//	maximum = 1000
+	//}
+	//
+	//now := time.Now()
+	//sub := now.Sub(startedAt)
+	//slot := sub / time.Duration(maximum)
+	//if slot < 10*time.Second {
+	//	slot = 10 * time.Second
+	//}
+	//
+	//var cnts response.NameCounts
+	//nameAlias, cntAlias, expr := cnts.Aliases()
+	//
+	//tbl := svc.qry.Oplog
+	//tbl.WithContext(ctx).
+	//	Select(expr)
+	//
+	//var at field.Int
+	//accessedAt := tbl.AccessedAt
+	//accessedAt.FromUnixtime(at.FloorDiv(60)).As(nameAlias)
+	//// SELECT
+	////    FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(accessed_at) / 60) * 60) AS slot,
+	////    COUNT(*) AS cnt
+	//// FROM
+	////    oplog
+	//// GROUP BY
+	////    slot
+	//// ORDER BY
+	////    slot;
+	//
+	//cntField := field.NewInt64("", cntAlias)
+	//timeField := field.NewTime("", nameAlias)
+	//underDB := tbl.WithContext(ctx).
+	//	Where(tbl.AccessedAt.Gte(startedAt)).
+	//	Group(timeField).
+	//	Order(timeField).
+	//	UnderlyingDB()
+	//
+	//field1 := "FROM_UNIXTIME(FLOOR(UNIX_TIMESTAMP(accessed_at) / %[1]d) * 60) AS"
+	//fmt.Sprintf(field1, 1)
+	//
+	//underDB.Select()
+
+	return nil, nil
 }

@@ -78,6 +78,10 @@ func (g *gridFile) Sys() any {
 	return nil
 }
 
+func (g *gridFile) MD5() string {
+	return g.file.MD5
+}
+
 func (g *gridFile) SHA1() string {
 	return g.file.SHA1
 }

@@ -24,7 +24,7 @@ func NewFile(qry *query.Query, log *slog.Logger) File {
 	ctx := context.Background()
 	tbl := qry.GridFile
 	db := tbl.WithContext(ctx).UnderlyingDB()
-	ignores := []field.Expr{tbl.Burst, tbl.SHA1, tbl.SHA256}
+	ignores := []field.Expr{tbl.Burst, tbl.MD5, tbl.SHA1, tbl.SHA256}
 	opt := &condition.ParserOptions{IgnoreOrder: ignores, IgnoreWhere: ignores}
 	cond, _ := condition.ParseModel(db, mod, opt)
 

@@ -132,6 +132,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	const basePath, webuiPath = "/api", "/webui"
 	staticPath := path.Join(basePath, webuiPath)
 	routes := []shipx.Router{
+		restapi.NewAuth(),
 		restapi.NewConfigCertificate(configCertificateService),
 		restapi.NewDAV(basePath, "/"),
 		restapi.NewFile(dbfs, fileService),

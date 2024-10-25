@@ -2,7 +2,6 @@ package restapi
 
 import (
 	"mime"
-	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -62,11 +61,13 @@ func (api *fileAPI) Download(c *ship.Context) error {
 	defer file.Close()
 
 	filename := file.Name()
-	param := map[string]string{
-		"filename": filename,
-		"sha1":     file.SHA1(),
-		"sha256":   file.SHA256(),
+	param := map[string]string{"filename": filename}
+	if digest, ok := file.(gridfs.Digester); ok {
+		param["md5"] = digest.MD5()
+		param["sha1"] = digest.SHA1()
+		param["sha256"] = digest.SHA256()
 	}
+
 	disposition := mime.FormatMediaType("attachment", param)
 	c.SetRespHeader(ship.HeaderContentDisposition, disposition)
 	c.SetRespHeader(ship.HeaderContentLength, strconv.FormatInt(file.Size(), 10))
@@ -106,26 +107,4 @@ func (api *fileAPI) Count(c *ship.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, ret)
-}
-
-func saveFile(srcFile multipart.File, dst string) error {
-	//srcFile, err := upload.Open()
-	//if err != nil {
-	//	return err
-	//}
-	//defer srcFile.Close()
-
-	//if file, ok := srcFile.(*os.File); ok {
-	//	return os.Rename(file.Name(), dst)
-	//}
-	//
-	//dstFile, err := os.Create(dst)
-	//if err != nil {
-	//	return err
-	//}
-	//defer dstFile.Close()
-	//
-	//_, err = io.Copy(dstFile, srcFile)
-
-	return nil
 }

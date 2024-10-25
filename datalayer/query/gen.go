@@ -21,7 +21,11 @@ var (
 	ConfigServer      *configServer
 	GridChunk         *gridChunk
 	GridFile          *gridFile
+	Menu              *menu
 	Oplog             *oplog
+	Role              *role
+	RoleMenu          *roleMenu
+	User              *user
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
@@ -30,7 +34,11 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	ConfigServer = &Q.ConfigServer
 	GridChunk = &Q.GridChunk
 	GridFile = &Q.GridFile
+	Menu = &Q.Menu
 	Oplog = &Q.Oplog
+	Role = &Q.Role
+	RoleMenu = &Q.RoleMenu
+	User = &Q.User
 }
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
@@ -40,7 +48,11 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		ConfigServer:      newConfigServer(db, opts...),
 		GridChunk:         newGridChunk(db, opts...),
 		GridFile:          newGridFile(db, opts...),
+		Menu:              newMenu(db, opts...),
 		Oplog:             newOplog(db, opts...),
+		Role:              newRole(db, opts...),
+		RoleMenu:          newRoleMenu(db, opts...),
+		User:              newUser(db, opts...),
 	}
 }
 
@@ -51,7 +63,11 @@ type Query struct {
 	ConfigServer      configServer
 	GridChunk         gridChunk
 	GridFile          gridFile
+	Menu              menu
 	Oplog             oplog
+	Role              role
+	RoleMenu          roleMenu
+	User              user
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -63,7 +79,11 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		ConfigServer:      q.ConfigServer.clone(db),
 		GridChunk:         q.GridChunk.clone(db),
 		GridFile:          q.GridFile.clone(db),
+		Menu:              q.Menu.clone(db),
 		Oplog:             q.Oplog.clone(db),
+		Role:              q.Role.clone(db),
+		RoleMenu:          q.RoleMenu.clone(db),
+		User:              q.User.clone(db),
 	}
 }
 
@@ -82,7 +102,11 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		ConfigServer:      q.ConfigServer.replaceDB(db),
 		GridChunk:         q.GridChunk.replaceDB(db),
 		GridFile:          q.GridFile.replaceDB(db),
+		Menu:              q.Menu.replaceDB(db),
 		Oplog:             q.Oplog.replaceDB(db),
+		Role:              q.Role.replaceDB(db),
+		RoleMenu:          q.RoleMenu.replaceDB(db),
+		User:              q.User.replaceDB(db),
 	}
 }
 
@@ -91,7 +115,11 @@ type queryCtx struct {
 	ConfigServer      *configServerDo
 	GridChunk         *gridChunkDo
 	GridFile          *gridFileDo
+	Menu              *menuDo
 	Oplog             *oplogDo
+	Role              *roleDo
+	RoleMenu          *roleMenuDo
+	User              *userDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
@@ -100,7 +128,11 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		ConfigServer:      q.ConfigServer.WithContext(ctx),
 		GridChunk:         q.GridChunk.WithContext(ctx),
 		GridFile:          q.GridFile.WithContext(ctx),
+		Menu:              q.Menu.WithContext(ctx),
 		Oplog:             q.Oplog.WithContext(ctx),
+		Role:              q.Role.WithContext(ctx),
+		RoleMenu:          q.RoleMenu.WithContext(ctx),
+		User:              q.User.WithContext(ctx),
 	}
 }
 

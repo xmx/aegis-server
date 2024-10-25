@@ -14,3 +14,12 @@ func (nc NameCounts) Aliases() (string, string, field.OrderExpr) {
 	expr := field.NewField("", count)
 	return "name", "count", expr // 与 gorm tag 保持一致
 }
+
+type Pair struct {
+	Key string
+}
+
+type CountPair struct {
+	Key string `json:"key"`
+	Cnt int64  `json:"cnt"`
+}
