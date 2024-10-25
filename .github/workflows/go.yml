@@ -22,7 +22,7 @@ jobs:
         go-version: '1.23'
 
     - name: Go Build
-      run: go build -o aegis-server -v ./main
+      run: sh build.sh
 
     - name: Go Test
       run: go test -v ./...
