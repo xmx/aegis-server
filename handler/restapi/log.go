@@ -9,56 +9,55 @@ import (
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/aegis-server/business/service"
-	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/protocol/eventsource"
 )
 
-func NewLog(svc service.Log) shipx.Router {
-	return &logAPI{
+func NewLog(svc *service.Log) *Log {
+	return &Log{
 		svc:   svc,
 		limit: 5,
 	}
 }
 
-type logAPI struct {
-	svc   service.Log
+type Log struct {
+	svc   *service.Log
 	limit int32        // tail 日志最大个数。
 	count atomic.Int32 // tail 连接计数器。
 }
 
-func (api *logAPI) Route(r *ship.RouteGroupBuilder) error {
+func (l *Log) Route(r *ship.RouteGroupBuilder) error {
 	r.Route("/log/level").
-		GET(api.Level).
-		POST(api.SetLevel)
-	r.Route("/sse/log/tail").GET(api.Tail)
+		GET(l.level).
+		POST(l.setLevel)
+	r.Route("/sse/log/tail").GET(l.tail)
 
 	return nil
 }
 
-func (api *logAPI) Level(c *ship.Context) error {
-	level := api.svc.Level()
+func (l *Log) level(c *ship.Context) error {
+	level := l.svc.Level()
 	ret := &response.LogLevel{Level: level}
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (api *logAPI) SetLevel(c *ship.Context) error {
+func (l *Log) setLevel(c *ship.Context) error {
 	req := new(request.LogLevel)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
 
-	return api.svc.SetLevel(req.Level)
+	return l.svc.SetLevel(req.Level)
 }
 
-func (api *logAPI) Tail(c *ship.Context) error {
-	cnt := api.count.Add(1)
-	if lim := api.limit; cnt > lim {
-		api.count.Add(-1)
+func (l *Log) tail(c *ship.Context) error {
+	cnt := l.count.Add(1)
+	if lim := l.limit; cnt > lim {
+		l.count.Add(-1)
 		return errcode.ErrTooManyRequests
 	}
 
 	defer func() {
-		num := api.count.Add(-1)
+		num := l.count.Add(-1)
 		c.Infof("离开日志查看器，当前还有 %d 个查看窗口", num)
 	}()
 
@@ -69,8 +68,8 @@ func (api *logAPI) Tail(c *ship.Context) error {
 		return errcode.ErrServerSentEvents
 	}
 
-	api.svc.Attach(sse)
-	defer api.svc.Leave(sse)
+	l.svc.Attach(sse)
+	defer l.svc.Leave(sse)
 
 	c.Warnf("进入日志查看器，当前共有 %d 个查看窗口", cnt)
 	<-sse.Done()

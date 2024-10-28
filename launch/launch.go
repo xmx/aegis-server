@@ -58,7 +58,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		defer lumber.Close()
 		logWriter.Attach(lumber)
 	}
-	if logCfg.Terminal {
+	if logCfg.Console {
 		logWriter.Attach(os.Stdout)
 	}
 
@@ -160,10 +160,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	baseAPI := sh.Group(basePath).Use(middle.WAF(oplogService))
 	if err = shipx.BindRouters(baseAPI, routes); err != nil { // 注册路由
 		return err
-	}
-
-	for _, route := range sh.Routes() {
-		log.Info("路由", slog.Any("route", route))
 	}
 
 	srv := &http.Server{

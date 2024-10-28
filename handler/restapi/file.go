@@ -13,7 +13,7 @@ import (
 	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewFile(dbfs gridfs.FS, svc service.File) shipx.Router {
+func NewFile(dbfs gridfs.FS, svc *service.File) shipx.Router {
 	return &fileAPI{
 		dbfs: dbfs,
 		svc:  svc,
@@ -22,7 +22,7 @@ func NewFile(dbfs gridfs.FS, svc service.File) shipx.Router {
 
 type fileAPI struct {
 	dbfs gridfs.FS
-	svc  service.File
+	svc  *service.File
 }
 
 func (api *fileAPI) Route(r *ship.RouteGroupBuilder) error {

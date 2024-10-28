@@ -116,6 +116,7 @@ func (g *gormHandler) Enabled(ctx context.Context, level slog.Level) bool {
 }
 
 func (g *gormHandler) Handle(ctx context.Context, record slog.Record) error {
+	// https://github.com/go-gorm/gorm/blob/v1.25.12/utils/utils.go#L33-L49
 	pcs := [13]uintptr{}
 	size := runtime.Callers(6, pcs[:])
 	frames := runtime.CallersFrames(pcs[:size])

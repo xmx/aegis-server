@@ -7,19 +7,14 @@ import (
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/aegis-server/datalayer/condition"
+	"github.com/xmx/aegis-server/datalayer/gridfs"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/pagination"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"gorm.io/gen/field"
 )
 
-type File interface {
-	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.GridFile], error)
-	Count(ctx context.Context, limit int) (response.NameCounts, error)
-}
-
-func NewFile(qry *query.Query, log *slog.Logger) File {
+func NewFile(qry *query.Query, log *slog.Logger) *File {
 	mod := new(model.GridFile)
 	ctx := context.Background()
 	tbl := qry.GridFile
@@ -28,24 +23,25 @@ func NewFile(qry *query.Query, log *slog.Logger) File {
 	opt := &condition.ParserOptions{IgnoreOrder: ignores, IgnoreWhere: ignores}
 	cond, _ := condition.ParseModel(db, mod, opt)
 
-	return &fileService{
+	return &File{
 		qry:  qry,
 		log:  log,
 		cond: cond,
 	}
 }
 
-type fileService struct {
+type File struct {
 	qry  *query.Query
 	log  *slog.Logger
+	dbfs gridfs.File
 	cond *condition.Cond
 }
 
-func (svc *fileService) Cond() *response.Cond {
+func (svc *File) Cond() *response.Cond {
 	return response.ReadCond(svc.cond)
 }
 
-func (svc *fileService) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.GridFile], error) {
+func (svc *File) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.GridFile], error) {
 	tbl := svc.qry.GridFile
 	scope := svc.cond.Scope(req.AllInputs())
 	dao := tbl.WithContext(ctx).Scopes(scope)
@@ -68,7 +64,7 @@ func (svc *fileService) Page(ctx context.Context, req *request.PageCondition) (*
 	return ret, nil
 }
 
-func (svc *fileService) Count(ctx context.Context, limit int) (response.NameCounts, error) {
+func (svc *File) Count(ctx context.Context, limit int) (response.NameCounts, error) {
 	if limit <= 0 {
 		limit = 1
 	}
