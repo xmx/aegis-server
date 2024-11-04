@@ -19,7 +19,7 @@ import (
 
 type FS interface {
 	fs.FS
-	OpenID(fileID int64) (File, error)
+	OpenID(ctx context.Context, fileID int64) (File, error)
 	Save(ctx context.Context, filename string, r io.Reader) (*model.GridFile, error)
 }
 
@@ -67,11 +67,8 @@ func (g *gridFS) Open(name string) (fs.File, error) {
 	return f, nil
 }
 
-func (g *gridFS) OpenID(fileID int64) (File, error) {
+func (g *gridFS) OpenID(ctx context.Context, fileID int64) (File, error) {
 	tbl := g.qry.GridFile
-	ctx, cancel := g.getContext()
-	defer cancel()
-
 	file, err := tbl.WithContext(ctx).
 		Where(tbl.ID.Eq(fileID)).
 		First()

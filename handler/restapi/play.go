@@ -20,23 +20,23 @@ import (
 	"github.com/xmx/aegis-server/protocol/wsocket"
 )
 
-func NewPlay(player service.Player) shipx.Router {
-	return &playAPI{
+func NewPlay(player service.Player) *Play {
+	return &Play{
 		player: player,
 	}
 }
 
-type playAPI struct {
+type Play struct {
 	player service.Player
 }
 
-func (api *playAPI) Route(r *ship.RouteGroupBuilder) error {
-	r.Route("/ws/js/play").GET(api.JS)
-	r.Route("/js/play/pprof").GET(api.Pprof)
+func (api *Play) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/ws/js/play").GET(api.js)
+	r.Route("/js/play/pprof").GET(api.pprof)
 	return nil
 }
 
-func (api *playAPI) JS(c *ship.Context) error {
+func (api *Play) js(c *ship.Context) error {
 	w, r := c.ResponseWriter(), c.Request()
 	opt := &websocket.AcceptOptions{
 		CompressionMode:    websocket.CompressionContextTakeover,
@@ -79,7 +79,7 @@ func (api *playAPI) JS(c *ship.Context) error {
 	return nil
 }
 
-func (api *playAPI) Pprof(c *ship.Context) error {
+func (api *Play) pprof(c *ship.Context) error {
 	secVal := c.Query("seconds")
 	sec, _ := strconv.ParseInt(secVal, 10, 64)
 	if sec < 1 {

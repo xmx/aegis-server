@@ -9,16 +9,19 @@ import (
 	"github.com/xmx/aegis-server/datalayer/query"
 )
 
-type Menu interface {
-	Migrate(ctx context.Context, routes []ship.Route) error
+func NewMenu(qry *query.Query, log *slog.Logger) *Menu {
+	return &Menu{
+		qry: qry,
+		log: log,
+	}
 }
 
-type menuService struct {
+type Menu struct {
 	qry *query.Query
 	log *slog.Logger
 }
 
-func (svc *menuService) Tree(ctx context.Context, parentID ...int64) (model.MenuNodes, error) {
+func (svc *Menu) Tree(ctx context.Context, parentID ...int64) (model.MenuNodes, error) {
 	tbl := svc.qry.Menu
 	menus, err := tbl.WithContext(ctx).
 		Order(tbl.Folder.Desc(), tbl.ID).
@@ -65,7 +68,7 @@ func (svc *menuService) Tree(ctx context.Context, parentID ...int64) (model.Menu
 	return ret, nil
 }
 
-func (svc *menuService) Migrate(ctx context.Context, routes []ship.Route) error {
+func (svc *Menu) Migrate(ctx context.Context, routes []ship.Route) error {
 	for _, route := range routes {
 		data := route.Data
 		if data == nil {

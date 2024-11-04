@@ -6,38 +6,37 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/business/service"
-	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewOplog(svc service.Oplog) shipx.Router {
-	return &oplogAPI{svc: svc}
+func NewOplog(svc *service.Oplog) *Oplog {
+	return &Oplog{svc: svc}
 }
 
-type oplogAPI struct {
-	svc service.Oplog
+type Oplog struct {
+	svc *service.Oplog
 }
 
-func (api *oplogAPI) Route(r *ship.RouteGroupBuilder) error {
-	r.Route("/oplog").GET(api.Detail).DELETE(api.Delete)
-	r.Route("/oplogs").GET(api.Page)
-	r.Route("/oplog/cond").GET(api.Cond)
+func (l *Oplog) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/oplog").GET(l.detail).DELETE(l.delete)
+	r.Route("/oplogs").GET(l.page)
+	r.Route("/oplog/cond").GET(l.cond)
 
 	return nil
 }
 
-func (api *oplogAPI) Cond(c *ship.Context) error {
-	ret := api.svc.Cond()
+func (l *Oplog) cond(c *ship.Context) error {
+	ret := l.svc.Cond()
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (api *oplogAPI) Page(c *ship.Context) error {
+func (l *Oplog) page(c *ship.Context) error {
 	req := new(request.PageCondition)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 
 	ctx := c.Request().Context()
-	ret, err := api.svc.Page(ctx, req)
+	ret, err := l.svc.Page(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -45,14 +44,14 @@ func (api *oplogAPI) Page(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (api *oplogAPI) Detail(c *ship.Context) error {
+func (l *Oplog) detail(c *ship.Context) error {
 	req := new(request.Int64ID)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	ret, err := api.svc.Detail(ctx, req.ID)
+	ret, err := l.svc.Detail(ctx, req.ID)
 	if err != nil {
 		return err
 	}
@@ -60,12 +59,12 @@ func (api *oplogAPI) Detail(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (api *oplogAPI) Delete(c *ship.Context) error {
+func (l *Oplog) delete(c *ship.Context) error {
 	req := new(request.CondWhereInputs)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return api.svc.Delete(ctx, req)
+	return l.svc.Delete(ctx, req)
 }

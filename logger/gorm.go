@@ -1,8 +1,9 @@
-package logext
+package logger
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"runtime"
 	"strings"
@@ -41,39 +42,42 @@ type gormLog struct {
 	log                       *slog.Logger
 }
 
-func (l *gormLog) LogMode(lvl logger.LogLevel) logger.Interface {
-	nl := *l
+func (gl *gormLog) LogMode(lvl logger.LogLevel) logger.Interface {
+	nl := *gl
 	nl.LogLevel = lvl
 	return &nl
 }
 
-func (l *gormLog) Info(ctx context.Context, msg string, data ...any) {
-	if l.LogLevel >= logger.Info {
-		l.log.InfoContext(ctx, msg, slog.Any("data", data))
+func (gl *gormLog) Info(ctx context.Context, msg string, data ...any) {
+	if gl.LogLevel >= logger.Info {
+		str := fmt.Sprintf(msg, data...)
+		gl.log.InfoContext(ctx, str)
 	}
 }
 
-func (l *gormLog) Warn(ctx context.Context, msg string, data ...any) {
-	if l.LogLevel >= logger.Warn {
-		l.log.WarnContext(ctx, msg, slog.Any("data", data))
+func (gl *gormLog) Warn(ctx context.Context, msg string, data ...any) {
+	if gl.LogLevel >= logger.Warn {
+		str := fmt.Sprintf(msg, data...)
+		gl.log.WarnContext(ctx, str)
 	}
 }
 
-func (l *gormLog) Error(ctx context.Context, msg string, data ...any) {
-	if l.LogLevel >= logger.Error {
-		l.log.ErrorContext(ctx, msg, slog.Any("data", data))
+func (gl *gormLog) Error(ctx context.Context, msg string, data ...any) {
+	if gl.LogLevel >= logger.Error {
+		str := fmt.Sprintf(msg, data...)
+		gl.log.ErrorContext(ctx, str)
 	}
 }
 
-func (l *gormLog) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
-	if l.LogLevel <= logger.Silent {
+func (gl *gormLog) Trace(ctx context.Context, begin time.Time, fc func() (sql string, rowsAffected int64), err error) {
+	if gl.LogLevel <= logger.Silent {
 		return
 	}
 
 	elapsed := time.Since(begin)
 	elapsedStr := elapsed.String()
 	switch {
-	case err != nil && l.LogLevel >= logger.Error && (!errors.Is(err, logger.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError):
+	case err != nil && gl.LogLevel >= logger.Error && (!errors.Is(err, logger.ErrRecordNotFound) || !gl.IgnoreRecordNotFoundError):
 		sql, rows := fc()
 		attrs := []slog.Attr{
 			slog.String("sql", sql),
@@ -81,41 +85,41 @@ func (l *gormLog) Trace(ctx context.Context, begin time.Time, fc func() (sql str
 			slog.String("elapsed", elapsedStr),
 			slog.Any("error", err),
 		}
-		l.printf(ctx, slog.LevelError, attrs)
-	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= logger.Warn:
+		gl.printf(ctx, slog.LevelError, attrs)
+	case elapsed > gl.SlowThreshold && gl.SlowThreshold != 0 && gl.LogLevel >= logger.Warn:
 		sql, rows := fc()
 		attrs := []slog.Attr{
 			slog.String("sql", sql),
 			slog.Int64("rows", rows),
 			slog.String("elapsed", elapsedStr),
-			slog.String("threshold", l.SlowThreshold.String()),
+			slog.String("threshold", gl.SlowThreshold.String()),
 			slog.Bool("slowed", true),
 		}
-		l.printf(ctx, slog.LevelWarn, attrs)
-	case l.LogLevel == logger.Info:
+		gl.printf(ctx, slog.LevelWarn, attrs)
+	case gl.LogLevel == logger.Info:
 		sql, rows := fc()
 		attrs := []slog.Attr{
 			slog.String("sql", sql),
 			slog.Int64("rows", rows),
 			slog.String("elapsed", elapsedStr),
 		}
-		l.printf(ctx, slog.LevelInfo, attrs)
+		gl.printf(ctx, slog.LevelInfo, attrs)
 	}
 }
 
-func (l *gormLog) printf(ctx context.Context, lvl slog.Level, attrs []slog.Attr) {
-	l.log.LogAttrs(ctx, lvl, "gorm", attrs...)
+func (gl *gormLog) printf(ctx context.Context, lvl slog.Level, attrs []slog.Attr) {
+	gl.log.LogAttrs(ctx, lvl, "gorm", attrs...)
 }
 
 type gormHandler struct {
 	h slog.Handler
 }
 
-func (g *gormHandler) Enabled(ctx context.Context, level slog.Level) bool {
-	return g.h.Enabled(ctx, level)
+func (gh *gormHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	return gh.h.Enabled(ctx, level)
 }
 
-func (g *gormHandler) Handle(ctx context.Context, record slog.Record) error {
+func (gh *gormHandler) Handle(ctx context.Context, record slog.Record) error {
 	// https://github.com/go-gorm/gorm/blob/v1.25.12/utils/utils.go#L33-L49
 	pcs := [13]uintptr{}
 	size := runtime.Callers(6, pcs[:])
@@ -130,13 +134,13 @@ func (g *gormHandler) Handle(ctx context.Context, record slog.Record) error {
 		}
 	}
 
-	return g.h.Handle(ctx, record)
+	return gh.h.Handle(ctx, record)
 }
 
-func (g *gormHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	return g.h.WithAttrs(attrs)
+func (gh *gormHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return gh.h.WithAttrs(attrs)
 }
 
-func (g *gormHandler) WithGroup(name string) slog.Handler {
-	return g.h.WithGroup(name)
+func (gh *gormHandler) WithGroup(name string) slog.Handler {
+	return gh.h.WithGroup(name)
 }

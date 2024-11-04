@@ -18,21 +18,16 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type Term interface {
-	PTY(ws *websocket.Conn, size *request.TermResize) error
-	SSH(ws *websocket.Conn, req *request.TermSSH) error
+func NewTerm(log *slog.Logger) *Term {
+	return &Term{log: log}
 }
 
-func NewTerm(log *slog.Logger) Term {
-	return &termService{log: log}
-}
-
-type termService struct {
+type Term struct {
 	log *slog.Logger
 }
 
 //goland:noinspection GoUnhandledErrorResult
-func (svc *termService) PTY(conn *websocket.Conn, size *request.TermResize) error {
+func (svc *Term) PTY(conn *websocket.Conn, size *request.TermResize) error {
 	shell := os.Getenv("SHELL")
 	if shell == "" {
 		shell = "/bin/sh"
@@ -52,7 +47,7 @@ func (svc *termService) PTY(conn *websocket.Conn, size *request.TermResize) erro
 	return err
 }
 
-func (svc *termService) SSH(ws *websocket.Conn, req *request.TermSSH) error {
+func (svc *Term) SSH(ws *websocket.Conn, req *request.TermSSH) error {
 	_, privateKey, err := ed25519.GenerateKey(nil)
 	if err != nil {
 		return err
@@ -79,6 +74,7 @@ func (svc *termService) SSH(ws *websocket.Conn, req *request.TermSSH) error {
 	if err != nil {
 		return err
 	}
+	//goland:noinspection GoUnhandledErrorResult
 	defer tty.Close()
 
 	castFile := filepath.Join("resources/static/play/", "ssh.cast")
@@ -88,7 +84,7 @@ func (svc *termService) SSH(ws *websocket.Conn, req *request.TermSSH) error {
 }
 
 //goland:noinspection GoUnhandledErrorResult
-func (svc *termService) serveTerminal(ws *websocket.Conn, tty vterminal.Typewriter, castFile string) error {
+func (svc *Term) serveTerminal(ws *websocket.Conn, tty vterminal.Typewriter, castFile string) error {
 	conn := wsterm.NewConn(ws)
 	defer conn.Close()
 
@@ -147,7 +143,7 @@ func (svc *termService) serveTerminal(ws *websocket.Conn, tty vterminal.Typewrit
 	return nil
 }
 
-func (svc *termService) passwordCallback(ws *websocket.Conn) func() (string, error) {
+func (svc *Term) passwordCallback(ws *websocket.Conn) func() (string, error) {
 	conn := wsterm.NewConn(ws)
 	return func() (string, error) {
 		if _, err := conn.Write([]byte("请输入密码：")); err != nil {
@@ -165,7 +161,7 @@ func (svc *termService) passwordCallback(ws *websocket.Conn) func() (string, err
 	}
 }
 
-func (svc *termService) keyboardInteractive(ws *websocket.Conn) ssh.KeyboardInteractiveChallenge {
+func (svc *Term) keyboardInteractive(ws *websocket.Conn) ssh.KeyboardInteractiveChallenge {
 	return func(name, instruction string, questions []string, echos []bool) ([]string, error) {
 		conn := wsterm.NewConn(ws)
 		answers := make([]string, 0, len(questions))
@@ -193,7 +189,7 @@ func (svc *termService) keyboardInteractive(ws *websocket.Conn) ssh.KeyboardInte
 	}
 }
 
-func (*termService) readUntilCR(conn *wsterm.Conn, echo bool) (string, error) {
+func (*Term) readUntilCR(conn *wsterm.Conn, echo bool) (string, error) {
 	var answer string
 	for {
 		_, data, err := conn.Input()

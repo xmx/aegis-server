@@ -9,43 +9,42 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/business/service"
-	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewConfigCertificate(svc service.ConfigCertificate) shipx.Router {
-	return &configCertificateAPI{svc: svc}
+func NewConfigCertificate(svc *service.ConfigCertificate) *ConfigCertificate {
+	return &ConfigCertificate{svc: svc}
 }
 
-type configCertificateAPI struct {
-	svc service.ConfigCertificate
+type ConfigCertificate struct {
+	svc *service.ConfigCertificate
 }
 
-func (api *configCertificateAPI) Route(r *ship.RouteGroupBuilder) error {
-	r.Route("/config/certificates").GET(api.Page)
-	r.Route("/config/certificate/download").GET(api.Download)
-	r.Route("/config/certificate/refresh").GET(api.Refresh)
-	r.Route("/config/certificate/cond").GET(api.Cond)
+func (cc *ConfigCertificate) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/config/certificates").GET(cc.page)
+	r.Route("/config/certificate/download").GET(cc.download)
+	r.Route("/config/certificate/refresh").GET(cc.refresh)
+	r.Route("/config/certificate/cond").GET(cc.cond)
 	r.Route("/config/certificate").
-		GET(api.Detail).
-		POST(api.Create).
-		PUT(api.Update).
-		DELETE(api.Delete)
+		GET(cc.detail).
+		POST(cc.create).
+		PUT(cc.update).
+		DELETE(cc.delete)
 
 	return nil
 }
 
-func (api *configCertificateAPI) Cond(c *ship.Context) error {
-	ret := api.svc.Cond()
+func (cc *ConfigCertificate) cond(c *ship.Context) error {
+	ret := cc.svc.Cond()
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (api *configCertificateAPI) Page(c *ship.Context) error {
+func (cc *ConfigCertificate) page(c *ship.Context) error {
 	req := new(request.PageCondition)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
-	ret, err := api.svc.Page(ctx, req)
+	ret, err := cc.svc.Page(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -53,34 +52,34 @@ func (api *configCertificateAPI) Page(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (api *configCertificateAPI) Create(c *ship.Context) error {
+func (cc *ConfigCertificate) create(c *ship.Context) error {
 	req := new(request.ConfigCertificateCreate)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return api.svc.Create(ctx, req)
+	return cc.svc.Create(ctx, req)
 }
 
-func (api *configCertificateAPI) Update(c *ship.Context) error {
+func (cc *ConfigCertificate) update(c *ship.Context) error {
 	req := new(request.ConfigCertificateUpdate)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return api.svc.Update(ctx, req)
+	return cc.svc.Update(ctx, req)
 }
 
-func (api *configCertificateAPI) Detail(c *ship.Context) error {
+func (cc *ConfigCertificate) detail(c *ship.Context) error {
 	req := new(request.Int64ID)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 
 	ctx := c.Request().Context()
-	ret, err := api.svc.Detail(ctx, req.ID)
+	ret, err := cc.svc.Detail(ctx, req.ID)
 	if err != nil {
 		return err
 	}
@@ -88,24 +87,24 @@ func (api *configCertificateAPI) Detail(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (api *configCertificateAPI) Delete(c *ship.Context) error {
+func (cc *ConfigCertificate) delete(c *ship.Context) error {
 	req := new(request.Int64IDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return api.svc.Delete(ctx, req.ID)
+	return cc.svc.Delete(ctx, req.ID)
 }
 
-func (api *configCertificateAPI) Download(c *ship.Context) error {
+func (cc *ConfigCertificate) download(c *ship.Context) error {
 	req := new(request.Int64IDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	dats, err := api.svc.Find(ctx, req.ID)
+	dats, err := cc.svc.Find(ctx, req.ID)
 	if err != nil {
 		return err
 	}
@@ -159,8 +158,8 @@ func (api *configCertificateAPI) Download(c *ship.Context) error {
 	return err
 }
 
-func (api *configCertificateAPI) Refresh(c *ship.Context) error {
+func (cc *ConfigCertificate) refresh(c *ship.Context) error {
 	ctx := c.Request().Context()
-	_, err := api.svc.Refresh(ctx)
+	_, err := cc.svc.Refresh(ctx)
 	return err
 }

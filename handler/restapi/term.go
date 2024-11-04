@@ -5,24 +5,23 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/business/service"
-	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewTerm(svc service.Term) shipx.Router {
-	return &termAPI{svc: svc}
+func NewTerm(svc *service.Term) *Term {
+	return &Term{svc: svc}
 }
 
-type termAPI struct {
-	svc service.Term
+type Term struct {
+	svc *service.Term
 }
 
-func (api *termAPI) Route(r *ship.RouteGroupBuilder) error {
-	r.Route("/ws/pty").GET(api.PTY)
-	r.Route("/ws/ssh").GET(api.SSH)
+func (api *Term) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/ws/pty").GET(api.pty)
+	r.Route("/ws/ssh").GET(api.ssh)
 	return nil
 }
 
-func (api *termAPI) PTY(c *ship.Context) error {
+func (api *Term) pty(c *ship.Context) error {
 	req := new(request.TermResize)
 	if err := c.BindQuery(req); err != nil {
 		return err
@@ -38,7 +37,7 @@ func (api *termAPI) PTY(c *ship.Context) error {
 	return nil
 }
 
-func (api *termAPI) SSH(c *ship.Context) error {
+func (api *Term) ssh(c *ship.Context) error {
 	req := new(request.TermSSH)
 	if err := c.BindQuery(req); err != nil {
 		return err

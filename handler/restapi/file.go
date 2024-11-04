@@ -10,35 +10,30 @@ import (
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/gridfs"
-	"github.com/xmx/aegis-server/handler/shipx"
 )
 
-func NewFile(dbfs gridfs.FS, svc *service.File) shipx.Router {
-	return &fileAPI{
-		dbfs: dbfs,
-		svc:  svc,
+func NewFile(svc *service.File) *File {
+	return &File{
+		svc: svc,
 	}
 }
 
-type fileAPI struct {
-	dbfs gridfs.FS
-	svc  *service.File
+type File struct {
+	svc *service.File
 }
 
-func (api *fileAPI) Route(r *ship.RouteGroupBuilder) error {
+func (f *File) Route(r *ship.RouteGroupBuilder) error {
 	r.Route("/file").
-		Name("文件管理").
-		Data(map[string]string{"key": "上传下载"}).
-		PUT(api.Upload).
-		GET(api.Download)
-	r.Route("/file/cond").GET(api.Cond)
-	r.Route("/files").GET(api.Page)
-	r.Route("/file/count").GET(api.Count)
+		PUT(f.upload).
+		GET(f.download)
+	r.Route("/file/cond").GET(f.cond)
+	r.Route("/files").GET(f.page)
+	r.Route("/file/count").GET(f.count)
 
 	return nil
 }
 
-func (api *fileAPI) Upload(c *ship.Context) error {
+func (f *File) upload(c *ship.Context) error {
 	file, header, err := c.FormFile("file")
 	if err != nil {
 		return err
@@ -48,16 +43,23 @@ func (api *fileAPI) Upload(c *ship.Context) error {
 
 	ctx := c.Request().Context()
 	filename := header.Filename
-	_, err = api.dbfs.Save(ctx, filename, file)
+	_, err = f.svc.Save(ctx, filename, file)
 
 	return err
 }
 
-func (api *fileAPI) Download(c *ship.Context) error {
-	file, err := api.dbfs.OpenID(1)
+func (f *File) download(c *ship.Context) error {
+	req := new(request.Int64ID)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+
+	ctx := c.Request().Context()
+	file, err := f.svc.Open(ctx, req.ID)
 	if err != nil {
 		return err
 	}
+	//goland:noinspection GoUnhandledErrorResult
 	defer file.Close()
 
 	filename := file.Name()
@@ -80,14 +82,14 @@ func (api *fileAPI) Download(c *ship.Context) error {
 	return c.Stream(http.StatusOK, contentType, file)
 }
 
-func (api *fileAPI) Page(c *ship.Context) error {
+func (f *File) page(c *ship.Context) error {
 	req := new(request.PageCondition)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 
 	ctx := c.Request().Context()
-	ret, err := api.svc.Page(ctx, req)
+	ret, err := f.svc.Page(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -95,14 +97,14 @@ func (api *fileAPI) Page(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (api *fileAPI) Cond(c *ship.Context) error {
-	ret := api.svc.Cond()
+func (f *File) cond(c *ship.Context) error {
+	ret := f.svc.Cond()
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (api *fileAPI) Count(c *ship.Context) error {
+func (f *File) count(c *ship.Context) error {
 	ctx := c.Request().Context()
-	ret, err := api.svc.Count(ctx, 10)
+	ret, err := f.svc.Count(ctx, 10)
 	if err != nil {
 		return err
 	}

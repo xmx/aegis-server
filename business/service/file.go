@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"io"
 	"log/slog"
 
 	"github.com/xmx/aegis-server/argument/request"
@@ -14,7 +15,7 @@ import (
 	"gorm.io/gen/field"
 )
 
-func NewFile(qry *query.Query, log *slog.Logger) *File {
+func NewFile(qry *query.Query, dbfs gridfs.FS, log *slog.Logger) *File {
 	mod := new(model.GridFile)
 	ctx := context.Background()
 	tbl := qry.GridFile
@@ -26,6 +27,7 @@ func NewFile(qry *query.Query, log *slog.Logger) *File {
 	return &File{
 		qry:  qry,
 		log:  log,
+		dbfs: dbfs,
 		cond: cond,
 	}
 }
@@ -33,17 +35,17 @@ func NewFile(qry *query.Query, log *slog.Logger) *File {
 type File struct {
 	qry  *query.Query
 	log  *slog.Logger
-	dbfs gridfs.File
+	dbfs gridfs.FS
 	cond *condition.Cond
 }
 
-func (svc *File) Cond() *response.Cond {
-	return response.ReadCond(svc.cond)
+func (f *File) Cond() *response.Cond {
+	return response.ReadCond(f.cond)
 }
 
-func (svc *File) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.GridFile], error) {
-	tbl := svc.qry.GridFile
-	scope := svc.cond.Scope(req.AllInputs())
+func (f *File) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.GridFile], error) {
+	tbl := f.qry.GridFile
+	scope := f.cond.Scope(req.AllInputs())
 	dao := tbl.WithContext(ctx).Scopes(scope)
 	cnt, err := dao.Count()
 	if err != nil {
@@ -64,7 +66,7 @@ func (svc *File) Page(ctx context.Context, req *request.PageCondition) (*paginat
 	return ret, nil
 }
 
-func (svc *File) Count(ctx context.Context, limit int) (response.NameCounts, error) {
+func (f *File) Count(ctx context.Context, limit int) (response.NameCounts, error) {
 	if limit <= 0 {
 		limit = 1
 	}
@@ -72,7 +74,7 @@ func (svc *File) Count(ctx context.Context, limit int) (response.NameCounts, err
 	ret := make(response.NameCounts, 0, limit)
 	nameAlias, countAlias, countField := ret.Aliases()
 
-	tbl := svc.qry.GridFile
+	tbl := f.qry.GridFile
 	err := tbl.WithContext(ctx).
 		Select(tbl.Extension.As(nameAlias), tbl.Extension.Count().As(countAlias)).
 		Group(tbl.Extension).
@@ -80,4 +82,12 @@ func (svc *File) Count(ctx context.Context, limit int) (response.NameCounts, err
 		Limit(limit).
 		Scan(&ret)
 	return ret, err
+}
+
+func (f *File) Save(ctx context.Context, filename string, r io.Reader) (*model.GridFile, error) {
+	return f.dbfs.Save(ctx, filename, r)
+}
+
+func (f *File) Open(ctx context.Context, fileID int64) (gridfs.File, error) {
+	return f.dbfs.OpenID(ctx, fileID)
 }

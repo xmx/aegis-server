@@ -3,6 +3,8 @@ package service
 import (
 	"log/slog"
 
+	"github.com/dop251/goja"
+
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
@@ -27,5 +29,15 @@ func (pl *player) NewGoja(loads []jsvm.Loader) GojaPlayer {
 	return NewGojaPlayer(pugs, pl.log)
 }
 
-func NewVM() {
+type VM struct {
+	vm *goja.Runtime
+}
+
+func NewVM(loads []jsvm.Loader) (*VM, error) {
+	vm := jsvm.New()
+	if err := jsvm.Register(vm, loads); err != nil {
+		return nil, err
+	}
+
+	return &VM{vm: vm}, nil
 }

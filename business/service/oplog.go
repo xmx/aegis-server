@@ -14,15 +14,7 @@ import (
 	"gorm.io/gen/field"
 )
 
-type Oplog interface {
-	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.Oplog], error)
-	Detail(ctx context.Context, id int64) (*model.Oplog, error)
-	Delete(ctx context.Context, req *request.CondWhereInputs) error
-	Write(ctx context.Context, oplog *model.Oplog) error
-}
-
-func NewOplog(qry *query.Query, log *slog.Logger) Oplog {
+func NewOplog(qry *query.Query, log *slog.Logger) *Oplog {
 	mod := new(model.Oplog)
 	ctx := context.Background()
 	tbl := qry.Oplog
@@ -31,26 +23,26 @@ func NewOplog(qry *query.Query, log *slog.Logger) Oplog {
 	opt := &condition.ParserOptions{IgnoreOrder: ignores, IgnoreWhere: ignores}
 	cond, _ := condition.ParseModel(db, mod, opt)
 
-	return &oplogService{
+	return &Oplog{
 		qry:  qry,
 		log:  log,
 		cond: cond,
 	}
 }
 
-type oplogService struct {
+type Oplog struct {
 	qry  *query.Query
 	log  *slog.Logger
 	cond *condition.Cond
 }
 
-func (svc *oplogService) Cond() *response.Cond {
-	return response.ReadCond(svc.cond)
+func (l *Oplog) Cond() *response.Cond {
+	return response.ReadCond(l.cond)
 }
 
-func (svc *oplogService) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.Oplog], error) {
-	tbl := svc.qry.Oplog
-	scope := svc.cond.Scope(req.AllInputs())
+func (l *Oplog) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.Oplog], error) {
+	tbl := l.qry.Oplog
+	scope := l.cond.Scope(req.AllInputs())
 	dao := tbl.WithContext(ctx).Scopes(scope)
 	cnt, err := dao.Count()
 	if err != nil {
@@ -72,20 +64,20 @@ func (svc *oplogService) Page(ctx context.Context, req *request.PageCondition) (
 	return ret, nil
 }
 
-func (svc *oplogService) Detail(ctx context.Context, id int64) (*model.Oplog, error) {
-	tbl := svc.qry.Oplog
+func (l *Oplog) Detail(ctx context.Context, id int64) (*model.Oplog, error) {
+	tbl := l.qry.Oplog
 	return tbl.WithContext(ctx).
 		Where(tbl.ID.Eq(id)).
 		First()
 }
 
-func (svc *oplogService) Delete(ctx context.Context, req *request.CondWhereInputs) error {
-	wheres := svc.cond.CompileWheres(req.Inputs())
+func (l *Oplog) Delete(ctx context.Context, req *request.CondWhereInputs) error {
+	wheres := l.cond.CompileWheres(req.Inputs())
 	if len(wheres) != 0 { // 禁止全表删除
 		return nil
 	}
 
-	tbl := svc.qry.Oplog
+	tbl := l.qry.Oplog
 	_, err := tbl.WithContext(ctx).
 		Where(wheres...).
 		Delete()
@@ -93,17 +85,17 @@ func (svc *oplogService) Delete(ctx context.Context, req *request.CondWhereInput
 	return err
 }
 
-func (svc *oplogService) Write(ctx context.Context, oplog *model.Oplog) error {
+func (l *Oplog) Write(ctx context.Context, oplog *model.Oplog) error {
 	if oplog == nil {
 		return nil
 	}
 
-	dao := svc.qry.Oplog.WithContext(ctx)
+	dao := l.qry.Oplog.WithContext(ctx)
 
 	return dao.Create(oplog)
 }
 
-func (svc *oplogService) Trend(ctx context.Context, startedAt time.Time, maximum int) (*model.Oplog, error) {
+func (l *Oplog) Trend(ctx context.Context, startedAt time.Time, maximum int) (*model.Oplog, error) {
 	//if maximum < 10 {
 	//	maximum = 10
 	//} else if maximum > 1000 {

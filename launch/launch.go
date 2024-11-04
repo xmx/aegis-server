@@ -18,7 +18,6 @@ import (
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
-	"github.com/xmx/aegis-server/infra/logext"
 	"github.com/xmx/aegis-server/infra/profile"
 	"github.com/xmx/aegis-server/jsenv/jslib"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
@@ -26,9 +25,10 @@ import (
 	"github.com/xmx/aegis-server/library/ioext"
 	"github.com/xmx/aegis-server/library/sqldb"
 	"github.com/xmx/aegis-server/library/validation"
+	"github.com/xmx/aegis-server/logger"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	glog "gorm.io/gorm/logger"
 )
 
 func Run(ctx context.Context, path string) error {
@@ -79,8 +79,8 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	defer db.Close()
 
-	glogCfg := logger.Config{SlowThreshold: 30 * time.Millisecond, LogLevel: logger.Info}
-	gormLog := logext.Gorm(logHandler, glogCfg)
+	glogCfg := glog.Config{SlowThreshold: 30 * time.Millisecond, LogLevel: glog.Info}
+	gormLog := logger.Gorm(logHandler, glogCfg)
 	mysqlCfg := &mysql.Config{Conn: db}
 	gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg}, &gorm.Config{Logger: gormLog})
 	if err != nil {
@@ -122,7 +122,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	dbfs := gridfs.NewFS(qry)
 	logService := service.NewLog(logLevel, logWriter, log)
 	termService := service.NewTerm(log)
-	fileService := service.NewFile(qry, log)
+	fileService := service.NewFile(qry, dbfs, log)
 
 	jsLoaders := []jsvm.Loader{
 		jslib.OS(),
@@ -138,7 +138,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		restapi.NewAuth(),
 		restapi.NewConfigCertificate(configCertificateService),
 		restapi.NewDAV(basePath, "/"),
-		restapi.NewFile(dbfs, fileService),
+		restapi.NewFile(fileService),
 		restapi.NewLog(logService),
 		restapi.NewOplog(oplogService),
 		restapi.NewTerm(termService),
@@ -149,7 +149,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	sh.Validator = valid
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
-	sh.Logger = logext.Ship(logHandler)
+	sh.Logger = logger.Ship(logHandler)
 	sh.Route("/").GET(func(c *ship.Context) error {
 		return c.Redirect(http.StatusPermanentRedirect, staticPath)
 	})

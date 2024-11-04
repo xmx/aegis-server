@@ -20,35 +20,19 @@ import (
 	"gorm.io/gen/field"
 )
 
-type ConfigCertificate interface {
-	Cond() *response.Cond
-	Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.ConfigCertificate], error)
-	Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error)
-	Create(ctx context.Context, req *request.ConfigCertificateCreate) error
-	Detail(ctx context.Context, id int64) (*model.ConfigCertificate, error)
-	Update(ctx context.Context, req *request.ConfigCertificateUpdate) error
-	Delete(ctx context.Context, ids []int64) error
-
-	// Refresh 刷新证书，返回有效证书个数。
-	Refresh(ctx context.Context) (int, error)
-}
-
-func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) ConfigCertificate {
+func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) *ConfigCertificate {
 	mod := new(model.ConfigCertificate)
 	tbl := qry.ConfigCertificate
 	ctx := context.Background()
 	db := tbl.WithContext(ctx).UnderlyingDB()
 	ignores := []field.Expr{
-		tbl.PublicKey, tbl.PrivateKey, tbl.CertificateSHA256, tbl.PublicKeySHA256,
-		tbl.PrivateKeySHA256,
+		tbl.PublicKey, tbl.PrivateKey, tbl.CertificateSHA256,
+		tbl.PublicKeySHA256, tbl.PrivateKeySHA256,
 	}
-	opt := &condition.ParserOptions{
-		IgnoreOrder: ignores,
-		IgnoreWhere: ignores,
-	}
+	opt := &condition.ParserOptions{IgnoreOrder: ignores, IgnoreWhere: ignores}
 	cond, _ := condition.ParseModel(db, mod, opt)
 
-	return &configCertificateService{
+	return &ConfigCertificate{
 		pool:  pool,
 		qry:   qry,
 		cond:  cond,
@@ -57,7 +41,7 @@ func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog
 	}
 }
 
-type configCertificateService struct {
+type ConfigCertificate struct {
 	pool  credential.Certifier // 证书池。
 	log   *slog.Logger
 	qry   *query.Query
@@ -66,11 +50,11 @@ type configCertificateService struct {
 	limit int64 // 数据库最多可保存的证书数量。
 }
 
-func (svc *configCertificateService) Cond() *response.Cond {
+func (svc *ConfigCertificate) Cond() *response.Cond {
 	return response.ReadCond(svc.cond)
 }
 
-func (svc *configCertificateService) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.ConfigCertificate], error) {
+func (svc *ConfigCertificate) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.ConfigCertificate], error) {
 	tbl := svc.qry.ConfigCertificate
 	scope := svc.cond.Scope(req.AllInputs())
 	dao := tbl.WithContext(ctx).Scopes(scope)
@@ -94,7 +78,7 @@ func (svc *configCertificateService) Page(ctx context.Context, req *request.Page
 	return ret, nil
 }
 
-func (svc *configCertificateService) Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error) {
+func (svc *ConfigCertificate) Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error) {
 	if len(ids) == 0 {
 		return []*model.ConfigCertificate{}, nil
 	}
@@ -103,7 +87,7 @@ func (svc *configCertificateService) Find(ctx context.Context, ids []int64) ([]*
 	return dao.Where(tbl.ID.In(ids...)).Find()
 }
 
-func (svc *configCertificateService) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
+func (svc *ConfigCertificate) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
 	enabled := req.Enabled
 	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
 	if err != nil {
@@ -134,7 +118,7 @@ func (svc *configCertificateService) Create(ctx context.Context, req *request.Co
 	return err
 }
 
-func (svc *configCertificateService) Update(ctx context.Context, req *request.ConfigCertificateUpdate) error {
+func (svc *ConfigCertificate) Update(ctx context.Context, req *request.ConfigCertificateUpdate) error {
 	id, enabled := req.ID, req.Enabled
 	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
 	if err != nil {
@@ -170,7 +154,7 @@ func (svc *configCertificateService) Update(ctx context.Context, req *request.Co
 	return err
 }
 
-func (svc *configCertificateService) Delete(ctx context.Context, ids []int64) error {
+func (svc *ConfigCertificate) Delete(ctx context.Context, ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -190,14 +174,14 @@ func (svc *configCertificateService) Delete(ctx context.Context, ids []int64) er
 	return err
 }
 
-func (svc *configCertificateService) Detail(ctx context.Context, id int64) (*model.ConfigCertificate, error) {
+func (svc *ConfigCertificate) Detail(ctx context.Context, id int64) (*model.ConfigCertificate, error) {
 	tbl := svc.qry.ConfigCertificate
 	return tbl.WithContext(ctx).
 		Where(tbl.ID.Eq(id)).
 		First()
 }
 
-func (svc *configCertificateService) Refresh(ctx context.Context) (int, error) {
+func (svc *ConfigCertificate) Refresh(ctx context.Context) (int, error) {
 	tbl := svc.qry.ConfigCertificate
 	dao := tbl.WithContext(ctx)
 	dats, err := dao.Where(tbl.Enabled.Is(true)).Find()
@@ -224,7 +208,7 @@ func (svc *configCertificateService) Refresh(ctx context.Context) (int, error) {
 	return num, nil
 }
 
-func (svc *configCertificateService) parseCertificate(publicKey, privateKey string, enabled bool) (*model.ConfigCertificate, error) {
+func (svc *ConfigCertificate) parseCertificate(publicKey, privateKey string, enabled bool) (*model.ConfigCertificate, error) {
 	publicKeyBlock, privateKeyBlock := []byte(publicKey), []byte(privateKey)
 	cert, err := tls.X509KeyPair(publicKeyBlock, privateKeyBlock)
 	if err != nil {
@@ -279,7 +263,7 @@ func (svc *configCertificateService) parseCertificate(publicKey, privateKey stri
 }
 
 // fingerprintSHA256 计算证书和私钥的 SHA256 指纹。
-func (*configCertificateService) fingerprintSHA256(cert tls.Certificate) (certSHA256, pubKeySHA256, priKeySHA256 string) {
+func (*ConfigCertificate) fingerprintSHA256(cert tls.Certificate) (certSHA256, pubKeySHA256, priKeySHA256 string) {
 	leaf := cert.Leaf
 	sum256 := sha256.Sum256(leaf.Raw)
 	certSHA256 = hex.EncodeToString(sum256[:])
