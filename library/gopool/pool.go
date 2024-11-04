@@ -7,7 +7,7 @@ import (
 
 type Pool interface {
 	Exec(ctx context.Context, task func(ctx context.Context))
-	Await(parent context.Context, tasks []func(ctx context.Context)) context.Context
+	Wait(parent context.Context, tasks []func(ctx context.Context)) context.Context
 }
 
 func NewPool(maxWorkers, queue int) Pool {
@@ -53,7 +53,7 @@ func (le *limitExecutor) Exec(ctx context.Context, task func(ctx context.Context
 	}
 }
 
-func (le *limitExecutor) Await(parent context.Context, tasks []func(ctx context.Context)) context.Context {
+func (le *limitExecutor) Wait(parent context.Context, tasks []func(ctx context.Context)) context.Context {
 	effects := make([]func(ctx context.Context), 0, len(tasks))
 	for _, task := range tasks {
 		if task != nil {
