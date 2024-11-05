@@ -32,13 +32,13 @@ func (d *DAV) Route(r *ship.RouteGroupBuilder) error {
 		http.MethodOptions, http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodDelete,
 		"LOCK", "UNLOCK", "PROPFIND", "PROPPATCH", "MKCOL", "COPY", "MOVE",
 	}
-	r.Route(d.path).Method(d.browser, methods...)
-	r.Route(d.path+"/*wildcard").Method(d.browser, methods...)
+	r.Route(d.path).Method(d.access, methods...)
+	r.Route(d.path+"/*wildcard").Method(d.access, methods...)
 
 	return nil
 }
 
-func (d *DAV) browser(c *ship.Context) error {
+func (d *DAV) access(c *ship.Context) error {
 	wildcard := c.Param("path")
 	w, r := c.ResponseWriter(), c.Request()
 	path := r.URL.Path

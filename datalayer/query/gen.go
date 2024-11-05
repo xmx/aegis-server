@@ -22,6 +22,7 @@ var (
 	GridChunk         *gridChunk
 	GridFile          *gridFile
 	Menu              *menu
+	OAuthConfig       *oAuthConfig
 	Oplog             *oplog
 	Role              *role
 	RoleMenu          *roleMenu
@@ -35,6 +36,7 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	GridChunk = &Q.GridChunk
 	GridFile = &Q.GridFile
 	Menu = &Q.Menu
+	OAuthConfig = &Q.OAuthConfig
 	Oplog = &Q.Oplog
 	Role = &Q.Role
 	RoleMenu = &Q.RoleMenu
@@ -49,6 +51,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		GridChunk:         newGridChunk(db, opts...),
 		GridFile:          newGridFile(db, opts...),
 		Menu:              newMenu(db, opts...),
+		OAuthConfig:       newOAuthConfig(db, opts...),
 		Oplog:             newOplog(db, opts...),
 		Role:              newRole(db, opts...),
 		RoleMenu:          newRoleMenu(db, opts...),
@@ -64,6 +67,7 @@ type Query struct {
 	GridChunk         gridChunk
 	GridFile          gridFile
 	Menu              menu
+	OAuthConfig       oAuthConfig
 	Oplog             oplog
 	Role              role
 	RoleMenu          roleMenu
@@ -80,6 +84,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		GridChunk:         q.GridChunk.clone(db),
 		GridFile:          q.GridFile.clone(db),
 		Menu:              q.Menu.clone(db),
+		OAuthConfig:       q.OAuthConfig.clone(db),
 		Oplog:             q.Oplog.clone(db),
 		Role:              q.Role.clone(db),
 		RoleMenu:          q.RoleMenu.clone(db),
@@ -103,6 +108,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		GridChunk:         q.GridChunk.replaceDB(db),
 		GridFile:          q.GridFile.replaceDB(db),
 		Menu:              q.Menu.replaceDB(db),
+		OAuthConfig:       q.OAuthConfig.replaceDB(db),
 		Oplog:             q.Oplog.replaceDB(db),
 		Role:              q.Role.replaceDB(db),
 		RoleMenu:          q.RoleMenu.replaceDB(db),
@@ -116,6 +122,7 @@ type queryCtx struct {
 	GridChunk         *gridChunkDo
 	GridFile          *gridFileDo
 	Menu              *menuDo
+	OAuthConfig       *oAuthConfigDo
 	Oplog             *oplogDo
 	Role              *roleDo
 	RoleMenu          *roleMenuDo
@@ -129,6 +136,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		GridChunk:         q.GridChunk.WithContext(ctx),
 		GridFile:          q.GridFile.WithContext(ctx),
 		Menu:              q.Menu.WithContext(ctx),
+		OAuthConfig:       q.OAuthConfig.WithContext(ctx),
 		Oplog:             q.Oplog.WithContext(ctx),
 		Role:              q.Role.WithContext(ctx),
 		RoleMenu:          q.RoleMenu.WithContext(ctx),

@@ -19,20 +19,26 @@ type Config struct {
 	MaxIdleTime time.Duration
 }
 
-func TiDB(cfg Config) (*sql.DB, error) {
-	dsn := cfg.DSN
+func Open(c Config, l mysql.Logger) (*sql.DB, error) {
+	dsn := c.DSN
 	if err := autoTLS(dsn); err != nil {
 		return nil, err
 	}
 
-	db, err := sql.Open("mysql", dsn)
+	cfg, err := mysql.ParseDSN(dsn)
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(cfg.MaxOpenConn)
-	db.SetMaxIdleConns(cfg.MaxIdleConn)
-	db.SetConnMaxLifetime(cfg.MaxLifetime)
-	db.SetConnMaxIdleTime(cfg.MaxLifetime)
+	cfg.Logger = l
+	drv, err := mysql.NewConnector(cfg)
+	if err != nil {
+		return nil, err
+	}
+	db := sql.OpenDB(drv)
+	db.SetMaxOpenConns(c.MaxOpenConn)
+	db.SetMaxIdleConns(c.MaxIdleConn)
+	db.SetConnMaxLifetime(c.MaxLifetime)
+	db.SetConnMaxIdleTime(c.MaxLifetime)
 
 	return db, nil
 }

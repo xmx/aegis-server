@@ -11,6 +11,7 @@ func main() {
 		model.ConfigServer{},
 		model.GridChunk{},
 		model.GridFile{},
+		model.OAuthConfig{},
 		model.Menu{},
 		model.Oplog{},
 		model.Role{},

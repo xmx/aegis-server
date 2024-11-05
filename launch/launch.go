@@ -72,7 +72,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	// 连接数据库
 	dbCfg := mapstruct.ConfigDatabase(cfg.Database)
-	db, err := sqldb.TiDB(dbCfg)
+	db, err := sqldb.Open(dbCfg, sqldb.NewLog(log))
 	if err != nil {
 		log.Error("数据库连接失败", slog.Any("error", err))
 		return err
