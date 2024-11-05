@@ -2,6 +2,7 @@ package gopool
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 )
 
@@ -70,10 +71,10 @@ func (le *limitExecutor) Wait(parent context.Context, tasks []func(ctx context.C
 		return ctx
 	}
 
-	count := &awaitCount{cancel: cancel}
+	count := &waitCount{cancel: cancel}
 	for _, task := range effects {
 		count.incr()
-		fn := le.awaitCountFunc(count, task)
+		fn := le.waitCountFunc(count, task)
 		le.Exec(ctx, fn)
 	}
 
@@ -96,7 +97,7 @@ func (le *limitExecutor) exec(tf *taskFunc) {
 	}
 }
 
-func (le *limitExecutor) awaitCountFunc(cnt *awaitCount, task func(context.Context)) func(context.Context) {
+func (le *limitExecutor) waitCountFunc(cnt *waitCount, task func(context.Context)) func(context.Context) {
 	return func(ctx context.Context) {
 		defer func() { cnt.decr() }()
 		task(ctx)
@@ -113,17 +114,49 @@ func (tf *taskFunc) call() {
 	tf.task(tf.ctx)
 }
 
-type awaitCount struct {
+type waitCount struct {
 	count  atomic.Int64
 	cancel context.CancelFunc
 }
 
-func (ac *awaitCount) incr() {
+func (ac *waitCount) incr() {
 	ac.count.Add(1)
 }
 
-func (ac *awaitCount) decr() {
+func (ac *waitCount) decr() {
 	if num := ac.count.Add(-1); num <= 0 {
 		ac.cancel()
 	}
+}
+
+type name struct {
+	sema  chan struct{}
+	queue chan *taskFunc
+}
+
+type taskUnit struct {
+	ctx context.Context
+	fun func(ctx context.Context)
+}
+
+func (t *taskUnit) call() {
+	defer func() { recover() }()
+	t.fun(t.ctx)
+}
+
+type taskCount struct {
+	count  atomic.Int64
+	cancel context.CancelFunc
+}
+
+func (t *taskCount) incr() {
+	t.count.Add(1)
+}
+
+func (t *taskCount) decr() {
+	if num := t.count.Add(-1); num <= 0 {
+		t.cancel()
+	}
+	var wg sync.WaitGroup
+	wg.Done()
 }
