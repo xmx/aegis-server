@@ -6,8 +6,8 @@ import (
 )
 
 type Pool interface {
-	Go(fn func()) context.Context
-	Gos(ctx context.Context, fns ...func(ctx context.Context)) context.Context
+	Go(func()) context.Context
+	Gos(context.Context, ...func(context.Context)) context.Context
 }
 
 func NewPool(worker, queue int) Pool {
