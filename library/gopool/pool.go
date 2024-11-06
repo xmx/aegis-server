@@ -36,8 +36,8 @@ func (p *pool) Go(f func()) context.Context {
 		return ctx
 	}
 
-	fun := p.warpFunc(cancel, f)
-	p.join(fun)
+	fn := p.warpFunc(cancel, f)
+	p.join(fn)
 
 	return ctx
 }
