@@ -81,14 +81,14 @@ func (p *pool) join(fn func()) {
 	}
 }
 
-func (p *pool) call(fun func()) {
+func (p *pool) call(fn func()) {
 	defer func() { <-p.sema }()
 
-	fun()
+	fn()
 	for over := false; !over; {
 		select {
-		case fun = <-p.queue:
-			fun()
+		case fn = <-p.queue:
+			fn()
 		default:
 			over = true
 		}
