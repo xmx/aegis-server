@@ -29,54 +29,54 @@ type pool struct {
 	queue chan func()
 }
 
-func (p *pool) Go(fn func()) context.Context {
+func (p *pool) Go(f func()) context.Context {
 	ctx, cancel := context.WithCancel(context.Background())
-	if fn == nil {
+	if f == nil {
 		cancel()
 		return ctx
 	}
 
-	fun := p.warpFunc(cancel, fn)
+	fun := p.warpFunc(cancel, f)
 	p.join(fun)
 
 	return ctx
 }
 
-func (p *pool) Gos(parent context.Context, fns ...func(ctx context.Context)) context.Context {
+func (p *pool) Gos(parent context.Context, fs ...func(ctx context.Context)) context.Context {
 	if parent == nil {
 		parent = context.Background()
 	}
 	ctx, cancel := context.WithCancel(parent)
 	mon := p.newMonitor(ctx, cancel)
-	funs := make([]func(), 0, len(fns))
-	for _, fn := range fns {
-		if fn == nil {
+	fns := make([]func(), 0, len(fs))
+	for _, f := range fs {
+		if f == nil {
 			continue
 		}
-		fun := mon.warpFunc(fn)
-		funs = append(funs, fun)
+		fun := mon.warpFunc(f)
+		fns = append(fns, fun)
 	}
-	if len(funs) == 0 {
+	if len(fns) == 0 {
 		cancel()
 		return ctx
 	}
 
-	for _, fun := range funs {
+	for _, fun := range fns {
 		p.join(fun)
 	}
 
 	return ctx
 }
 
-func (p *pool) join(fun func()) {
+func (p *pool) join(fn func()) {
 	select {
 	case p.sema <- struct{}{}:
-		go p.call(fun)
+		go p.call(fn)
 	default:
 		select {
-		case p.queue <- fun:
+		case p.queue <- fn:
 		case p.sema <- struct{}{}:
-			go p.call(fun)
+			go p.call(fn)
 		}
 	}
 }
