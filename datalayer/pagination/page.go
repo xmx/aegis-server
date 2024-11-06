@@ -61,7 +61,7 @@ func (p *pagination[E]) calculate(cnt int64) (offset, limit int) {
 		page := (cnt + p.size - 1) / p.size
 		if page <= 0 {
 			p.page = 1
-		} else {
+		} else if page < p.page {
 			p.page = page
 		}
 	}
