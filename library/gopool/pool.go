@@ -42,27 +42,27 @@ func (p *pool) Go(f func()) context.Context {
 	return ctx
 }
 
-func (p *pool) Gos(parent context.Context, fs ...func(ctx context.Context)) context.Context {
+func (p *pool) Gos(parent context.Context, funcs ...func(ctx context.Context)) context.Context {
 	if parent == nil {
 		parent = context.Background()
 	}
 	ctx, cancel := context.WithCancel(parent)
 	mon := p.newMonitor(ctx, cancel)
-	fns := make([]func(), 0, len(fs))
-	for _, f := range fs {
+	fns := make([]func(), 0, len(funcs))
+	for _, f := range funcs {
 		if f == nil {
 			continue
 		}
-		fun := mon.warpFunc(f)
-		fns = append(fns, fun)
+		fn := mon.warpFunc(f)
+		fns = append(fns, fn)
 	}
 	if len(fns) == 0 {
 		cancel()
 		return ctx
 	}
 
-	for _, fun := range fns {
-		p.join(fun)
+	for _, fn := range fns {
+		p.join(fn)
 	}
 
 	return ctx
