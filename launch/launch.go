@@ -3,7 +3,6 @@ package launch
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -19,8 +18,6 @@ import (
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/infra/profile"
-	"github.com/xmx/aegis-server/jsenv/jslib"
-	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"github.com/xmx/aegis-server/library/credential"
 	"github.com/xmx/aegis-server/library/ioext"
 	"github.com/xmx/aegis-server/library/sqldb"
@@ -124,14 +121,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	termService := service.NewTerm(log)
 	fileService := service.NewFile(qry, dbfs, log)
 
-	jsLoaders := []jsvm.Loader{
-		jslib.OS(),
-		jslib.Time(),
-		jslib.Context(),
-		jslib.Console(io.Discard),
-	}
-	playerService := service.NewPlayer(jsLoaders, log)
-
 	const basePath, webuiPath = "/api", "/webui"
 	staticPath := path.Join(basePath, webuiPath)
 	routes := []shipx.Router{
@@ -142,7 +131,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		restapi.NewLog(logService),
 		restapi.NewOplog(oplogService),
 		restapi.NewTerm(termService),
-		restapi.NewPlay(playerService),
 	}
 
 	sh := ship.Default()

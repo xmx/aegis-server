@@ -1,13 +1,12 @@
 package jsrt
 
-import "github.com/dop251/goja"
+import "github.com/grafana/sobek"
 
-type VM struct {
-	vm *goja.Runtime
-}
+func New() *sobek.Runtime {
+	vm := sobek.New()
+	mapper := sobek.TagFieldNameMapper("json", true)
+	vm.SetFieldNameMapper(mapper)
+	vm.SetMaxCallStackSize(64)
 
-func New() *VM {
-	return &VM{
-		vm: goja.New(),
-	}
+	return vm
 }

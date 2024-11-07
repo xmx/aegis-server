@@ -76,10 +76,11 @@ func (p *pool) warp(done chan struct{}, f func()) func() {
 }
 
 func (p *pool) newMonitor(ctx context.Context, cancel context.CancelFunc) *monitor {
-	return &monitor{ctx: ctx, cancel: cancel}
+	return &monitor{sema: p.sema, ctx: ctx, cancel: cancel}
 }
 
 type monitor struct {
+	sema   chan struct{}
 	cnt    atomic.Int32
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -92,6 +93,7 @@ func (m *monitor) warp(f func(context.Context)) func() {
 			if num := m.cnt.Add(-1); num <= 0 {
 				m.cancel()
 			}
+			<-m.sema
 		}()
 		f(m.ctx)
 	}

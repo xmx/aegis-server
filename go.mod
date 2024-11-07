@@ -5,12 +5,11 @@ go 1.23
 require (
 	github.com/coder/websocket v1.8.12
 	github.com/creack/pty v1.1.24
-	github.com/dop251/goja v0.0.0-20241024094426-79f3a7efcdbd
-	github.com/dop251/goja_nodejs v0.0.0-20240728170619-29b559befffc
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.22.1
 	github.com/go-sql-driver/mysql v1.8.1
+	github.com/grafana/sobek v0.0.0-20241024150027-d91f02b05e9b
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.1
 	golang.org/x/crypto v0.28.0
