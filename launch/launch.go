@@ -14,6 +14,7 @@ import (
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/gridfs"
 	"github.com/xmx/aegis-server/datalayer/query"
+	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
@@ -103,11 +104,13 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 
+	oplogRepo := repository.NewOplog(qry)
+
 	var useTLS bool
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
 	poolTLS := credential.Pool(baseTLS)
 
-	oplogService := service.NewOplog(qry, log)
+	oplogService := service.NewOplog(oplogRepo, log)
 	configCertificateService := service.NewConfigCertificate(poolTLS, qry, log)
 	if num, exx := configCertificateService.Refresh(ctx); exx != nil { // 初始化刷新证书池。
 		log.Error("初始化证书错误", slog.Any("error", exx))
@@ -145,7 +148,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		routes = append(routes, restapi.NewStatic(webuiPath, dir))
 	}
 
-	baseAPI := sh.Group(basePath).Use(middle.WAF(oplogService))
+	baseAPI := sh.Group(basePath).Use(middle.WAF(oplogRepo.Create))
 	if err = shipx.BindRouters(baseAPI, routes); err != nil { // 注册路由
 		return err
 	}

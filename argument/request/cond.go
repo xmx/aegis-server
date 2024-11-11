@@ -19,10 +19,13 @@ type Condition struct {
 	CondOrderInputs
 }
 
-func (c Condition) AllInputs() (*condition.WhereInputs, *condition.OrderInputs) {
+func (c Condition) AllInputs() *condition.ScopeInput {
 	where := c.CondWhereInputs.Inputs()
 	order := c.CondOrderInputs.Inputs()
-	return where, order
+	return &condition.ScopeInput{
+		Where: where,
+		Order: order,
+	}
 }
 
 type CondOrderInputs struct {

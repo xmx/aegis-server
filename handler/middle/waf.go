@@ -11,17 +11,13 @@ import (
 	"github.com/xmx/aegis-server/datalayer/model"
 )
 
-type OplogWriter interface {
-	Write(ctx context.Context, oplog *model.Oplog) error
-}
-
-func WAF(wrt OplogWriter) ship.Middleware {
-	waf := &wafMiddle{wrt: wrt}
+func WAF(writeLog func(context.Context, *model.Oplog) error) ship.Middleware {
+	waf := &wafMiddle{writeLog: writeLog}
 	return waf.middle
 }
 
 type wafMiddle struct {
-	wrt OplogWriter
+	writeLog func(context.Context, *model.Oplog) error
 }
 
 func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
@@ -67,14 +63,16 @@ func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
 			oplog.Body = body.Data()
 			attr := slog.Any("oplog", oplog)
 
-			if exx := ctx.Err(); exx != nil {
-				ctx = context.Background()
-			}
-			ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
-			exx := wm.wrt.Write(ctx2, oplog)
-			cancel()
-			if exx != nil {
-				c.Errorf("保存访问日志出错", attr, slog.Any("error", exx))
+			if fn := wm.writeLog; fn != nil {
+				if exx := ctx.Err(); exx != nil {
+					ctx = context.Background()
+				}
+				ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
+				exx := wm.writeLog(ctx2, oplog)
+				cancel()
+				if exx != nil {
+					c.Errorf("保存访问日志出错", attr, slog.Any("error", exx))
+				}
 			}
 			if failed {
 				c.Warnf("接口访问", attr)

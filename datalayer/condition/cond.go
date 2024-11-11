@@ -55,6 +55,11 @@ type OrderInputs struct {
 	Inputs []*OrderInput
 }
 
+type ScopeInput struct {
+	Where *WhereInputs
+	Order *OrderInputs
+}
+
 type Cond struct {
 	orders        []*OrderField
 	ordersNameMap map[string]*OrderField
@@ -70,10 +75,15 @@ func (c Cond) WhereFields() WhereFields {
 	return c.wheres
 }
 
-func (c Cond) Scope(whereInputs *WhereInputs, orderInputs *OrderInputs) func(gen.Dao) gen.Dao {
+func (c Cond) Scope(input *ScopeInput) func(gen.Dao) gen.Dao {
 	return func(dao gen.Dao) gen.Dao {
-		wheres := c.CompileWheres(whereInputs)
-		orders := c.CompileOrders(orderInputs)
+		if input == nil {
+			return dao
+		}
+
+		wheres := c.CompileWheres(input.Where)
+		orders := c.CompileOrders(input.Order)
+
 		return dao.Where(wheres...).Order(orders...)
 	}
 }
