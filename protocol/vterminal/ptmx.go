@@ -50,12 +50,10 @@ func (pt *ptmxTTY) Write(p []byte) (int, error) {
 }
 
 func (pt *ptmxTTY) Close() error {
-	err := pt.ptmx.Close()
 	if p := pt.cmd.Process; p != nil {
 		_ = p.Kill()
 	}
-
-	return err
+	return pt.ptmx.Close()
 }
 
 func (pt *ptmxTTY) Size() (cols, rows int, err error) {
