@@ -37,5 +37,11 @@
     "localtime": true,
     // https://github.com/natefinch/lumberjack/blob/v2.2.1/lumberjack.go#L106-L108
     "compress": true
+  },
+  "server": {
+    "addr": "0.0.0.0:1443",
+    "static": "resources/static/",
+    "cert": "",
+    "pkey": ""
   }
 }
