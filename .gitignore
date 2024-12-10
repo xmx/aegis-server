@@ -39,6 +39,9 @@ resources/test/*
 
 aegis-server-*
 
+resources/temp
+resources/test
+
 crash.txt
 *.crash.txt
 *.cast
