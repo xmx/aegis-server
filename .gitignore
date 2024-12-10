@@ -39,6 +39,7 @@ resources/test/*
 
 aegis-server-*
 
+crash.txt
 *.crash.txt
 *.cast
 *.upx
