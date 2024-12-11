@@ -3,6 +3,7 @@ module github.com/xmx/aegis-server
 go 1.23
 
 require (
+	github.com/cilium/ebpf v0.16.0
 	github.com/coder/websocket v1.8.12
 	github.com/creack/pty v1.1.24
 	github.com/go-playground/locales v0.14.1
@@ -33,6 +34,7 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
+	golang.org/x/exp v0.0.0-20230224173230-c95f2b4c22f2 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect

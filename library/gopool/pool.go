@@ -6,11 +6,11 @@ import (
 )
 
 type Pool interface {
-	Go(f func()) (done <-chan struct{})
-	Gos(parent context.Context, funcs ...func(parent context.Context)) (done <-chan struct{})
+	Go(fn func()) (done <-chan struct{})
+	Gos(parent context.Context, fns ...func(parent context.Context)) (done <-chan struct{})
 }
 
-func NewPool(worker int) Pool {
+func New(worker int) Pool {
 	if worker <= 0 {
 		worker = 1
 	}
@@ -23,55 +23,55 @@ type pool struct {
 	sema chan struct{}
 }
 
-func (p *pool) Go(f func()) <-chan struct{} {
+func (p *pool) Go(fn func()) <-chan struct{} {
 	done := make(chan struct{})
-	if f == nil {
+	if fn == nil {
 		close(done)
 		return done
 	}
 
-	fn := p.warp(done, f)
-	p.join(fn)
+	fun := p.warp(done, fn)
+	p.sched(fun)
 
 	return done
 }
 
-func (p *pool) Gos(parent context.Context, funcs ...func(parent context.Context)) <-chan struct{} {
+func (p *pool) Gos(parent context.Context, fns ...func(parent context.Context)) <-chan struct{} {
 	if parent == nil {
 		parent = context.Background()
 	}
 	ctx, cancel := context.WithCancel(parent)
 	mon := p.newMonitor(ctx, cancel)
-	fns := make([]func(), 0, len(funcs))
-	for _, f := range funcs {
+	funcs := make([]func(), 0, len(fns))
+	for _, f := range fns {
 		if f != nil {
 			fn := mon.warp(f)
-			fns = append(fns, fn)
+			funcs = append(funcs, fn)
 		}
 	}
-	if len(fns) == 0 {
+	if len(funcs) == 0 {
 		cancel()
 		return ctx.Done()
 	}
-	for _, fn := range fns {
-		p.join(fn)
+	for _, fn := range funcs {
+		p.sched(fn)
 	}
 
 	return ctx.Done()
 }
 
-func (p *pool) join(f func()) {
+func (p *pool) sched(fn func()) {
 	p.sema <- struct{}{}
-	go f()
+	go fn()
 }
 
-func (p *pool) warp(done chan struct{}, f func()) func() {
+func (p *pool) warp(done chan struct{}, fn func()) func() {
 	return func() {
 		defer func() {
 			close(done)
 			<-p.sema
 		}()
-		f()
+		fn()
 	}
 }
 
@@ -86,7 +86,7 @@ type monitor struct {
 	cancel context.CancelFunc
 }
 
-func (m *monitor) warp(f func(context.Context)) func() {
+func (m *monitor) warp(fn func(context.Context)) func() {
 	m.cnt.Add(1)
 	return func() {
 		defer func() {
@@ -95,6 +95,6 @@ func (m *monitor) warp(f func(context.Context)) func() {
 			}
 			<-m.sema
 		}()
-		f(m.ctx)
+		fn(m.ctx)
 	}
 }
