@@ -1,3 +1,5 @@
+// 使用前请按照本文格式，创建一个 application.jsonc 的配置文件。
+
 {
   // 类似于 springboot profile 配置，根据配置切换配置文件。
   // https://docs.spring.io/spring-boot/reference/features/profiles.html
@@ -41,7 +43,7 @@
   "server": {
     "addr": "0.0.0.0:1443",
     "static": "resources/static/",
-    "cert": "",
-    "pkey": ""
+    "cert": "resources/tls/server.crt",
+    "pkey": "resources/tls/server.key"
   }
 }

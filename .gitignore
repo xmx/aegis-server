@@ -27,7 +27,7 @@ go.work.sum
 
 # config file
 resources/config/*
-!resources/config/application.jsonc
+!resources/config/application-example.jsonc
 !resources/config/README.md
 
 main/main
