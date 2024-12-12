@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path"
 	"time"
 
 	"github.com/xgfone/ship/v5"
@@ -124,8 +123,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	termService := service.NewTerm(log)
 	fileService := service.NewFile(qry, dbfs, log)
 
-	const basePath, webuiPath = "/api", "/webui"
-	staticPath := path.Join(basePath, webuiPath)
+	const basePath = "/api"
 	routes := []shipx.Router{
 		restapi.NewAuth(),
 		restapi.NewConfigCertificate(configCertificateService),
@@ -141,11 +139,8 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
 	sh.Logger = logger.Ship(logHandler)
-	sh.Route("/").GET(func(c *ship.Context) error {
-		return c.Redirect(http.StatusPermanentRedirect, staticPath)
-	})
 	if dir := srvCfg.Static; dir != "" {
-		routes = append(routes, restapi.NewStatic(webuiPath, dir))
+		sh.Route("/").Static(dir)
 	}
 
 	baseAPI := sh.Group(basePath).Use(middle.WAF(oplogRepo.Create))

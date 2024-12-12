@@ -32,7 +32,13 @@ func (api *Term) pty(c *ship.Context) error {
 	if err != nil {
 		return err
 	}
-	_ = api.svc.PTY(ws, req)
+	//goland:noinspection GoUnhandledErrorResult
+	defer ws.CloseNow()
+
+	if err = api.svc.PTY(ws, req); err != nil {
+		reason := err.Error()
+		_ = ws.Close(websocket.CloseStatus(err), reason)
+	}
 
 	return nil
 }
@@ -48,7 +54,10 @@ func (api *Term) ssh(c *ship.Context) error {
 	if err != nil {
 		return err
 	}
-	_ = api.svc.SSH(ws, req)
+	if err = api.svc.SSH(ws, req); err != nil {
+		reason := err.Error()
+		_ = ws.Close(websocket.CloseStatus(err), reason)
+	}
 
 	return nil
 }

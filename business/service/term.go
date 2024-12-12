@@ -2,11 +2,13 @@ package service
 
 import (
 	"crypto/ed25519"
+	"errors"
 	"io"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -28,11 +30,24 @@ type Term struct {
 
 //goland:noinspection GoUnhandledErrorResult
 func (svc *Term) PTY(conn *websocket.Conn, size *request.TermResize) error {
+	if runtime.GOOS == "windows" {
+		return errors.ErrUnsupported
+	}
+
 	shell := os.Getenv("SHELL")
 	if shell == "" {
-		shell = "/bin/sh"
+		for _, sh := range []string{
+			"/usr/bin/fish", "/usr/bin/zsh",
+		} {
+			if _, err := os.Lstat(sh); err == nil {
+				shell = sh
+			}
+		}
 	}
-	svc.log.Info("找到虚拟终端", slog.Any("shell", shell))
+	if shell == "" {
+		shell = "/bin/bash"
+	}
+	svc.log.Info("准备执行 SHELL", slog.Any("shell", shell))
 
 	cmd := exec.Command(shell)
 	tty, err := vterminal.NewPTMX(cmd, size.Cols, size.Rows)
