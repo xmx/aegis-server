@@ -1,4 +1,4 @@
-package jsrt
+package jsvm
 
 import "github.com/grafana/sobek"
 
