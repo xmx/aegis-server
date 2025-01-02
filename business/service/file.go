@@ -72,15 +72,18 @@ func (f *File) Count(ctx context.Context, limit int) (response.NameCounts, error
 	}
 
 	ret := make(response.NameCounts, 0, limit)
-	nameAlias, countAlias, countField := ret.Aliases()
+	nameExpr, countExpr := ret.Aliases()
+	nameAlias := nameExpr.ColumnName().String()
+	countAlias := countExpr.ColumnName().String()
 
 	tbl := f.qry.GridFile
 	err := tbl.WithContext(ctx).
 		Select(tbl.Extension.As(nameAlias), tbl.Extension.Count().As(countAlias)).
 		Group(tbl.Extension).
-		Order(countField.Desc(), tbl.Extension).
+		Order(countExpr.Desc(), tbl.Extension).
 		Limit(limit).
 		Scan(&ret)
+
 	return ret, err
 }
 

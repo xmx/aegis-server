@@ -132,7 +132,9 @@ func (svc *ConfigCertificate) Update(ctx context.Context, req *request.ConfigCer
 	defer svc.mutex.Unlock()
 
 	// 查询数据库中的数据。
-	mod, err := dao.Select(tbl.Enabled, tbl.CertificateSHA256).Where(tbl.ID.Eq(id)).First()
+	mod, err := dao.Select(tbl.Enabled, tbl.CertificateSHA256).
+		Where(tbl.ID.Eq(id)).
+		First()
 	if err != nil {
 		return err
 	}
@@ -242,21 +244,6 @@ func (svc *ConfigCertificate) parseCertificate(publicKey, privateKey string, ena
 		Version:           leaf.Version,
 		NotBefore:         leaf.NotBefore,
 		NotAfter:          leaf.NotAfter,
-	}
-	if dat.Organization == nil {
-		dat.Organization = []string{}
-	}
-	if dat.Country == nil {
-		dat.Country = []string{}
-	}
-	if dat.Province == nil {
-		dat.Province = []string{}
-	}
-	if dat.Locality == nil {
-		dat.Locality = []string{}
-	}
-	if dat.DNSNames == nil {
-		dat.DNSNames = []string{}
 	}
 
 	return dat, nil

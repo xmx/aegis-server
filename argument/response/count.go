@@ -9,17 +9,9 @@ type NameCount struct {
 
 type NameCounts []*NameCount
 
-func (nc NameCounts) Aliases() (string, string, field.OrderExpr) {
-	const count = "count"
-	expr := field.NewField("", count)
-	return "name", "count", expr // 与 gorm tag 保持一致
-}
-
-type Pair struct {
-	Key string
-}
-
-type CountPair struct {
-	Key string `json:"key"`
-	Cnt int64  `json:"cnt"`
+func (nc NameCounts) Aliases() (name, count field.Field) {
+	// 要与 NameCount gorm tag 保持一致
+	name = field.NewField("", "name")
+	count = field.NewField("", "count")
+	return
 }
