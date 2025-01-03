@@ -72,11 +72,10 @@ func (wc *writerConsole) write(call sobek.FunctionCall) sobek.Value {
 
 func (wc *writerConsole) format(call sobek.FunctionCall) ([]byte, error) {
 	buf := new(bytes.Buffer)
-	for _, val := range call.Arguments {
-		if err := wc.parse(buf, val); err != nil {
+	for _, arg := range call.Arguments {
+		if err := wc.parse(buf, arg); err != nil {
 			return nil, err
 		}
-		buf.WriteByte(' ')
 	}
 	buf.WriteByte('\n')
 
@@ -136,7 +135,7 @@ func (*writerConsole) reflectParse(buf *bytes.Buffer, v any) error {
 		}
 		// 标准库 JSON 序列化后会在最后面加换行符，这样输出到前端会有个换行，
 		// 下面的操作就是去除 JSON 字符串后面的换行符。当然不处理也无伤大雅。
-		_, _ = buf.ReadFrom(io.LimitReader(tmp, int64(tmp.Len()-1)))
+		_, _ = buf.ReadFrom(tmp)
 	}
 
 	return nil

@@ -53,10 +53,6 @@ func (r *response) object(vm *sobek.Runtime) sobek.Value {
 	return obj
 }
 
-func (r *response) statusCode() int {
-	return r.res.StatusCode
-}
-
 func (r *response) text() (string, error) {
 	defer r.res.Body.Close()
 	bs, err := io.ReadAll(r.res.Body)
@@ -65,8 +61,8 @@ func (r *response) text() (string, error) {
 
 func (r *response) json() (any, error) {
 	defer r.res.Body.Close()
-	hm := new(any)
-	if err := json.NewDecoder(r.res.Body).Decode(hm); err != nil {
+	hm := make(map[string]any, 16)
+	if err := json.NewDecoder(r.res.Body).Decode(&hm); err != nil {
 		return nil, err
 	}
 

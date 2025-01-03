@@ -132,7 +132,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		restapi.NewLog(logService),
 		restapi.NewOplog(oplogService),
 		restapi.NewTerm(termService),
-		restapi.NewPlay(),
+		restapi.NewPlay(cfg),
 	}
 
 	sh := ship.Default()
