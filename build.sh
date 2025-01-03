@@ -10,7 +10,7 @@ fi
 
 go clean -cache
 rm -rf ${directory}-*
-ld_flags="-s -w -extldflags -static -X 'github.com/xmx/aegis-server/infra/banner.compileTime=${compile_time}'"
+ld_flags="-s -w -extldflags -static -X 'github.com/xmx/aegis-server/banner.compileTime=${compile_time}'"
 go build -o ${executable} -v -trimpath -ldflags "${ld_flags}" ./main/
 
 if [ $? -eq 0 ]; then # 如果存在 upx 则进行压缩。

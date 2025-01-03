@@ -3,8 +3,8 @@ package mapstruct
 import (
 	"time"
 
-	"github.com/xmx/aegis-server/infra/profile"
 	"github.com/xmx/aegis-server/library/sqldb"
+	"github.com/xmx/aegis-server/profile"
 )
 
 func ConfigDatabase(c profile.Database) sqldb.Config {

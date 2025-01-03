@@ -10,18 +10,18 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/xmx/aegis-server/infra/banner"
+	"github.com/xmx/aegis-server/banner"
 	"github.com/xmx/aegis-server/launch"
 )
 
 func main() {
 	args := os.Args
-	name := filepath.Base(os.Args[0])
+	name := filepath.Base(args[0])
 	set := flag.NewFlagSet(name, flag.ExitOnError)
 	ver := set.Bool("v", false, "打印版本")
 	cfg := set.String("c", "resources/config/application.jsonc", "配置目录")
 	_ = set.Parse(args[1:])
-	if banner.ANSI(os.Stdout); *ver {
+	if _, _ = banner.ANSI(os.Stdout); *ver {
 		return
 	}
 
