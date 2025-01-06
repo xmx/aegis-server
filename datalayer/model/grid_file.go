@@ -4,8 +4,9 @@ import "time"
 
 type GridFile struct {
 	ID        int64     `json:"id,string"  gorm:"column:id;primaryKey;autoIncrement;comment:ID"`
-	Filename  string    `json:"filename"   gorm:"column:filename;varchar(255);not null;index:idx_filename;comment:文件名"`
-	Extension string    `json:"extension"  gorm:"column:extension;varchar(20);comment:扩展名"`
+	Filename  string    `json:"filename"   gorm:"column:filename;type:varchar(255);not null;index:idx_filename;comment:文件名"`
+	Extension string    `json:"extension"  gorm:"column:extension;type:varchar(20);comment:扩展名"`
+	MediaType string    `json:"media_type" gorm:"column:media_type;type:varchar(100);comment:媒体类型"`
 	Length    int64     `json:"length"     gorm:"column:length;comment:文件大小"`
 	Burst     uint16    `json:"-"          gorm:"column:burst;comment:分片大小"`
 	MD5       string    `json:"md5"        gorm:"column:md5;type:char(32);comment:MD5"`

@@ -6,7 +6,7 @@ import (
 	"github.com/go-sql-driver/mysql"
 )
 
-func NewLog(l *slog.Logger) mysql.Logger {
+func NewMySQLLog(l *slog.Logger) mysql.Logger {
 	return &mysqlLog{l: l}
 }
 

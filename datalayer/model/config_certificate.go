@@ -7,8 +7,8 @@ type ConfigCertificate struct {
 	ID                int64     `json:"id,string"             gorm:"column:id;primaryKey;autoIncrement;comment:ID"`
 	Enabled           bool      `json:"enabled"               gorm:"column:enabled;comment:是否启用"`
 	CommonName        string    `json:"common_name"           gorm:"column:common_name;not null;type:varchar(255);index:idx_common_name;comment:公用名"`
-	PublicKey         string    `json:"public_key,omitempty"  gorm:"column:public_key;comment:证书"`
-	PrivateKey        string    `json:"private_key,omitempty" gorm:"column:private_key;comment:私钥"`
+	PublicKey         []byte    `json:"public_key,omitempty"  gorm:"column:public_key;type:blob;comment:证书"`
+	PrivateKey        []byte    `json:"private_key,omitempty" gorm:"column:private_key;type:blob;comment:私钥"`
 	CertificateSHA256 string    `json:"certificate_sha256"    gorm:"column:certificate_sha256;type:char(64);comment:证书指纹"`
 	PublicKeySHA256   string    `json:"public_key_sha256"     gorm:"column:public_key_sha256;type:char(64);comment:公钥指纹"`
 	PrivateKeySHA256  string    `json:"private_key_sha256"    gorm:"column:private_key_sha256;type:char(64);comment:私钥指纹"`

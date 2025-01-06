@@ -6,15 +6,5 @@ import (
 )
 
 func autoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(
-		model.ConfigCertificate{},
-		model.ConfigServer{},
-		model.GridChunk{},
-		model.GridFile{},
-		model.Menu{},
-		model.Oplog{},
-		model.Role{},
-		model.RoleMenu{},
-		model.User{},
-	)
+	return db.AutoMigrate(model.All()...)
 }

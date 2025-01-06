@@ -43,7 +43,7 @@
   "server": {
     "addr": "0.0.0.0:1443",
     "static": "resources/static/",
-    "cert": "resources/tls/server.pem",
+    "cert": "resources/tls/server.crt",
     "pkey": "resources/tls/server.key"
   }
 }

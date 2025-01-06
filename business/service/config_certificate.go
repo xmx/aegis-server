@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
+	"io"
 	"log/slog"
 	"sync"
 
@@ -87,9 +88,31 @@ func (svc *ConfigCertificate) Find(ctx context.Context, ids []int64) ([]*model.C
 	return dao.Where(tbl.ID.In(ids...)).Find()
 }
 
+//goland:noinspection GoUnhandledErrorResult
 func (svc *ConfigCertificate) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
+	pubKey, priKey := req.PublicKey, req.PrivateKey
+	pubKeyFile, err := pubKey.Open()
+	if err != nil {
+		return err
+	}
+	defer pubKeyFile.Close()
+	priKeyFile, err := priKey.Open()
+	if err != nil {
+		return err
+	}
+	defer priKeyFile.Close()
+
+	pubKeyBlock, err := io.ReadAll(pubKeyFile)
+	if err != nil {
+		return err
+	}
+	priKeyBlock, err := io.ReadAll(priKeyFile)
+	if err != nil {
+		return err
+	}
+
 	enabled := req.Enabled
-	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
+	dat, err := svc.parseCertificate(pubKeyBlock, priKeyBlock, enabled)
 	if err != nil {
 		return err
 	}
@@ -119,41 +142,42 @@ func (svc *ConfigCertificate) Create(ctx context.Context, req *request.ConfigCer
 }
 
 func (svc *ConfigCertificate) Update(ctx context.Context, req *request.ConfigCertificateUpdate) error {
-	id, enabled := req.ID, req.Enabled
-	dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
-	if err != nil {
-		return err
-	}
-
-	tbl := svc.qry.ConfigCertificate
-	dao := tbl.WithContext(ctx)
-
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
-
-	// 查询数据库中的数据。
-	mod, err := dao.Select(tbl.Enabled, tbl.CertificateSHA256).
-		Where(tbl.ID.Eq(id)).
-		First()
-	if err != nil {
-		return err
-	}
-	// 指纹变了说明修改了证书
-	if mod.CertificateSHA256 != dat.CertificateSHA256 {
-		if cnt, _ := dao.Where(tbl.CertificateSHA256.Eq(dat.CertificateSHA256)).
-			Count(); cnt > 0 {
-			return errcode.ErrCertificateExisted
-		}
-	}
-
-	enabled = enabled || mod.Enabled
-	dat.ID, dat.CreatedAt = id, mod.CreatedAt
-	if err = dao.Where(tbl.ID.Eq(id)).Save(dat); err != nil || !enabled {
-		return err
-	}
-	_, err = svc.Refresh(ctx)
-
-	return err
+	//id, enabled := req.ID, req.Enabled
+	//dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//tbl := svc.qry.ConfigCertificate
+	//dao := tbl.WithContext(ctx)
+	//
+	//svc.mutex.Lock()
+	//defer svc.mutex.Unlock()
+	//
+	//// 查询数据库中的数据。
+	//mod, err := dao.Select(tbl.Enabled, tbl.CertificateSHA256).
+	//	Where(tbl.ID.Eq(id)).
+	//	First()
+	//if err != nil {
+	//	return err
+	//}
+	//// 指纹变了说明修改了证书
+	//if mod.CertificateSHA256 != dat.CertificateSHA256 {
+	//	if cnt, _ := dao.Where(tbl.CertificateSHA256.Eq(dat.CertificateSHA256)).
+	//		Count(); cnt > 0 {
+	//		return errcode.ErrCertificateExisted
+	//	}
+	//}
+	//
+	//enabled = enabled || mod.Enabled
+	//dat.ID, dat.CreatedAt = id, mod.CreatedAt
+	//if err = dao.Where(tbl.ID.Eq(id)).Save(dat); err != nil || !enabled {
+	//	return err
+	//}
+	//_, err = svc.Refresh(ctx)
+	//
+	//return err
+	return nil
 }
 
 func (svc *ConfigCertificate) Delete(ctx context.Context, ids []int64) error {
@@ -194,7 +218,7 @@ func (svc *ConfigCertificate) Refresh(ctx context.Context) (int, error) {
 
 	certs := make([]tls.Certificate, 0, len(dats))
 	for _, dat := range dats {
-		cert, exx := tls.X509KeyPair([]byte(dat.PublicKey), []byte(dat.PrivateKey))
+		cert, exx := tls.X509KeyPair(dat.PublicKey, dat.PrivateKey)
 		if exx != nil {
 			svc.log.Error("处理证书错误", slog.Any("error", err))
 			return 0, exx
@@ -210,9 +234,8 @@ func (svc *ConfigCertificate) Refresh(ctx context.Context) (int, error) {
 	return num, nil
 }
 
-func (svc *ConfigCertificate) parseCertificate(publicKey, privateKey string, enabled bool) (*model.ConfigCertificate, error) {
-	publicKeyBlock, privateKeyBlock := []byte(publicKey), []byte(privateKey)
-	cert, err := tls.X509KeyPair(publicKeyBlock, privateKeyBlock)
+func (svc *ConfigCertificate) parseCertificate(publicKey, privateKey []byte, enabled bool) (*model.ConfigCertificate, error) {
+	cert, err := tls.X509KeyPair(publicKey, privateKey)
 	if err != nil {
 		svc.log.Warn("证书解析错误", slog.Any("error", err))
 		return nil, errcode.ErrCertificateInvalid

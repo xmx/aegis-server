@@ -30,8 +30,8 @@ func newConfigCertificate(db *gorm.DB, opts ...gen.DOOption) configCertificate {
 	_configCertificate.ID = field.NewInt64(tableName, "id")
 	_configCertificate.Enabled = field.NewBool(tableName, "enabled")
 	_configCertificate.CommonName = field.NewString(tableName, "common_name")
-	_configCertificate.PublicKey = field.NewString(tableName, "public_key")
-	_configCertificate.PrivateKey = field.NewString(tableName, "private_key")
+	_configCertificate.PublicKey = field.NewBytes(tableName, "public_key")
+	_configCertificate.PrivateKey = field.NewBytes(tableName, "private_key")
 	_configCertificate.CertificateSHA256 = field.NewString(tableName, "certificate_sha256")
 	_configCertificate.PublicKeySHA256 = field.NewString(tableName, "public_key_sha256")
 	_configCertificate.PrivateKeySHA256 = field.NewString(tableName, "private_key_sha256")
@@ -59,8 +59,8 @@ type configCertificate struct {
 	ID                field.Int64
 	Enabled           field.Bool
 	CommonName        field.String
-	PublicKey         field.String
-	PrivateKey        field.String
+	PublicKey         field.Bytes
+	PrivateKey        field.Bytes
 	CertificateSHA256 field.String
 	PublicKeySHA256   field.String
 	PrivateKeySHA256  field.String
@@ -94,8 +94,8 @@ func (c *configCertificate) updateTableName(table string) *configCertificate {
 	c.ID = field.NewInt64(table, "id")
 	c.Enabled = field.NewBool(table, "enabled")
 	c.CommonName = field.NewString(table, "common_name")
-	c.PublicKey = field.NewString(table, "public_key")
-	c.PrivateKey = field.NewString(table, "private_key")
+	c.PublicKey = field.NewBytes(table, "public_key")
+	c.PrivateKey = field.NewBytes(table, "private_key")
 	c.CertificateSHA256 = field.NewString(table, "certificate_sha256")
 	c.PublicKeySHA256 = field.NewString(table, "public_key_sha256")
 	c.PrivateKeySHA256 = field.NewString(table, "private_key_sha256")

@@ -1,12 +1,16 @@
 package request
 
+import "mime/multipart"
+
 type ConfigCertificateCreate struct {
-	PublicKey  string `json:"public_key"  validate:"required"`
-	PrivateKey string `json:"private_key" validate:"required"`
-	Enabled    bool   `json:"enabled"`
+	PublicKey  *multipart.FileHeader `form:"public_key"  validate:"required"`
+	PrivateKey *multipart.FileHeader `form:"private_key" validate:"required"`
+	Enabled    bool                  `form:"enabled"`
 }
 
 type ConfigCertificateUpdate struct {
 	Int64ID
-	ConfigCertificateCreate
+	PublicKey  *multipart.FileHeader `form:"public_key"`
+	PrivateKey *multipart.FileHeader `form:"private_key"`
+	Enabled    bool                  `form:"enabled"`
 }

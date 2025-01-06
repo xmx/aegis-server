@@ -18,7 +18,6 @@ import (
 var (
 	Q                 = new(Query)
 	ConfigCertificate *configCertificate
-	ConfigServer      *configServer
 	GridChunk         *gridChunk
 	GridFile          *gridFile
 	Menu              *menu
@@ -32,7 +31,6 @@ var (
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	*Q = *Use(db, opts...)
 	ConfigCertificate = &Q.ConfigCertificate
-	ConfigServer = &Q.ConfigServer
 	GridChunk = &Q.GridChunk
 	GridFile = &Q.GridFile
 	Menu = &Q.Menu
@@ -47,7 +45,6 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
 		db:                db,
 		ConfigCertificate: newConfigCertificate(db, opts...),
-		ConfigServer:      newConfigServer(db, opts...),
 		GridChunk:         newGridChunk(db, opts...),
 		GridFile:          newGridFile(db, opts...),
 		Menu:              newMenu(db, opts...),
@@ -63,7 +60,6 @@ type Query struct {
 	db *gorm.DB
 
 	ConfigCertificate configCertificate
-	ConfigServer      configServer
 	GridChunk         gridChunk
 	GridFile          gridFile
 	Menu              menu
@@ -80,7 +76,6 @@ func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
 		db:                db,
 		ConfigCertificate: q.ConfigCertificate.clone(db),
-		ConfigServer:      q.ConfigServer.clone(db),
 		GridChunk:         q.GridChunk.clone(db),
 		GridFile:          q.GridFile.clone(db),
 		Menu:              q.Menu.clone(db),
@@ -104,7 +99,6 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
 		db:                db,
 		ConfigCertificate: q.ConfigCertificate.replaceDB(db),
-		ConfigServer:      q.ConfigServer.replaceDB(db),
 		GridChunk:         q.GridChunk.replaceDB(db),
 		GridFile:          q.GridFile.replaceDB(db),
 		Menu:              q.Menu.replaceDB(db),
@@ -118,7 +112,6 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 
 type queryCtx struct {
 	ConfigCertificate *configCertificateDo
-	ConfigServer      *configServerDo
 	GridChunk         *gridChunkDo
 	GridFile          *gridFileDo
 	Menu              *menuDo
@@ -132,7 +125,6 @@ type queryCtx struct {
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
 		ConfigCertificate: q.ConfigCertificate.WithContext(ctx),
-		ConfigServer:      q.ConfigServer.WithContext(ctx),
 		GridChunk:         q.GridChunk.WithContext(ctx),
 		GridFile:          q.GridFile.WithContext(ctx),
 		Menu:              q.Menu.WithContext(ctx),

@@ -30,6 +30,7 @@ func newGridFile(db *gorm.DB, opts ...gen.DOOption) gridFile {
 	_gridFile.ID = field.NewInt64(tableName, "id")
 	_gridFile.Filename = field.NewString(tableName, "filename")
 	_gridFile.Extension = field.NewString(tableName, "extension")
+	_gridFile.MediaType = field.NewString(tableName, "media_type")
 	_gridFile.Length = field.NewInt64(tableName, "length")
 	_gridFile.Burst = field.NewUint16(tableName, "burst")
 	_gridFile.MD5 = field.NewString(tableName, "md5")
@@ -50,6 +51,7 @@ type gridFile struct {
 	ID        field.Int64
 	Filename  field.String
 	Extension field.String
+	MediaType field.String
 	Length    field.Int64
 	Burst     field.Uint16
 	MD5       field.String
@@ -76,6 +78,7 @@ func (g *gridFile) updateTableName(table string) *gridFile {
 	g.ID = field.NewInt64(table, "id")
 	g.Filename = field.NewString(table, "filename")
 	g.Extension = field.NewString(table, "extension")
+	g.MediaType = field.NewString(table, "media_type")
 	g.Length = field.NewInt64(table, "length")
 	g.Burst = field.NewUint16(table, "burst")
 	g.MD5 = field.NewString(table, "md5")
@@ -107,10 +110,11 @@ func (g *gridFile) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (g *gridFile) fillFieldMap() {
-	g.fieldMap = make(map[string]field.Expr, 10)
+	g.fieldMap = make(map[string]field.Expr, 11)
 	g.fieldMap["id"] = g.ID
 	g.fieldMap["filename"] = g.Filename
 	g.fieldMap["extension"] = g.Extension
+	g.fieldMap["media_type"] = g.MediaType
 	g.fieldMap["length"] = g.Length
 	g.fieldMap["burst"] = g.Burst
 	g.fieldMap["md5"] = g.MD5

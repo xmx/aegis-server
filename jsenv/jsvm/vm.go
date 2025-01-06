@@ -10,3 +10,7 @@ func New() *sobek.Runtime {
 
 	return vm
 }
+
+type Module interface {
+	Global(vm *sobek.Runtime) error
+}
