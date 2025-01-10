@@ -3,5 +3,6 @@ package response
 import "log/slog"
 
 type LogLevel struct {
-	Level slog.Level `json:"level"`
+	Log  slog.Level `json:"log"`
+	Gorm slog.Level `json:"gorm"`
 }

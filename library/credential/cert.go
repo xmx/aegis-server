@@ -11,7 +11,7 @@ type Certifier interface {
 	Replace(certs []tls.Certificate)
 }
 
-func Pool(base *tls.Config) Certifier {
+func NewPool(base *tls.Config) Certifier {
 	return &certPool{base: base}
 }
 

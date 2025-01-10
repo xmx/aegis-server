@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
+	"gorm.io/gorm/logger"
 )
 
 type Config struct {
@@ -17,6 +18,7 @@ type Config struct {
 	MaxIdleConn int
 	MaxLifetime time.Duration
 	MaxIdleTime time.Duration
+	LogConfig   logger.Config
 }
 
 func Open(c Config, l mysql.Logger) (*sql.DB, error) {

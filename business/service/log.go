@@ -7,26 +7,28 @@ import (
 	"github.com/xmx/aegis-server/library/multiwrite"
 )
 
-func NewLog(level *slog.LevelVar, writer multiwrite.Writer, log *slog.Logger) *Log {
+func NewLog(logLevel, gormLevel *slog.LevelVar, writer multiwrite.Writer, log *slog.Logger) *Log {
 	return &Log{
-		level:  level,
-		writer: writer,
-		log:    log,
+		logLevel:  logLevel,
+		gormLevel: gormLevel,
+		writer:    writer,
+		log:       log,
 	}
 }
 
 type Log struct {
-	level  *slog.LevelVar
-	writer multiwrite.Writer
-	log    *slog.Logger
+	logLevel  *slog.LevelVar
+	gormLevel *slog.LevelVar
+	writer    multiwrite.Writer
+	log       *slog.Logger
 }
 
-func (l *Log) Level() slog.Level {
-	return l.level.Level()
+func (l *Log) Level() (slog.Level, slog.Level) {
+	return l.logLevel.Level(), l.gormLevel.Level()
 }
 
 func (l *Log) SetLevel(lvl string) error {
-	return l.level.UnmarshalText([]byte(lvl))
+	return l.logLevel.UnmarshalText([]byte(lvl))
 }
 
 func (l *Log) Attach(w io.Writer) bool {

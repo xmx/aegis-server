@@ -30,7 +30,6 @@ func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
 
 		host, method := c.Host(), c.Method()
 		req := c.Request()
-		ctx := req.Context()
 		reqURL := req.URL
 		body := wm.newRecordBody(req.Body, 4096)
 		req.Body = body
@@ -43,7 +42,6 @@ func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
 			Method:     method,
 			Path:       reqURL.Path,
 			Query:      reqURL.Query(),
-			Body:       nil,
 			Header:     req.Header,
 			ClientIP:   clientIP,
 			DirectIP:   directIP,
@@ -64,11 +62,9 @@ func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
 			attr := slog.Any("oplog", oplog)
 
 			if fn := wm.writeLog; fn != nil {
-				if exx := ctx.Err(); exx != nil {
-					ctx = context.Background()
-				}
-				ctx2, cancel := context.WithTimeout(ctx, 5*time.Second)
-				exx := wm.writeLog(ctx2, oplog)
+				background := context.Background()
+				ctx, cancel := context.WithTimeout(background, 5*time.Second)
+				exx := wm.writeLog(ctx, oplog)
 				cancel()
 				if exx != nil {
 					c.Errorf("保存访问日志出错", attr, slog.Any("error", exx))

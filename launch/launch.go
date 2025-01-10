@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/mapstruct"
@@ -25,7 +25,6 @@ import (
 	"github.com/xmx/aegis-server/profile"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	glog "gorm.io/gorm/logger"
 )
 
 func Run(ctx context.Context, path string) error {
@@ -67,8 +66,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	logHandler := slog.NewJSONHandler(logWriter, logOpt)
 	log := slog.New(logHandler)
 
-	// 连接数据库
 	dbCfg := mapstruct.ConfigDatabase(cfg.Database)
+	gormLog, gormLevel := sqldb.NewLog(logWriter, dbCfg.LogConfig)
+
+	// 连接数据库
 	db, err := sqldb.Open(dbCfg, sqldb.NewMySQLLog(log))
 	if err != nil {
 		log.Error("数据库连接失败", slog.Any("error", err))
@@ -76,8 +77,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	defer db.Close()
 
-	glogCfg := glog.Config{SlowThreshold: 30 * time.Millisecond, LogLevel: glog.Info}
-	gormLog := logger.Gorm(logHandler, glogCfg)
 	mysqlCfg := &mysql.Config{Conn: db}
 	gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg}, &gorm.Config{Logger: gormLog})
 	if err != nil {
@@ -95,13 +94,11 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		log.Info("检查合并数据库表结构结束")
 	}
 
-	// 查询 server 配置
-	oplogRepo := repository.NewOplog(qry)
-
 	var useTLS bool
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
-	poolTLS := credential.Pool(baseTLS)
+	poolTLS := credential.NewPool(baseTLS)
 
+	oplogRepo := repository.NewOplog(qry)
 	oplogService := service.NewOplog(oplogRepo, log)
 	configCertificateService := service.NewConfigCertificate(poolTLS, qry, log)
 	if num, exx := configCertificateService.Refresh(ctx); exx != nil { // 初始化刷新证书池。
@@ -112,7 +109,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	dbfs := gridfs.NewFS(qry)
-	logService := service.NewLog(logLevel, logWriter, log)
+	logService := service.NewLog(logLevel, gormLevel, logWriter, log)
 	termService := service.NewTerm(log)
 	fileService := service.NewFile(qry, dbfs, log)
 
@@ -128,23 +125,32 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		restapi.NewPlay(cfg),
 	}
 
+	srvCfg := cfg.Server
 	sh := ship.Default()
 	sh.Validator = valid
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
 	sh.Logger = logger.Ship(logHandler)
+	if static := srvCfg.Static; static != "" {
+		sh.Route("/").Static(static)
+	}
 
 	baseAPI := sh.Group(basePath).Use(middle.WAF(oplogRepo.Create))
 	if err = shipx.BindRouters(baseAPI, routes); err != nil { // 注册路由
 		return err
 	}
 
-	srv := &http.Server{
-		Handler:   sh,
-		TLSConfig: &tls.Config{GetConfigForClient: poolTLS.Match},
+	lis, err := net.Listen("tcp", srvCfg.Addr)
+	if err != nil {
+		return err
 	}
+	if addr := listenAddr(lis); addr != "" {
+		log.Warn("监听地址", slog.Any("listen", addr))
+	}
+	tlsCfg := &tls.Config{GetConfigForClient: poolTLS.Match}
+	srv := &http.Server{Handler: sh, TLSConfig: tlsCfg}
 	errs := make(chan error)
-	go serveHTTP(srv, useTLS, errs)
+	go serveHTTP(srv, lis, useTLS, errs)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
@@ -159,10 +165,21 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	return err
 }
 
-func serveHTTP(srv *http.Server, useTLS bool, errs chan<- error) {
+func serveHTTP(srv *http.Server, lis net.Listener, useTLS bool, errs chan<- error) {
 	if useTLS {
-		errs <- srv.ListenAndServeTLS("", "")
+		errs <- srv.ServeTLS(lis, "", "")
 	} else {
-		errs <- srv.ListenAndServe()
+		errs <- srv.Serve(lis)
+	}
+}
+
+func listenAddr(l net.Listener) string {
+	switch v := l.(type) {
+	case *net.TCPListener:
+		return v.Addr().String()
+	case *net.UnixListener:
+		return v.Addr().String()
+	default:
+		return ""
 	}
 }
