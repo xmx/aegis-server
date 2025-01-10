@@ -69,7 +69,7 @@ func (l *Log) tail(c *ship.Context) error {
 	}
 
 	l.svc.Attach(sse)
-	defer l.svc.Leave(sse)
+	defer l.svc.Detach(sse)
 
 	c.Warnf("进入日志查看器，当前共有 %d 个查看窗口", cnt)
 	<-sse.Done()
