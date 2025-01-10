@@ -4,10 +4,10 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/xmx/aegis-server/library/ioext"
+	"github.com/xmx/aegis-server/library/multiwrite"
 )
 
-func NewLog(level *slog.LevelVar, writer ioext.AttachWriter, log *slog.Logger) *Log {
+func NewLog(level *slog.LevelVar, writer multiwrite.Writer, log *slog.Logger) *Log {
 	return &Log{
 		level:  level,
 		writer: writer,
@@ -17,7 +17,7 @@ func NewLog(level *slog.LevelVar, writer ioext.AttachWriter, log *slog.Logger) *
 
 type Log struct {
 	level  *slog.LevelVar
-	writer ioext.AttachWriter
+	writer multiwrite.Writer
 	log    *slog.Logger
 }
 
@@ -33,6 +33,6 @@ func (l *Log) Attach(w io.Writer) bool {
 	return l.writer.Attach(w)
 }
 
-func (l *Log) Leave(w io.Writer) bool {
-	return l.writer.Leave(w)
+func (l *Log) Detach(w io.Writer) bool {
+	return l.writer.Detach(w)
 }

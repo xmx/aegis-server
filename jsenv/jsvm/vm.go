@@ -12,5 +12,15 @@ func New() *sobek.Runtime {
 }
 
 type Module interface {
-	Global(vm *sobek.Runtime) error
+	SetGlobal(vm *sobek.Runtime) error
+}
+
+func SetModule(vm *sobek.Runtime, mods []Module) error {
+	for _, mod := range mods {
+		if err := mod.SetGlobal(vm); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

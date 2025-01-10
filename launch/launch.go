@@ -18,7 +18,7 @@ import (
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/library/credential"
-	"github.com/xmx/aegis-server/library/ioext"
+	"github.com/xmx/aegis-server/library/multiwrite"
 	"github.com/xmx/aegis-server/library/sqldb"
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
@@ -50,7 +50,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	// 初始化日志组件。
 	logCfg := cfg.Logger
-	logWriter := ioext.NewAttachWriter()
+	logWriter := multiwrite.New(nil)
 	if lumber := logCfg.Lumber(); lumber != nil {
 		defer lumber.Close()
 		logWriter.Attach(lumber)
@@ -69,7 +69,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	// 连接数据库
 	dbCfg := mapstruct.ConfigDatabase(cfg.Database)
-	db, err := sqldb.Open(dbCfg, sqldb.NewLog(log))
+	db, err := sqldb.Open(dbCfg, sqldb.NewMySQLLog(log))
 	if err != nil {
 		log.Error("数据库连接失败", slog.Any("error", err))
 		return err
@@ -96,13 +96,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	// 查询 server 配置
-	configServerService := service.NewConfigServer(qry)
-	srvCfg, err := configServerService.Enabled(ctx)
-	if err != nil {
-		log.Error("查询 server 配置错误", slog.Any("error", err))
-		return err
-	}
-
 	oplogRepo := repository.NewOplog(qry)
 
 	var useTLS bool
@@ -140,9 +133,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
 	sh.Logger = logger.Ship(logHandler)
-	if dir := srvCfg.Static; dir != "" {
-		sh.Route("/").Static(dir)
-	}
 
 	baseAPI := sh.Group(basePath).Use(middle.WAF(oplogRepo.Create))
 	if err = shipx.BindRouters(baseAPI, routes); err != nil { // 注册路由
@@ -150,7 +140,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	srv := &http.Server{
-		Addr:      srvCfg.Addr,
 		Handler:   sh,
 		TLSConfig: &tls.Config{GetConfigForClient: poolTLS.Match},
 	}

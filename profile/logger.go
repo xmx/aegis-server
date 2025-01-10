@@ -3,7 +3,7 @@ package profile
 import "gopkg.in/natefinch/lumberjack.v2"
 
 type Logger struct {
-	Level   string `json:"level"`
+	Level   string `json:"level"   validate:"omitempty,oneof=DEBUG INFO WARN ERROR"`
 	Console bool   `json:"console"`
 	*lumberjack.Logger
 }

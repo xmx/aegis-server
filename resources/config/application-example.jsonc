@@ -41,7 +41,7 @@
     "compress": true
   },
   "server": {
-    "addr": "0.0.0.0:1443",
+    "addr": "0.0.0.0:443",
     "static": "resources/static/",
     "cert": "resources/tls/server.crt",
     "pkey": "resources/tls/server.key"

@@ -33,9 +33,14 @@ func (p *Play) run(c *ship.Context) error {
 	})
 	defer timer.Stop()
 
-	jsmod.RegisterHTTP(vm)
-	jsmod.RegisterConsole(vm, c)
-	vm.Set("profile", p.cfg)
+	mods := []jsvm.Module{
+		jsmod.NewHTTP(),
+		jsmod.NewConsole(c),
+		jsmod.NewGlobal("profile", p.cfg),
+	}
+	if err := jsvm.SetModule(vm, mods); err != nil {
+		return err
+	}
 
 	str, _ := io.ReadAll(c.Body())
 	_, err := vm.RunString(string(str))

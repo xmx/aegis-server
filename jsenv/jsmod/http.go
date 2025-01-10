@@ -6,19 +6,31 @@ import (
 	"net/http"
 
 	"github.com/grafana/sobek"
+	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
-func RegisterHTTP(vm *sobek.Runtime) {
-	hc := &httpClient{vm: vm, cli: http.DefaultClient}
-	obj := vm.NewObject()
-	_ = obj.Set("get", hc.get)
+func NewHTTP(clis ...*http.Client) jsvm.Module {
+	cli := http.DefaultClient
+	if len(clis) != 0 && clis[0] != nil {
+		cli = clis[0]
+	}
 
-	_ = vm.Set("http", obj)
+	return &httpClient{cli: cli}
 }
 
 type httpClient struct {
 	vm  *sobek.Runtime
 	cli *http.Client
+}
+
+func (hc *httpClient) SetGlobal(vm *sobek.Runtime) error {
+	hc.vm = vm
+	obj := vm.NewObject()
+	if err := obj.Set("get", hc.get); err != nil {
+		return err
+	}
+
+	return vm.Set("http", obj)
 }
 
 func (hc *httpClient) get(call sobek.FunctionCall) sobek.Value {
@@ -50,6 +62,8 @@ func (r *response) object(vm *sobek.Runtime) sobek.Value {
 	_ = obj.Set("statusCode", r.res.StatusCode)
 	_ = obj.Set("text", r.text)
 	_ = obj.Set("json", r.json)
+	_ = obj.Set("close", r.close)
+
 	return obj
 }
 
@@ -67,4 +81,8 @@ func (r *response) json() (any, error) {
 	}
 
 	return hm, nil
+}
+
+func (r *response) close() error {
+	return r.res.Body.Close()
 }

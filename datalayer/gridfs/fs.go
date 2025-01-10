@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"mime"
 	"path/filepath"
 	"strings"
 	"time"
@@ -83,12 +84,20 @@ func (g *gridFS) OpenID(ctx context.Context, fileID int64) (File, error) {
 
 func (g *gridFS) Save(ctx context.Context, filename string, r io.Reader) (*model.GridFile, error) {
 	ext := strings.ToLower(filepath.Ext(filename))
+	mediaType := mime.TypeByExtension(ext)
+	if mediaType == "" {
+		mediaType = "application/octet-stream"
+	}
+
 	createdAt := time.Now()
 	m5, h1, h256 := md5.New(), sha1.New(), sha256.New()
 	fr := io.TeeReader(r, io.MultiWriter(m5, h1, h256))
 
 	var sequence int64
-	file := &model.GridFile{Filename: filename, Extension: ext, Burst: g.burst, CreatedAt: createdAt}
+	file := &model.GridFile{
+		Filename: filename, Extension: ext, Burst: g.burst,
+		MediaType: mediaType, CreatedAt: createdAt,
+	}
 	err := g.qry.Transaction(func(tx *query.Query) error {
 		ftbl, ctbl := tx.GridFile, tx.GridChunk
 		fdao, cdao := ftbl.WithContext(ctx), ctbl.WithContext(ctx)
