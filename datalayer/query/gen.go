@@ -15,32 +15,6 @@ import (
 	"gorm.io/plugin/dbresolver"
 )
 
-var (
-	Q                 = new(Query)
-	ConfigCertificate *configCertificate
-	GridChunk         *gridChunk
-	GridFile          *gridFile
-	Menu              *menu
-	OAuthConfig       *oAuthConfig
-	Oplog             *oplog
-	Role              *role
-	RoleMenu          *roleMenu
-	User              *user
-)
-
-func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
-	*Q = *Use(db, opts...)
-	ConfigCertificate = &Q.ConfigCertificate
-	GridChunk = &Q.GridChunk
-	GridFile = &Q.GridFile
-	Menu = &Q.Menu
-	OAuthConfig = &Q.OAuthConfig
-	Oplog = &Q.Oplog
-	Role = &Q.Role
-	RoleMenu = &Q.RoleMenu
-	User = &Q.User
-}
-
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
 		db:                db,

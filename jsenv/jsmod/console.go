@@ -10,10 +10,9 @@ import (
 	"strconv"
 
 	"github.com/grafana/sobek"
-	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
-func NewConsole(w io.Writer) jsvm.Module {
+func NewConsole(w io.Writer) interface{ SetGlobal(vm *sobek.Runtime) error } {
 	if w == nil || w == io.Discard {
 		return new(discardConsole)
 	}

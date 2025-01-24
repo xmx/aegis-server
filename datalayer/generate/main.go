@@ -6,10 +6,8 @@ import (
 )
 
 func main() {
-	g := gen.NewGenerator(gen.Config{
-		Mode:    gen.WithDefaultQuery,
-		OutPath: "datalayer/query",
-	})
+	c := gen.Config{OutPath: "datalayer/query"}
+	g := gen.NewGenerator(c)
 	g.ApplyBasic(model.All()...)
 	g.Execute()
 }

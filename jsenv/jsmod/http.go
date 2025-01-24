@@ -6,10 +6,9 @@ import (
 	"net/http"
 
 	"github.com/grafana/sobek"
-	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
-func NewHTTP(clis ...*http.Client) jsvm.Module {
+func NewHTTP(clis ...*http.Client) *httpClient {
 	cli := http.DefaultClient
 	if len(clis) != 0 && clis[0] != nil {
 		cli = clis[0]

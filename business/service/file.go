@@ -12,6 +12,7 @@ import (
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/pagination"
 	"github.com/xmx/aegis-server/datalayer/query"
+	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"gorm.io/gen/field"
 )
 
@@ -37,6 +38,11 @@ type File struct {
 	log  *slog.Logger
 	dbfs gridfs.FS
 	cond *condition.Cond
+}
+
+func (f *File) Register(root *jsvm.Object) error {
+	root.Sub("service").Set("file", f)
+	return nil
 }
 
 func (f *File) Cond() *response.Cond {

@@ -76,3 +76,27 @@ func (c *Crontab) Remove(name string) {
 		delete(c.names, name)
 	}
 }
+
+func (c *Crontab) Cleanup() {
+	for _, ent := range c.crond.Entries() {
+		if !ent.Next.IsZero() {
+			continue
+		}
+		if name := c.resolveName(ent.ID); name != "" {
+			c.Remove(name)
+		}
+	}
+}
+
+func (c *Crontab) resolveName(id cron.EntryID) string {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	for name, eid := range c.names {
+		if id == eid {
+			return name
+		}
+	}
+
+	return ""
+}
