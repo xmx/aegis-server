@@ -7,7 +7,7 @@ import (
 
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
-	"github.com/xmx/aegis-server/datalayer/condition"
+	"github.com/xmx/aegis-server/datalayer/dynsql"
 	"github.com/xmx/aegis-server/datalayer/gridfs"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/pagination"
@@ -16,28 +16,25 @@ import (
 	"gorm.io/gen/field"
 )
 
-func NewFile(qry *query.Query, dbfs gridfs.FS, log *slog.Logger) *File {
-	mod := new(model.GridFile)
-	ctx := context.Background()
-	tbl := qry.GridFile
-	db := tbl.WithContext(ctx).UnderlyingDB()
-	ignores := []field.Expr{tbl.Burst, tbl.MD5, tbl.SHA1, tbl.SHA256}
-	opt := &condition.ParserOptions{IgnoreOrder: ignores, IgnoreWhere: ignores}
-	cond, _ := condition.ParseModel(db, mod, opt)
+func NewFile(qry *query.Query, dbfs gridfs.FS, log *slog.Logger) (*File, error) {
+	fl := &File{qry: qry, log: log, dbfs: dbfs}
+	opt := dynsql.Options{Where: fl.whereFunc(), Order: fl.orderFunc()}
+	mods := []any{model.GridFile{}}
 
-	return &File{
-		qry:  qry,
-		log:  log,
-		dbfs: dbfs,
-		cond: cond,
+	tbl, err := dynsql.Parse(qry, mods, opt)
+	if err != nil {
+		return nil, err
 	}
+	fl.tbl = tbl
+
+	return fl, nil
 }
 
 type File struct {
 	qry  *query.Query
 	log  *slog.Logger
 	dbfs gridfs.FS
-	cond *condition.Cond
+	tbl  *dynsql.Table
 }
 
 func (f *File) Register(root *jsvm.Object) error {
@@ -45,31 +42,32 @@ func (f *File) Register(root *jsvm.Object) error {
 	return nil
 }
 
-func (f *File) Cond() *response.Cond {
-	return response.ReadCond(f.cond)
+func (f *File) Cond() *response.Cond1 {
+	return response.ReadCond1(f.tbl)
 }
 
 func (f *File) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.GridFile], error) {
-	tbl := f.qry.GridFile
-	scope := f.cond.Scope(req.AllInputs())
-	dao := tbl.WithContext(ctx).Scopes(scope)
-	cnt, err := dao.Count()
-	if err != nil {
-		return nil, err
-	}
-	pager := pagination.NewPager[*model.GridFile](req.PageSize())
-	if cnt == 0 {
-		empty := pager.Empty()
-		return empty, nil
-	}
-
-	dats, err := dao.Scopes(pager.Scope(cnt)).Find()
-	if err != nil {
-		return nil, err
-	}
-	ret := pager.Result(dats)
-
-	return ret, nil
+	//tbl := f.qry.GridFile
+	//scope := f.cond.Scope(req.AllInputs())
+	//dao := tbl.WithContext(ctx).Scopes(scope)
+	//cnt, err := dao.Count()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//pager := pagination.NewPager[*model.GridFile](req.PageSize())
+	//if cnt == 0 {
+	//	empty := pager.Empty()
+	//	return empty, nil
+	//}
+	//
+	//dats, err := dao.Scopes(pager.Scope(cnt)).Find()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//ret := pager.Result(dats)
+	//
+	//return ret, nil
+	return nil, nil
 }
 
 func (f *File) Count(ctx context.Context, limit int) (response.NameCounts, error) {
@@ -99,4 +97,30 @@ func (f *File) Save(ctx context.Context, filename string, r io.Reader) (*model.G
 
 func (f *File) Open(ctx context.Context, fileID int64) (gridfs.File, error) {
 	return f.dbfs.OpenID(ctx, fileID)
+}
+
+func (f *File) whereFunc() func(*dynsql.Where) *dynsql.Where {
+	file := f.qry.GridFile
+	ignores := []field.Expr{file.MD5, file.SHA1, file.SHA256}
+	return func(where *dynsql.Where) *dynsql.Where {
+		for _, ignore := range ignores {
+			if where.Equals(ignore) {
+				return nil
+			}
+		}
+		return where
+	}
+}
+
+func (f *File) orderFunc() func(*dynsql.Order) *dynsql.Order {
+	file := f.qry.GridFile
+	ignores := []field.Expr{file.MD5, file.SHA1, file.SHA256, file.MediaType, file.Burst}
+	return func(order *dynsql.Order) *dynsql.Order {
+		for _, ignore := range ignores {
+			if order.Equals(ignore) {
+				return nil
+			}
+		}
+		return order
+	}
 }

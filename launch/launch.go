@@ -112,7 +112,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	dbfs := gridfs.NewFS(qry)
 	logService := service.NewLog(logLevel, gormLevel, logWriter, log)
 	termService := service.NewTerm(log)
-	fileService := service.NewFile(qry, dbfs, log)
+	fileService, err := service.NewFile(qry, dbfs, log)
+	if err != nil {
+		return err
+	}
 
 	const basePath = "/api"
 	modules := []jsvm.Module{fileService}
