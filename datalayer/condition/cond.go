@@ -179,7 +179,7 @@ func (c Cond) fieldString(f field.String, input *WhereInput) field.Expr {
 	if !ok {
 		return nil
 	}
-	if !ok || arg0 == "" {
+	if arg0 == "" {
 		switch op {
 		case Eq, Neq:
 		default:

@@ -3,7 +3,8 @@ package dynsql
 type Operators []Operator
 
 type Operator interface {
-	OpInfo() (string, string)
+	OpInfo() (id, name string)
+	String() string
 }
 
 type operator struct {
@@ -13,6 +14,10 @@ type operator struct {
 
 func (o operator) OpInfo() (string, string) {
 	return o.id, o.name
+}
+
+func (o operator) String() string {
+	return o.id
 }
 
 var (
@@ -28,9 +33,9 @@ var (
 	NotBetween = operator{id: "notbetween", name: "NOT BETWEEN"}
 	In         = operator{id: "in", name: "IN"}
 	NotIn      = operator{id: "notin", name: "NOT IN"}
-	NotNull    = operator{id: "notnull", name: "NOT NULL"}
+	Null       = operator{id: "null", name: "NULL"}
 
-	opMaps = map[string]Operator{
+	operatorMaps = map[string]Operator{
 		Eq.id:         Eq,
 		Neq.id:        Neq,
 		Gt.id:         Gt,
@@ -43,10 +48,10 @@ var (
 		NotBetween.id: NotBetween,
 		In.id:         In,
 		NotIn.id:      NotIn,
-		NotNull.id:    NotNull,
+		Null.id:       Null,
 	}
 )
 
 func Lookup(id string) Operator {
-	return opMaps[id]
+	return operatorMaps[id]
 }

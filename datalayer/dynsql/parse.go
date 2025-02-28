@@ -58,6 +58,13 @@ func Parse(qry *query.Query, mods []any, opt Options) (*Table, error) {
 					db:        db,
 				}
 				if w := opt.Where(where); w != nil && len(w.Operators) != 0 {
+					opMaps := make(map[string]Operator, len(w.Operators))
+					for _, o := range w.Operators {
+						id, _ := o.OpInfo()
+						opMaps[id] = o
+					}
+					w.db, w.opMaps = db, opMaps
+
 					shortID := w.Column
 					if old := whereMaps[shortID]; old == nil {
 						w.ID = shortID
@@ -78,11 +85,15 @@ func Parse(qry *query.Query, mods []any, opt Options) (*Table, error) {
 			if opt.NonOrder {
 				continue
 			}
+			orderExpr, ok := expr.(field.OrderExpr)
+			if !ok {
+				continue
+			}
 			order := &Order{
 				Table:  tableName,
 				Column: column,
 				Name:   comment,
-				Expr:   expr,
+				Expr:   orderExpr,
 				db:     db,
 			}
 			if o := opt.Order(order); o != nil {
@@ -115,28 +126,36 @@ func Parse(qry *query.Query, mods []any, opt Options) (*Table, error) {
 }
 
 func parse(f *schema.Field) (field.Expr, Operators) {
+	var expr field.Expr
+	var ops Operators
+
 	table, column := f.Schema.Table, f.DBName
 	realType := getFieldRealType(f.FieldType)
 	switch realType {
 	case "string":
-		return field.NewString(table, column),
-			Operators{Eq, Neq, Gt, Gte, Lt, Lte, Like, NotLike, Between, NotBetween, In, NotIn, NotNull}
+		expr = field.NewString(table, column)
+		ops = Operators{Eq, Neq, Gt, Gte, Lt, Lte, Like, NotLike, Between, NotBetween, In, NotIn}
 	case "int", "int8", "int16", "int32", "int64",
 		"uint", "uint8", "uint16", "uint32", "uint64":
-		return field.NewInt(table, column),
-			Operators{Eq, Neq, Gt, Gte, Lt, Lte, Between, NotBetween, In, NotIn, NotNull}
+		expr = field.NewInt(table, column)
+		ops = Operators{Eq, Neq, Gt, Gte, Lt, Lte, Between, NotBetween, In, NotIn}
 	case "float32", "float64":
-		return field.NewFloat64(table, column),
-			Operators{Eq, Neq, Gt, Gte, Lt, Lte, Between, NotBetween, In, NotIn, NotNull}
+		expr = field.NewFloat64(table, column)
+		ops = Operators{Eq, Neq, Gt, Gte, Lt, Lte, Between, NotBetween, In, NotIn}
 	case "bool":
-		return field.NewBool(table, column),
-			Operators{Eq, Neq}
+		expr = field.NewBool(table, column)
+		ops = Operators{Eq, Neq}
 	case "time.Time":
-		return field.NewTime(table, column),
-			Operators{Eq, Neq, Gt, Gte, Lt, Lte, Between, NotBetween, In, NotIn, NotNull}
+		expr = field.NewTime(table, column)
+		ops = Operators{Eq, Neq, Gt, Gte, Lt, Lte, Between, NotBetween, In, NotIn}
 	default:
 		return nil, nil
 	}
+	if !f.NotNull {
+		ops = append(ops, Null)
+	}
+
+	return expr, ops
 }
 
 // getFieldRealType  get basic type of field.

@@ -8,11 +8,11 @@ import (
 type Orders []*Order
 
 type Order struct {
-	ID     string     `json:"id"` // 唯一名字
-	Table  string     `json:"table"`
-	Column string     `json:"column"`
-	Name   string     `json:"name"`
-	Expr   field.Expr `json:"-"`
+	ID     string          `json:"id"` // 唯一名字
+	Table  string          `json:"table"`
+	Column string          `json:"column"`
+	Name   string          `json:"name"`
+	Expr   field.OrderExpr `json:"-"`
 	db     *gorm.DB
 }
 
@@ -29,4 +29,11 @@ func (o Order) Equals(fe field.Expr) bool {
 
 func (o Order) fullID() string {
 	return o.Table + "." + o.Column
+}
+
+type OrderInputs []*OrderInput
+
+type OrderInput struct {
+	ID   string
+	Desc bool
 }
