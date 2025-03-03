@@ -2,7 +2,7 @@ package model
 
 func All() []any {
 	return []any{
-		ConfigCertificate{},
+		Certificate{},
 		GridChunk{},
 		GridFile{},
 		Menu{},

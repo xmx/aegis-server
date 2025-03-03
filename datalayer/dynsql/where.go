@@ -88,5 +88,5 @@ func (svs stringValues) ints() ([]int, error) {
 		}
 	}
 
-	return dats
+	return dats, nil
 }

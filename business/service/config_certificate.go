@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
 	"io"
 	"log/slog"
@@ -21,9 +22,9 @@ import (
 	"gorm.io/gen/field"
 )
 
-func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) *ConfigCertificate {
-	mod := new(model.ConfigCertificate)
-	tbl := qry.ConfigCertificate
+func NewCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) *Certificate {
+	mod := new(model.Certificate)
+	tbl := qry.Certificate
 	ctx := context.Background()
 	db := tbl.WithContext(ctx).UnderlyingDB()
 	ignores := []field.Expr{
@@ -33,7 +34,7 @@ func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog
 	opt := &condition.ParserOptions{IgnoreOrder: ignores, IgnoreWhere: ignores}
 	cond, _ := condition.ParseModel(db, mod, opt)
 
-	return &ConfigCertificate{
+	return &Certificate{
 		pool:  pool,
 		qry:   qry,
 		cond:  cond,
@@ -42,7 +43,7 @@ func NewConfigCertificate(pool credential.Certifier, qry *query.Query, log *slog
 	}
 }
 
-type ConfigCertificate struct {
+type Certificate struct {
 	pool  credential.Certifier // 证书池。
 	log   *slog.Logger
 	qry   *query.Query
@@ -51,19 +52,19 @@ type ConfigCertificate struct {
 	limit int64 // 数据库最多可保存的证书数量。
 }
 
-func (svc *ConfigCertificate) Cond() *response.Cond {
-	return response.ReadCond(svc.cond)
+func (crt *Certificate) Cond() *response.Cond {
+	return response.ReadCond(crt.cond)
 }
 
-func (svc *ConfigCertificate) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.ConfigCertificate], error) {
-	tbl := svc.qry.ConfigCertificate
-	scope := svc.cond.Scope(req.AllInputs())
+func (crt *Certificate) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.Certificate], error) {
+	tbl := crt.qry.Certificate
+	scope := crt.cond.Scope(req.AllInputs())
 	dao := tbl.WithContext(ctx).Scopes(scope)
 	cnt, err := dao.Count()
 	if err != nil {
 		return nil, err
 	}
-	pager := pagination.NewPager[*model.ConfigCertificate](req.PageSize())
+	pager := pagination.NewPager[*model.Certificate](req.PageSize())
 	if cnt == 0 {
 		empty := pager.Empty()
 		return empty, nil
@@ -79,17 +80,17 @@ func (svc *ConfigCertificate) Page(ctx context.Context, req *request.PageConditi
 	return ret, nil
 }
 
-func (svc *ConfigCertificate) Find(ctx context.Context, ids []int64) ([]*model.ConfigCertificate, error) {
+func (crt *Certificate) Find(ctx context.Context, ids []int64) ([]*model.Certificate, error) {
 	if len(ids) == 0 {
-		return []*model.ConfigCertificate{}, nil
+		return []*model.Certificate{}, nil
 	}
-	tbl := svc.qry.ConfigCertificate
+	tbl := crt.qry.Certificate
 	dao := tbl.WithContext(ctx)
 	return dao.Where(tbl.ID.In(ids...)).Find()
 }
 
 //goland:noinspection GoUnhandledErrorResult
-func (svc *ConfigCertificate) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
+func (crt *Certificate) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
 	pubKey, priKey := req.PublicKey, req.PrivateKey
 	pubKeyFile, err := pubKey.Open()
 	if err != nil {
@@ -112,16 +113,16 @@ func (svc *ConfigCertificate) Create(ctx context.Context, req *request.ConfigCer
 	}
 
 	enabled := req.Enabled
-	dat, err := svc.parseCertificate(pubKeyBlock, priKeyBlock, enabled)
+	dat, err := crt.parseCertificate(pubKeyBlock, priKeyBlock, enabled)
 	if err != nil {
 		return err
 	}
 
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+	crt.mutex.Lock()
+	defer crt.mutex.Unlock()
 
 	// 检查证书指纹，避免出现证书重复。
-	tbl := svc.qry.ConfigCertificate
+	tbl := crt.qry.Certificate
 	dao := tbl.WithContext(ctx)
 	if cnt, _ := dao.Where(tbl.CertificateSHA256.Eq(dat.CertificateSHA256)).
 		Count(); cnt > 0 {
@@ -129,26 +130,26 @@ func (svc *ConfigCertificate) Create(ctx context.Context, req *request.ConfigCer
 	}
 
 	// 检查证书是否已超过限制个数。
-	if cnt, _ := dao.Count(); cnt >= svc.limit {
-		return errcode.FmtTooManyCertificate.Fmt(svc.limit)
+	if cnt, _ := dao.Count(); cnt >= crt.limit {
+		return errcode.FmtTooManyCertificate.Fmt(crt.limit)
 	}
 	// 新增证书。
 	if err = dao.Create(dat); err != nil || !enabled {
 		return err
 	}
-	_, err = svc.Refresh(ctx)
+	_, err = crt.Refresh(ctx)
 
 	return err
 }
 
-func (svc *ConfigCertificate) Update(ctx context.Context, req *request.ConfigCertificateUpdate) error {
+func (crt *Certificate) Update(ctx context.Context, req *request.ConfigCertificateUpdate) error {
 	//id, enabled := req.ID, req.Enabled
 	//dat, err := svc.parseCertificate(req.PublicKey, req.PrivateKey, enabled)
 	//if err != nil {
 	//	return err
 	//}
 	//
-	//tbl := svc.qry.ConfigCertificate
+	//tbl := svc.qry.Certificate
 	//dao := tbl.WithContext(ctx)
 	//
 	//svc.mutex.Lock()
@@ -180,39 +181,39 @@ func (svc *ConfigCertificate) Update(ctx context.Context, req *request.ConfigCer
 	return nil
 }
 
-func (svc *ConfigCertificate) Delete(ctx context.Context, ids []int64) error {
+func (crt *Certificate) Delete(ctx context.Context, ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
-	svc.mutex.Lock()
-	defer svc.mutex.Unlock()
+	crt.mutex.Lock()
+	defer crt.mutex.Unlock()
 
-	tbl := svc.qry.ConfigCertificate
+	tbl := crt.qry.Certificate
 	dao := tbl.WithContext(ctx)
 	cnt, _ := dao.Where(tbl.ID.In(ids...), tbl.Enabled.Is(true)).Count()
 	_, err := dao.Where(tbl.ID.In(ids...)).Delete()
 	if err != nil || cnt == 0 {
 		return err
 	}
-	_, err = svc.Refresh(ctx)
+	_, err = crt.Refresh(ctx)
 
 	return err
 }
 
-func (svc *ConfigCertificate) Detail(ctx context.Context, id int64) (*model.ConfigCertificate, error) {
-	tbl := svc.qry.ConfigCertificate
+func (crt *Certificate) Detail(ctx context.Context, id int64) (*model.Certificate, error) {
+	tbl := crt.qry.Certificate
 	return tbl.WithContext(ctx).
 		Where(tbl.ID.Eq(id)).
 		First()
 }
 
-func (svc *ConfigCertificate) Refresh(ctx context.Context) (int, error) {
-	tbl := svc.qry.ConfigCertificate
+func (crt *Certificate) Refresh(ctx context.Context) (int, error) {
+	tbl := crt.qry.Certificate
 	dao := tbl.WithContext(ctx)
 	dats, err := dao.Where(tbl.Enabled.Is(true)).Find()
 	if err != nil {
-		svc.log.Error("查询所有开启的证书错误", slog.Any("error", err))
+		crt.log.Error("查询所有开启的证书错误", slog.Any("error", err))
 		return 0, err
 	}
 
@@ -220,24 +221,24 @@ func (svc *ConfigCertificate) Refresh(ctx context.Context) (int, error) {
 	for _, dat := range dats {
 		cert, exx := tls.X509KeyPair(dat.PublicKey, dat.PrivateKey)
 		if exx != nil {
-			svc.log.Error("处理证书错误", slog.Any("error", err))
+			crt.log.Error("处理证书错误", slog.Any("error", err))
 			return 0, exx
 		}
 		certs = append(certs, cert)
 	}
 	num := len(certs)
 	if num == 0 {
-		svc.log.Error("当前证书表未启用任何证书，程序将无法通过网络访问。")
+		crt.log.Error("当前证书表未启用任何证书，程序将无法通过网络访问。")
 	}
-	svc.pool.Replace(certs)
+	crt.pool.Replace(certs)
 
 	return num, nil
 }
 
-func (svc *ConfigCertificate) parseCertificate(publicKey, privateKey []byte, enabled bool) (*model.ConfigCertificate, error) {
+func (crt *Certificate) parseCertificate(publicKey, privateKey []byte, enabled bool) (*model.Certificate, error) {
 	cert, err := tls.X509KeyPair(publicKey, privateKey)
 	if err != nil {
-		svc.log.Warn("证书解析错误", slog.Any("error", err))
+		crt.log.Warn("证书解析错误", slog.Any("error", err))
 		return nil, errcode.ErrCertificateInvalid
 	}
 
@@ -247,10 +248,15 @@ func (svc *ConfigCertificate) parseCertificate(publicKey, privateKey []byte, ena
 	for _, addr := range leaf.IPAddresses {
 		ips = append(ips, addr.String())
 	}
+	uris := make([]string, 0, len(leaf.URIs))
+	for _, uri := range leaf.URIs {
+		uris = append(uris, uri.String())
+	}
 
 	// 计算指纹
-	certSHA256, pubKeySHA256, priKeySHA256 := svc.fingerprintSHA256(cert)
-	dat := &model.ConfigCertificate{
+	certSHA256, pubKeySHA256, priKeySHA256 := crt.fingerprintSHA256(cert)
+	dat := &model.Certificate{
+		ID:                0,
 		Enabled:           enabled,
 		CommonName:        sub.CommonName,
 		PublicKey:         publicKey,
@@ -258,22 +264,36 @@ func (svc *ConfigCertificate) parseCertificate(publicKey, privateKey []byte, ena
 		CertificateSHA256: certSHA256,
 		PublicKeySHA256:   pubKeySHA256,
 		PrivateKeySHA256:  priKeySHA256,
-		Organization:      sub.Organization,
-		Country:           sub.Country,
-		Province:          sub.Province,
-		Locality:          sub.Locality,
 		DNSNames:          leaf.DNSNames,
 		IPAddresses:       ips,
+		EmailAddresses:    leaf.EmailAddresses,
+		URIs:              uris,
 		Version:           leaf.Version,
 		NotBefore:         leaf.NotBefore,
 		NotAfter:          leaf.NotAfter,
+		Issuer:            crt.parsePKIX(leaf.Issuer),
+		Subject:           crt.parsePKIX(leaf.Subject),
 	}
 
 	return dat, nil
 }
 
+func (*Certificate) parsePKIX(v pkix.Name) model.PKIXName {
+	return model.PKIXName{
+		Country:            v.Country,
+		Organization:       v.Organization,
+		OrganizationalUnit: v.OrganizationalUnit,
+		Locality:           v.Locality,
+		Province:           v.Province,
+		StreetAddress:      v.StreetAddress,
+		PostalCode:         v.PostalCode,
+		SerialNumber:       v.SerialNumber,
+		CommonName:         v.CommonName,
+	}
+}
+
 // fingerprintSHA256 计算证书和私钥的 SHA256 指纹。
-func (*ConfigCertificate) fingerprintSHA256(cert tls.Certificate) (certSHA256, pubKeySHA256, priKeySHA256 string) {
+func (*Certificate) fingerprintSHA256(cert tls.Certificate) (certSHA256, pubKeySHA256, priKeySHA256 string) {
 	leaf := cert.Leaf
 	sum256 := sha256.Sum256(leaf.Raw)
 	certSHA256 = hex.EncodeToString(sum256[:])

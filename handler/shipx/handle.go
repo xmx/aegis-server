@@ -13,7 +13,7 @@ import (
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/errcode"
-	"github.com/xmx/aegis-server/argument/response"
+	"github.com/xmx/aegis-server/argument/problem"
 	"github.com/xmx/aegis-server/library/i18n"
 	"github.com/xmx/aegis-server/library/validation"
 	"golang.org/x/text/language"
@@ -27,7 +27,8 @@ func NotFound(_ *ship.Context) error {
 func HandleError(c *ship.Context, e error) {
 	statusCode, title, detail := UnpackError(e)
 
-	pd := &response.ProblemDetails{
+	pd := &problem.Details{
+		Host:     c.Host(),
 		Title:    title,
 		Status:   statusCode,
 		Detail:   detail,
@@ -100,9 +101,9 @@ func (eh ErrorHandler) HandleError(e error, c *ship.Context) {
 	}
 }
 
-func (eh ErrorHandler) unpack(e error, c *ship.Context) *response.ProblemDetails {
+func (eh ErrorHandler) unpack(e error, c *ship.Context) *problem.Details {
 	req := c.Request()
-	dat := &response.ProblemDetails{
+	dat := &problem.Details{
 		Status:   http.StatusBadRequest,
 		Instance: req.URL.Path,
 		Method:   c.Method(),

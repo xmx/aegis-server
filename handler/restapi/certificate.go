@@ -11,20 +11,20 @@ import (
 	"github.com/xmx/aegis-server/business/service"
 )
 
-func NewConfigCertificate(svc *service.ConfigCertificate) *ConfigCertificate {
-	return &ConfigCertificate{svc: svc}
+func NewCertificate(svc *service.Certificate) *Certificate {
+	return &Certificate{svc: svc}
 }
 
-type ConfigCertificate struct {
-	svc *service.ConfigCertificate
+type Certificate struct {
+	svc *service.Certificate
 }
 
-func (cc *ConfigCertificate) Route(r *ship.RouteGroupBuilder) error {
-	r.Route("/config/certificates").GET(cc.page)
-	r.Route("/config/certificate/download").GET(cc.download)
-	r.Route("/config/certificate/refresh").GET(cc.refresh)
-	r.Route("/config/certificate/cond").GET(cc.cond)
-	r.Route("/config/certificate").
+func (cc *Certificate) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/certificates").GET(cc.page)
+	r.Route("/certificate/download").GET(cc.download)
+	r.Route("/certificate/refresh").GET(cc.refresh)
+	r.Route("/certificate/cond").GET(cc.cond)
+	r.Route("/certificate").
 		GET(cc.detail).
 		POST(cc.create).
 		PUT(cc.update).
@@ -33,12 +33,12 @@ func (cc *ConfigCertificate) Route(r *ship.RouteGroupBuilder) error {
 	return nil
 }
 
-func (cc *ConfigCertificate) cond(c *ship.Context) error {
+func (cc *Certificate) cond(c *ship.Context) error {
 	ret := cc.svc.Cond()
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (cc *ConfigCertificate) page(c *ship.Context) error {
+func (cc *Certificate) page(c *ship.Context) error {
 	req := new(request.PageCondition)
 	if err := c.BindQuery(req); err != nil {
 		return err
@@ -52,7 +52,7 @@ func (cc *ConfigCertificate) page(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (cc *ConfigCertificate) create(c *ship.Context) error {
+func (cc *Certificate) create(c *ship.Context) error {
 	req := new(request.ConfigCertificateCreate)
 	if err := c.Bind(req); err != nil {
 		return err
@@ -62,7 +62,7 @@ func (cc *ConfigCertificate) create(c *ship.Context) error {
 	return cc.svc.Create(ctx, req)
 }
 
-func (cc *ConfigCertificate) update(c *ship.Context) error {
+func (cc *Certificate) update(c *ship.Context) error {
 	req := new(request.ConfigCertificateUpdate)
 	if err := c.Bind(req); err != nil {
 		return err
@@ -72,7 +72,7 @@ func (cc *ConfigCertificate) update(c *ship.Context) error {
 	return cc.svc.Update(ctx, req)
 }
 
-func (cc *ConfigCertificate) detail(c *ship.Context) error {
+func (cc *Certificate) detail(c *ship.Context) error {
 	req := new(request.Int64ID)
 	if err := c.BindQuery(req); err != nil {
 		return err
@@ -87,7 +87,7 @@ func (cc *ConfigCertificate) detail(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (cc *ConfigCertificate) delete(c *ship.Context) error {
+func (cc *Certificate) delete(c *ship.Context) error {
 	req := new(request.Int64IDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
@@ -97,7 +97,7 @@ func (cc *ConfigCertificate) delete(c *ship.Context) error {
 	return cc.svc.Delete(ctx, req.ID)
 }
 
-func (cc *ConfigCertificate) download(c *ship.Context) error {
+func (cc *Certificate) download(c *ship.Context) error {
 	req := new(request.Int64IDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
@@ -158,7 +158,7 @@ func (cc *ConfigCertificate) download(c *ship.Context) error {
 	return err
 }
 
-func (cc *ConfigCertificate) refresh(c *ship.Context) error {
+func (cc *Certificate) refresh(c *ship.Context) error {
 	ctx := c.Request().Context()
 	_, err := cc.svc.Refresh(ctx)
 	return err

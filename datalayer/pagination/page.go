@@ -70,3 +70,12 @@ func (p *pagination[E]) calculate(cnt int64) (offset, limit int) {
 
 	return
 }
+
+type Pages struct {
+	Page int64 `query:"page" json:"page" form:"page" validate:"gte=0"`
+	Size int64 `query:"size" json:"size" form:"size" validate:"gte=0,lte=1000"`
+}
+
+func (p Pages) PageSize() (int64, int64) {
+	return p.Page, p.Size
+}

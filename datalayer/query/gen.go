@@ -17,47 +17,47 @@ import (
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
-		db:                db,
-		ConfigCertificate: newConfigCertificate(db, opts...),
-		GridChunk:         newGridChunk(db, opts...),
-		GridFile:          newGridFile(db, opts...),
-		Menu:              newMenu(db, opts...),
-		OAuthConfig:       newOAuthConfig(db, opts...),
-		Oplog:             newOplog(db, opts...),
-		Role:              newRole(db, opts...),
-		RoleMenu:          newRoleMenu(db, opts...),
-		User:              newUser(db, opts...),
+		db:          db,
+		Certificate: newCertificate(db, opts...),
+		GridChunk:   newGridChunk(db, opts...),
+		GridFile:    newGridFile(db, opts...),
+		Menu:        newMenu(db, opts...),
+		OAuthConfig: newOAuthConfig(db, opts...),
+		Oplog:       newOplog(db, opts...),
+		Role:        newRole(db, opts...),
+		RoleMenu:    newRoleMenu(db, opts...),
+		User:        newUser(db, opts...),
 	}
 }
 
 type Query struct {
 	db *gorm.DB
 
-	ConfigCertificate configCertificate
-	GridChunk         gridChunk
-	GridFile          gridFile
-	Menu              menu
-	OAuthConfig       oAuthConfig
-	Oplog             oplog
-	Role              role
-	RoleMenu          roleMenu
-	User              user
+	Certificate certificate
+	GridChunk   gridChunk
+	GridFile    gridFile
+	Menu        menu
+	OAuthConfig oAuthConfig
+	Oplog       oplog
+	Role        role
+	RoleMenu    roleMenu
+	User        user
 }
 
 func (q *Query) Available() bool { return q.db != nil }
 
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
-		db:                db,
-		ConfigCertificate: q.ConfigCertificate.clone(db),
-		GridChunk:         q.GridChunk.clone(db),
-		GridFile:          q.GridFile.clone(db),
-		Menu:              q.Menu.clone(db),
-		OAuthConfig:       q.OAuthConfig.clone(db),
-		Oplog:             q.Oplog.clone(db),
-		Role:              q.Role.clone(db),
-		RoleMenu:          q.RoleMenu.clone(db),
-		User:              q.User.clone(db),
+		db:          db,
+		Certificate: q.Certificate.clone(db),
+		GridChunk:   q.GridChunk.clone(db),
+		GridFile:    q.GridFile.clone(db),
+		Menu:        q.Menu.clone(db),
+		OAuthConfig: q.OAuthConfig.clone(db),
+		Oplog:       q.Oplog.clone(db),
+		Role:        q.Role.clone(db),
+		RoleMenu:    q.RoleMenu.clone(db),
+		User:        q.User.clone(db),
 	}
 }
 
@@ -71,42 +71,42 @@ func (q *Query) WriteDB() *Query {
 
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
-		db:                db,
-		ConfigCertificate: q.ConfigCertificate.replaceDB(db),
-		GridChunk:         q.GridChunk.replaceDB(db),
-		GridFile:          q.GridFile.replaceDB(db),
-		Menu:              q.Menu.replaceDB(db),
-		OAuthConfig:       q.OAuthConfig.replaceDB(db),
-		Oplog:             q.Oplog.replaceDB(db),
-		Role:              q.Role.replaceDB(db),
-		RoleMenu:          q.RoleMenu.replaceDB(db),
-		User:              q.User.replaceDB(db),
+		db:          db,
+		Certificate: q.Certificate.replaceDB(db),
+		GridChunk:   q.GridChunk.replaceDB(db),
+		GridFile:    q.GridFile.replaceDB(db),
+		Menu:        q.Menu.replaceDB(db),
+		OAuthConfig: q.OAuthConfig.replaceDB(db),
+		Oplog:       q.Oplog.replaceDB(db),
+		Role:        q.Role.replaceDB(db),
+		RoleMenu:    q.RoleMenu.replaceDB(db),
+		User:        q.User.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
-	ConfigCertificate *configCertificateDo
-	GridChunk         *gridChunkDo
-	GridFile          *gridFileDo
-	Menu              *menuDo
-	OAuthConfig       *oAuthConfigDo
-	Oplog             *oplogDo
-	Role              *roleDo
-	RoleMenu          *roleMenuDo
-	User              *userDo
+	Certificate *certificateDo
+	GridChunk   *gridChunkDo
+	GridFile    *gridFileDo
+	Menu        *menuDo
+	OAuthConfig *oAuthConfigDo
+	Oplog       *oplogDo
+	Role        *roleDo
+	RoleMenu    *roleMenuDo
+	User        *userDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
-		ConfigCertificate: q.ConfigCertificate.WithContext(ctx),
-		GridChunk:         q.GridChunk.WithContext(ctx),
-		GridFile:          q.GridFile.WithContext(ctx),
-		Menu:              q.Menu.WithContext(ctx),
-		OAuthConfig:       q.OAuthConfig.WithContext(ctx),
-		Oplog:             q.Oplog.WithContext(ctx),
-		Role:              q.Role.WithContext(ctx),
-		RoleMenu:          q.RoleMenu.WithContext(ctx),
-		User:              q.User.WithContext(ctx),
+		Certificate: q.Certificate.WithContext(ctx),
+		GridChunk:   q.GridChunk.WithContext(ctx),
+		GridFile:    q.GridFile.WithContext(ctx),
+		Menu:        q.Menu.WithContext(ctx),
+		OAuthConfig: q.OAuthConfig.WithContext(ctx),
+		Oplog:       q.Oplog.WithContext(ctx),
+		Role:        q.Role.WithContext(ctx),
+		RoleMenu:    q.RoleMenu.WithContext(ctx),
+		User:        q.User.WithContext(ctx),
 	}
 }
 

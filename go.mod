@@ -30,7 +30,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
-	github.com/google/pprof v0.0.0-20250208200701-d0013a598941 // indirect
+	github.com/google/pprof v0.0.0-20250302191652-9094ed2288e7 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.6.0 // indirect

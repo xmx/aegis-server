@@ -101,7 +101,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	oplogRepo := repository.NewOplog(qry)
 	oplogService := service.NewOplog(oplogRepo, log)
-	configCertificateService := service.NewConfigCertificate(poolTLS, qry, log)
+	configCertificateService := service.NewCertificate(poolTLS, qry, log)
 	if num, exx := configCertificateService.Refresh(ctx); exx != nil { // 初始化刷新证书池。
 		log.Error("初始化证书错误", slog.Any("error", exx))
 		return exx
@@ -121,7 +121,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	modules := []jsvm.Module{fileService}
 	routes := []shipx.Router{
 		restapi.NewAuth(),
-		restapi.NewConfigCertificate(configCertificateService),
+		restapi.NewCertificate(configCertificateService),
 		restapi.NewDAV(basePath, "/"),
 		restapi.NewFile(fileService),
 		restapi.NewLog(logService),
