@@ -19,32 +19,32 @@ type Certificate struct {
 	svc *service.Certificate
 }
 
-func (cc *Certificate) Route(r *ship.RouteGroupBuilder) error {
-	r.Route("/certificates").GET(cc.page)
-	r.Route("/certificate/download").GET(cc.download)
-	r.Route("/certificate/refresh").GET(cc.refresh)
-	r.Route("/certificate/cond").GET(cc.cond)
+func (crt *Certificate) Route(r *ship.RouteGroupBuilder) error {
+	r.Route("/certificates").GET(crt.page)
+	r.Route("/certificate/download").GET(crt.download)
+	r.Route("/certificate/refresh").GET(crt.refresh)
+	r.Route("/certificate/cond").GET(crt.cond)
 	r.Route("/certificate").
-		GET(cc.detail).
-		POST(cc.create).
-		PUT(cc.update).
-		DELETE(cc.delete)
+		GET(crt.detail).
+		POST(crt.create).
+		PUT(crt.update).
+		DELETE(crt.delete)
 
 	return nil
 }
 
-func (cc *Certificate) cond(c *ship.Context) error {
-	ret := cc.svc.Cond()
+func (crt *Certificate) cond(c *ship.Context) error {
+	ret := crt.svc.Cond()
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (cc *Certificate) page(c *ship.Context) error {
+func (crt *Certificate) page(c *ship.Context) error {
 	req := new(request.PageCondition)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
-	ret, err := cc.svc.Page(ctx, req)
+	ret, err := crt.svc.Page(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -52,34 +52,34 @@ func (cc *Certificate) page(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (cc *Certificate) create(c *ship.Context) error {
+func (crt *Certificate) create(c *ship.Context) error {
 	req := new(request.ConfigCertificateCreate)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return cc.svc.Create(ctx, req)
+	return crt.svc.Create(ctx, req)
 }
 
-func (cc *Certificate) update(c *ship.Context) error {
+func (crt *Certificate) update(c *ship.Context) error {
 	req := new(request.ConfigCertificateUpdate)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return cc.svc.Update(ctx, req)
+	return crt.svc.Update(ctx, req)
 }
 
-func (cc *Certificate) detail(c *ship.Context) error {
+func (crt *Certificate) detail(c *ship.Context) error {
 	req := new(request.Int64ID)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 
 	ctx := c.Request().Context()
-	ret, err := cc.svc.Detail(ctx, req.ID)
+	ret, err := crt.svc.Detail(ctx, req.ID)
 	if err != nil {
 		return err
 	}
@@ -87,24 +87,24 @@ func (cc *Certificate) detail(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (cc *Certificate) delete(c *ship.Context) error {
+func (crt *Certificate) delete(c *ship.Context) error {
 	req := new(request.Int64IDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return cc.svc.Delete(ctx, req.ID)
+	return crt.svc.Delete(ctx, req.ID)
 }
 
-func (cc *Certificate) download(c *ship.Context) error {
+func (crt *Certificate) download(c *ship.Context) error {
 	req := new(request.Int64IDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	dats, err := cc.svc.Find(ctx, req.ID)
+	dats, err := crt.svc.Find(ctx, req.ID)
 	if err != nil {
 		return err
 	}
@@ -158,8 +158,8 @@ func (cc *Certificate) download(c *ship.Context) error {
 	return err
 }
 
-func (cc *Certificate) refresh(c *ship.Context) error {
+func (crt *Certificate) refresh(c *ship.Context) error {
 	ctx := c.Request().Context()
-	_, err := cc.svc.Refresh(ctx)
+	_, err := crt.svc.Refresh(ctx)
 	return err
 }
