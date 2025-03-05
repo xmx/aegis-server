@@ -14,70 +14,63 @@ import (
 	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
-	"github.com/xmx/aegis-server/datalayer/condition"
+	"github.com/xmx/aegis-server/datalayer/dynsql"
 	"github.com/xmx/aegis-server/datalayer/model"
-	"github.com/xmx/aegis-server/datalayer/pagination"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/library/credential"
-	"gorm.io/gen/field"
 )
 
-func NewCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) *Certificate {
-	mod := new(model.Certificate)
-	tbl := qry.Certificate
-	ctx := context.Background()
-	db := tbl.WithContext(ctx).UnderlyingDB()
-	ignores := []field.Expr{
-		tbl.PublicKey, tbl.PrivateKey, tbl.CertificateSHA256,
-		tbl.PublicKeySHA256, tbl.PrivateKeySHA256,
+func NewCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) (*Certificate, error) {
+	opt := dynsql.Options{}
+	tbl, err := dynsql.Parse(qry, []any{model.Certificate{}}, opt)
+	if err != nil {
+		return nil, err
 	}
-	opt := &condition.ParserOptions{IgnoreOrder: ignores, IgnoreWhere: ignores}
-	cond, _ := condition.ParseModel(db, mod, opt)
 
 	return &Certificate{
 		pool:  pool,
 		qry:   qry,
-		cond:  cond,
+		tbl:   tbl,
 		log:   log,
 		limit: 100,
-	}
+	}, nil
 }
 
 type Certificate struct {
 	pool  credential.Certifier // 证书池。
 	log   *slog.Logger
 	qry   *query.Query
-	cond  *condition.Cond
+	tbl   *dynsql.Table
 	mutex sync.Mutex
 	limit int64 // 数据库最多可保存的证书数量。
 }
 
 func (crt *Certificate) Cond() *response.Cond {
-	return response.ReadCond(crt.cond)
+	return response.ReadCond(crt.tbl)
 }
 
-func (crt *Certificate) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.Certificate], error) {
-	tbl := crt.qry.Certificate
-	scope := crt.cond.Scope(req.AllInputs())
-	dao := tbl.WithContext(ctx).Scopes(scope)
-	cnt, err := dao.Count()
-	if err != nil {
-		return nil, err
-	}
-	pager := pagination.NewPager[*model.Certificate](req.PageSize())
-	if cnt == 0 {
-		empty := pager.Empty()
-		return empty, nil
-	}
-
-	omits := []field.Expr{tbl.PublicKey, tbl.PrivateKey}
-	dats, err := dao.Omit(omits...).Scopes(pager.Scope(cnt)).Find()
-	if err != nil {
-		return nil, err
-	}
-	ret := pager.Result(dats)
-
-	return ret, nil
+func (crt *Certificate) Page(ctx context.Context, req *request.Pages) (*response.Pages[*model.Certificate], error) {
+	//tbl := crt.qry.Certificate
+	//scope := crt.cond.Scope(req.AllInputs())
+	//dao := tbl.WithContext(ctx).Scopes(scope)
+	//cnt, err := dao.Count()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//pages := response.NewPages[*model.Certificate](req.PageSize())
+	//if cnt == 0 {
+	//	return pages.Empty(), nil
+	//}
+	//
+	//omits := []field.Expr{tbl.PublicKey, tbl.PrivateKey}
+	//dats, err := dao.Omit(omits...).Scopes(pages.FP(cnt)).Find()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//return pages.SetRecords(dats), nil
+	return nil, nil
 }
 
 func (crt *Certificate) Find(ctx context.Context, ids []int64) ([]*model.Certificate, error) {

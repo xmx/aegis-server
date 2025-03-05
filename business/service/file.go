@@ -10,7 +10,6 @@ import (
 	"github.com/xmx/aegis-server/datalayer/dynsql"
 	"github.com/xmx/aegis-server/datalayer/gridfs"
 	"github.com/xmx/aegis-server/datalayer/model"
-	"github.com/xmx/aegis-server/datalayer/pagination"
 	"github.com/xmx/aegis-server/datalayer/query"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"gorm.io/gen/field"
@@ -42,11 +41,11 @@ func (f *File) Register(root *jsvm.Object) error {
 	return nil
 }
 
-func (f *File) Cond() *response.Cond1 {
-	return response.ReadCond1(f.tbl)
+func (f *File) Cond() *response.Cond {
+	return response.ReadCond(f.tbl)
 }
 
-func (f *File) Page(ctx context.Context, req *request.PageCondition) (*pagination.Result[*model.GridFile], error) {
+func (f *File) Page(ctx context.Context, req *request.Pages) (*response.Pages[*model.GridFile], error) {
 	//tbl := f.qry.GridFile
 	//scope := f.cond.Scope(req.AllInputs())
 	//dao := tbl.WithContext(ctx).Scopes(scope)

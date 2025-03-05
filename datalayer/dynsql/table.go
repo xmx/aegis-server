@@ -88,7 +88,7 @@ func (t Table) buildWhere(input *WhereInput) (field.Expr, field.Expr, error) {
 	if where == nil {
 		return nil, nil, errors.New(input.ID + " is not exist")
 	}
-	id, _ := input.Operator.OpInfo()
+	id, _ := input.Operator.Info()
 	op := where.opMaps[id]
 	if op == nil {
 		return nil, nil, errors.New("operator " + id + " is not exist")

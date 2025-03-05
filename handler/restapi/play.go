@@ -5,9 +5,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/xmx/aegis-server/jsenv/jsmod"
-
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/jsenv/jsmod"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 

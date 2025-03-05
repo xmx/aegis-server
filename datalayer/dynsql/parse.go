@@ -60,7 +60,7 @@ func Parse(qry *query.Query, mods []any, opt Options) (*Table, error) {
 				if w := opt.Where(where); w != nil && len(w.Operators) != 0 {
 					opMaps := make(map[string]Operator, len(w.Operators))
 					for _, o := range w.Operators {
-						id, _ := o.OpInfo()
+						id, _ := o.Info()
 						opMaps[id] = o
 					}
 					w.db, w.opMaps = db, opMaps

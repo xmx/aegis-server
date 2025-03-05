@@ -15,22 +15,21 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-    
-    - name: 拉取代码
-      uses: actions/checkout@v4
 
-    - name: 安装环境
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.24'
-        check-latest: true
+      - name: 拉取代码
+        uses: actions/checkout@v4
 
-    - name: 编译程序
-      run: sh build.sh
+      - name: 安装环境
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          check-latest: true
 
-    - name: 下载程序
-      uses: actions/upload-artifact@v4
-      with: 
-        name: aegis-server-linux
-        path: aegis-server-*
-        
+      - name: 编译程序
+        run: sh build.sh
+
+      - name: 下载程序
+        uses: actions/upload-artifact@v4
+        with:
+          name: aegis-server-linux
+          path: aegis-server-*

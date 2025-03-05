@@ -13,7 +13,6 @@ import (
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/gridfs"
 	"github.com/xmx/aegis-server/datalayer/query"
-	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
@@ -99,10 +98,13 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
 	poolTLS := credential.NewPool(baseTLS)
 
-	oplogRepo := repository.NewOplog(qry)
-	oplogService := service.NewOplog(oplogRepo, log)
-	configCertificateService := service.NewCertificate(poolTLS, qry, log)
-	if num, exx := configCertificateService.Refresh(ctx); exx != nil { // 初始化刷新证书池。
+	oplogSvc := service.NewOplog(qry, log)
+	certificateSvc, err := service.NewCertificate(poolTLS, qry, log)
+	if err != nil {
+		return err
+	}
+
+	if num, exx := certificateSvc.Refresh(ctx); exx != nil { // 初始化刷新证书池。
 		log.Error("初始化证书错误", slog.Any("error", exx))
 		return exx
 	} else {
@@ -110,23 +112,23 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	dbfs := gridfs.NewFS(qry)
-	logService := service.NewLog(logLevel, gormLevel, logWriter, log)
-	termService := service.NewTerm(log)
-	fileService, err := service.NewFile(qry, dbfs, log)
+	logSvc := service.NewLog(logLevel, gormLevel, logWriter, log)
+	termSvc := service.NewTerm(log)
+	fileSvc, err := service.NewFile(qry, dbfs, log)
 	if err != nil {
 		return err
 	}
 
 	const basePath = "/api"
-	modules := []jsvm.Module{fileService}
+	modules := []jsvm.Module{fileSvc}
 	routes := []shipx.Router{
 		restapi.NewAuth(),
-		restapi.NewCertificate(configCertificateService),
+		restapi.NewCertificate(certificateSvc),
 		restapi.NewDAV(basePath, "/"),
-		restapi.NewFile(fileService),
-		restapi.NewLog(logService),
-		restapi.NewOplog(oplogService),
-		restapi.NewTerm(termService),
+		restapi.NewFile(fileSvc),
+		restapi.NewLog(logSvc),
+		restapi.NewOplog(oplogSvc),
+		restapi.NewTerm(termSvc),
 		restapi.NewPlay(modules),
 	}
 
@@ -140,7 +142,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		sh.Route("/").Static(static)
 	}
 
-	baseAPI := sh.Group(basePath).Use(middle.WAF(oplogRepo.Create))
+	baseAPI := sh.Group(basePath).Use(middle.WAF(oplogSvc.Create))
 	if err = shipx.BindRouters(baseAPI, routes); err != nil { // 注册路由
 		return err
 	}

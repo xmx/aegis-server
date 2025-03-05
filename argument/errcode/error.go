@@ -20,8 +20,9 @@ const (
 )
 
 var (
-	ErrNotFound           = NewI18nError(http.StatusNotFound, "not-found")
-	ErrTooManyCertificate = NewI18nError(http.StatusBadRequest, "too-many-certificate")
+	ErrNotFound           = NewI18nError(http.StatusNotFound, "not_found")
+	ErrRequiredArgs       = NewI18nError(http.StatusBadRequest, "required_args")
+	ErrTooManyCertificate = NewI18nError(http.StatusBadRequest, "too_many_certificate")
 )
 
 type formatError string

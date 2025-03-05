@@ -30,7 +30,7 @@ func (l *Oplog) cond(c *ship.Context) error {
 }
 
 func (l *Oplog) page(c *ship.Context) error {
-	req := new(request.PageCondition)
+	req := new(request.Pages)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func (l *Oplog) detail(c *ship.Context) error {
 }
 
 func (l *Oplog) delete(c *ship.Context) error {
-	req := new(request.CondWhereInputs)
+	req := new(request.Pages)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}

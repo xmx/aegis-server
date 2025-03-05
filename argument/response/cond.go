@@ -1,50 +1,6 @@
 package response
 
-import (
-	"github.com/xmx/aegis-server/datalayer/condition"
-	"github.com/xmx/aegis-server/datalayer/dynsql"
-)
-
-type Cond struct {
-	Wheres []*CondWhere `json:"wheres,omitempty"`
-	Orders []*CondOrder `json:"orders,omitempty"`
-}
-
-type CondOrder struct {
-	Name    string `json:"name"`
-	Comment string `json:"comment"`
-}
-
-type CondWhere struct {
-	Name      string   `json:"name"`
-	Comment   string   `json:"comment"`
-	Operators []string `json:"operators"`
-}
-
-func ReadCond(c *condition.Cond) *Cond {
-	ret := new(Cond)
-	if c == nil {
-		return ret
-	}
-
-	for _, f := range c.OrderFields() {
-		name, comment := f.NameComment()
-		data := &CondOrder{Name: name, Comment: comment}
-		ret.Orders = append(ret.Orders, data)
-	}
-	for _, f := range c.WhereFields() {
-		name, comment := f.NameComment()
-		data := &CondWhere{Name: name, Comment: comment}
-		ops := f.Operators()
-		for _, op := range ops {
-			data.Operators = append(data.Operators, op.String())
-		}
-
-		ret.Wheres = append(ret.Wheres, data)
-	}
-
-	return ret
-}
+import "github.com/xmx/aegis-server/datalayer/dynsql"
 
 type CondEnums []*CondEnum
 
@@ -53,9 +9,9 @@ type CondEnum struct {
 	Name  string `json:"name"`  // 枚举说明
 }
 
-type CondOrders []*CondOrder1
+type CondOrders []*CondOrder
 
-type CondOrder1 struct {
+type CondOrder struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
@@ -67,9 +23,9 @@ type CondOperator struct {
 	Name string `json:"name"`
 }
 
-type CondWheres []*CondWhere1
+type CondWheres []*CondWhere
 
-type CondWhere1 struct {
+type CondWhere struct {
 	ID        string        `json:"id"`
 	Name      string        `json:"name"`
 	Type      string        `json:"type"`
@@ -77,13 +33,13 @@ type CondWhere1 struct {
 	Operators CondOperators `json:"operators"`
 }
 
-type Cond1 struct {
+type Cond struct {
 	Wheres CondWheres `json:"wheres,omitempty,omitzero"`
 	Orders CondOrders `json:"orders,omitempty,omitzero"`
 }
 
-func ReadCond1(tbl *dynsql.Table) *Cond1 {
-	cd := new(Cond1)
+func ReadCond(tbl *dynsql.Table) *Cond {
+	cd := new(Cond)
 	wheres, orders := tbl.RawColumns()
 	for _, w := range wheres {
 		enums := make(CondEnums, 0, len(w.Enums))
@@ -93,11 +49,11 @@ func ReadCond1(tbl *dynsql.Table) *Cond1 {
 		}
 		operators := make(CondOperators, 0, len(w.Operators))
 		for _, o := range w.Operators {
-			id, name := o.OpInfo()
+			id, name := o.Info()
 			operators = append(operators, &CondOperator{ID: id, Name: name})
 		}
 
-		cw := &CondWhere1{
+		cw := &CondWhere{
 			ID:        w.ID,
 			Name:      w.Name,
 			Type:      string(w.Type),
@@ -107,7 +63,7 @@ func ReadCond1(tbl *dynsql.Table) *Cond1 {
 		cd.Wheres = append(cd.Wheres, cw)
 	}
 	for _, o := range orders {
-		co := &CondOrder1{ID: o.ID, Name: o.Name}
+		co := &CondOrder{ID: o.ID, Name: o.Name}
 		cd.Orders = append(cd.Orders, co)
 	}
 

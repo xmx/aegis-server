@@ -6,7 +6,7 @@ import (
 )
 
 type PageKeyword struct {
-	Page
+	Pages
 	OptionalKeyword
 }
 

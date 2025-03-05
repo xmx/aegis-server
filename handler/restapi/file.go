@@ -83,7 +83,7 @@ func (f *File) download(c *ship.Context) error {
 }
 
 func (f *File) page(c *ship.Context) error {
-	req := new(request.PageCondition)
+	req := new(request.Pages)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
