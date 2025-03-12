@@ -4,21 +4,16 @@
   // 类似于 springboot profile 配置，根据配置切换配置文件。
   // https://docs.spring.io/spring-boot/reference/features/profiles.html
   "active": "dev",
+  "server": {
+    "addr": "0.0.0.0:443",
+    "static": "resources/static/",
+    "cert": "resources/tls/server.crt",
+    "pkey": "resources/tls/server.key"
+  },
   // 数据库配置相关。
   "database": {
-    // DSN Data Source Name 数据库连接。
-    "dsn": "root:password@tcp(localhost:3306)/dbname?tls=yourTLS&parseTime=True&timeout=10s",
-    // 最大连接数。
-    "max_open_conn": 100,
-    // 最大空闲连接数。
-    "max_idle_conn": 10,
-    // 连接最大生命周期。
-    "max_lifetime": "24h",
-    // 最大空闲时间。
-    "max_idle_time": "1h",
-    // 是否通过迁移表结构差异。部署时或升级版本数据库表结构发生变更时开启一次后关闭，
-    // 不推荐保持开启状态。
-    "migrate": true
+    // MongoDB 数据库连接。
+    "uri": "mongodb+srv://<username>:<password>@mongo.example.com/<dbname>?retryWrites=true&w=majority&appName=dev"
   },
   // 日志配置。
   "logger": {
@@ -39,11 +34,5 @@
     "localtime": true,
     // https://github.com/natefinch/lumberjack/blob/v2.2.1/lumberjack.go#L106-L108
     "compress": true
-  },
-  "server": {
-    "addr": "0.0.0.0:443",
-    "static": "resources/static/",
-    "cert": "resources/tls/server.crt",
-    "pkey": "resources/tls/server.key"
   }
 }

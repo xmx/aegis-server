@@ -9,8 +9,8 @@ type ConfigCertificateCreate struct {
 }
 
 type ConfigCertificateUpdate struct {
-	Int64ID
-	PublicKey  *multipart.FileHeader `form:"public_key"`
-	PrivateKey *multipart.FileHeader `form:"private_key"`
-	Enabled    bool                  `form:"enabled"`
+	ObjectID
+	PublicKey  *multipart.FileHeader `json:"public_key"  form:"public_key"  validate:"required"`
+	PrivateKey *multipart.FileHeader `json:"private_key" form:"private_key" validate:"required"`
+	Enabled    bool                  `json:"enabled"     form:"enabled"`
 }

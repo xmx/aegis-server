@@ -4,11 +4,12 @@ import (
 	"archive/zip"
 	"mime"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/business/service"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func NewCertificate(svc *service.Certificate) *Certificate {
@@ -23,7 +24,6 @@ func (crt *Certificate) Route(r *ship.RouteGroupBuilder) error {
 	r.Route("/certificates").GET(crt.page)
 	r.Route("/certificate/download").GET(crt.download)
 	r.Route("/certificate/refresh").GET(crt.refresh)
-	r.Route("/certificate/cond").GET(crt.cond)
 	r.Route("/certificate").
 		GET(crt.detail).
 		POST(crt.create).
@@ -33,13 +33,8 @@ func (crt *Certificate) Route(r *ship.RouteGroupBuilder) error {
 	return nil
 }
 
-func (crt *Certificate) cond(c *ship.Context) error {
-	ret := crt.svc.Cond()
-	return c.JSON(http.StatusOK, ret)
-}
-
 func (crt *Certificate) page(c *ship.Context) error {
-	req := new(request.Pages)
+	req := new(request.PageKeywords)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
@@ -73,13 +68,14 @@ func (crt *Certificate) update(c *ship.Context) error {
 }
 
 func (crt *Certificate) detail(c *ship.Context) error {
-	req := new(request.Int64ID)
+	req := new(request.ObjectID)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 
 	ctx := c.Request().Context()
-	ret, err := crt.svc.Detail(ctx, req.ID)
+	oid, _ := bson.ObjectIDFromHex(req.ID)
+	ret, err := crt.svc.Detail(ctx, oid)
 	if err != nil {
 		return err
 	}
@@ -88,23 +84,23 @@ func (crt *Certificate) detail(c *ship.Context) error {
 }
 
 func (crt *Certificate) delete(c *ship.Context) error {
-	req := new(request.Int64IDs)
+	req := new(request.ObjectIDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	return crt.svc.Delete(ctx, req.ID)
+	return crt.svc.Delete(ctx, req.OIDs())
 }
 
 func (crt *Certificate) download(c *ship.Context) error {
-	req := new(request.Int64IDs)
+	req := new(request.ObjectIDs)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 	ctx := c.Request().Context()
 
-	dats, err := crt.svc.Find(ctx, req.ID)
+	dats, err := crt.svc.Find(ctx, req.OIDs())
 	if err != nil {
 		return err
 	}
@@ -128,31 +124,34 @@ func (crt *Certificate) download(c *ship.Context) error {
 	c.SetRespHeader(ship.HeaderContentDisposition, disposition)
 	c.WriteHeader(http.StatusOK)
 
-	zw := zip.NewWriter(c.ResponseWriter())
+	zipfs := zip.NewWriter(c.ResponseWriter())
 	//goland:noinspection GoUnhandledErrorResult
-	defer zw.Close()
+	defer zipfs.Close()
 
+	// 这些字符不允许当作文件名。
+	replacer := strings.NewReplacer("\\", "_", "/", "_", ":", "_", "*", "_",
+		"?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
 	unique := make(map[string]struct{}, size)
 	for _, dat := range dats {
-		commonName := dat.CommonName
+		commonName := replacer.Replace(dat.CommonName)
 		if _, ok := unique[commonName]; ok {
-			sid := strconv.FormatInt(dat.ID, 10)
-			commonName = sid + "-" + commonName
+			sid := dat.ID.Hex()
+			commonName = commonName + "-" + sid
 		}
 		unique[commonName] = struct{}{}
 
-		cw, err := zw.Create(commonName + ".crt")
+		cw, exx := zipfs.Create(commonName + ".crt")
+		if exx != nil {
+			return exx
+		}
+		if _, err = cw.Write(dat.PublicKey); err != nil {
+			return err
+		}
+		cw, err = zipfs.Create(commonName + ".key")
 		if err != nil {
 			return err
 		}
-		if _, err = cw.Write([]byte(dat.PublicKey)); err != nil {
-			return err
-		}
-		cw, err = zw.Create(commonName + ".key")
-		if err != nil {
-			return err
-		}
-		_, err = cw.Write([]byte(dat.PrivateKey))
+		_, err = cw.Write(dat.PrivateKey)
 	}
 
 	return err

@@ -9,81 +9,55 @@ import (
 	"encoding/hex"
 	"io"
 	"log/slog"
-	"sync"
+	"time"
+
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/request"
-	"github.com/xmx/aegis-server/argument/response"
-	"github.com/xmx/aegis-server/datalayer/dynsql"
 	"github.com/xmx/aegis-server/datalayer/model"
-	"github.com/xmx/aegis-server/datalayer/query"
+	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/library/credential"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func NewCertificate(pool credential.Certifier, qry *query.Query, log *slog.Logger) (*Certificate, error) {
-	opt := dynsql.Options{}
-	tbl, err := dynsql.Parse(qry, []any{model.Certificate{}}, opt)
-	if err != nil {
-		return nil, err
-	}
-
+func NewCertificate(repo repository.Certificate, pool credential.Certifier, log *slog.Logger) (*Certificate, error) {
 	return &Certificate{
-		pool:  pool,
-		qry:   qry,
-		tbl:   tbl,
-		log:   log,
-		limit: 100,
+		repo: repo,
+		pool: pool,
+		log:  log,
 	}, nil
 }
 
 type Certificate struct {
-	pool  credential.Certifier // 证书池。
-	log   *slog.Logger
-	qry   *query.Query
-	tbl   *dynsql.Table
-	mutex sync.Mutex
-	limit int64 // 数据库最多可保存的证书数量。
+	repo repository.Certificate
+	pool credential.Certifier // 证书池。
+	log  *slog.Logger
 }
 
-func (crt *Certificate) Cond() *response.Cond {
-	return response.ReadCond(crt.tbl)
+func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*repository.Pages[model.Certificate], error) {
+	filter := make(bson.M, 4)
+	if arr := req.Regexps("common_name", "dns_names"); len(arr) != 0 {
+		filter["$or"] = arr
+	}
+
+	projection := bson.M{"public_key": 0, "private_key": 0}
+	opt := options.Find().SetProjection(projection)
+
+	return crt.repo.FindPage(ctx, filter, req.Page, req.Size, opt)
 }
 
-func (crt *Certificate) Page(ctx context.Context, req *request.Pages) (*response.Pages[*model.Certificate], error) {
-	//tbl := crt.qry.Certificate
-	//scope := crt.cond.Scope(req.AllInputs())
-	//dao := tbl.WithContext(ctx).Scopes(scope)
-	//cnt, err := dao.Count()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//pages := response.NewPages[*model.Certificate](req.PageSize())
-	//if cnt == 0 {
-	//	return pages.Empty(), nil
-	//}
-	//
-	//omits := []field.Expr{tbl.PublicKey, tbl.PrivateKey}
-	//dats, err := dao.Omit(omits...).Scopes(pages.FP(cnt)).Find()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//return pages.SetRecords(dats), nil
-	return nil, nil
-}
-
-func (crt *Certificate) Find(ctx context.Context, ids []int64) ([]*model.Certificate, error) {
+func (crt *Certificate) Find(ctx context.Context, ids []bson.ObjectID) ([]*model.Certificate, error) {
 	if len(ids) == 0 {
 		return []*model.Certificate{}, nil
 	}
-	tbl := crt.qry.Certificate
-	dao := tbl.WithContext(ctx)
-	return dao.Where(tbl.ID.In(ids...)).Find()
+
+	return crt.repo.Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
 }
 
 //goland:noinspection GoUnhandledErrorResult
 func (crt *Certificate) Create(ctx context.Context, req *request.ConfigCertificateCreate) error {
+	now := time.Now()
 	pubKey, priKey := req.PublicKey, req.PrivateKey
 	pubKeyFile, err := pubKey.Open()
 	if err != nil {
@@ -111,26 +85,15 @@ func (crt *Certificate) Create(ctx context.Context, req *request.ConfigCertifica
 		return err
 	}
 
-	crt.mutex.Lock()
-	defer crt.mutex.Unlock()
-
 	// 检查证书指纹，避免出现证书重复。
-	tbl := crt.qry.Certificate
-	dao := tbl.WithContext(ctx)
-	if cnt, _ := dao.Where(tbl.CertificateSHA256.Eq(dat.CertificateSHA256)).
-		Count(); cnt > 0 {
+	filter := bson.M{"certificate_sha256": dat.CertificateSHA256}
+	if cnt, exx := crt.repo.CountDocuments(ctx, filter); exx != nil {
+		return exx
+	} else if cnt > 0 {
 		return errcode.ErrCertificateExisted
 	}
-
-	// 检查证书是否已超过限制个数。
-	if cnt, _ := dao.Count(); cnt >= crt.limit {
-		return errcode.FmtTooManyCertificate.Fmt(crt.limit)
-	}
-	// 新增证书。
-	if err = dao.Create(dat); err != nil || !enabled {
-		return err
-	}
-	_, err = crt.Refresh(ctx)
+	dat.CreatedAt, dat.UpdatedAt = now, now
+	_, err = crt.repo.InsertOne(ctx, dat)
 
 	return err
 }
@@ -174,44 +137,34 @@ func (crt *Certificate) Update(ctx context.Context, req *request.ConfigCertifica
 	return nil
 }
 
-func (crt *Certificate) Delete(ctx context.Context, ids []int64) error {
+func (crt *Certificate) Delete(ctx context.Context, ids []bson.ObjectID) error {
 	if len(ids) == 0 {
 		return nil
 	}
 
-	crt.mutex.Lock()
-	defer crt.mutex.Unlock()
-
-	tbl := crt.qry.Certificate
-	dao := tbl.WithContext(ctx)
-	cnt, _ := dao.Where(tbl.ID.In(ids...), tbl.Enabled.Is(true)).Count()
-	_, err := dao.Where(tbl.ID.In(ids...)).Delete()
-	if err != nil || cnt == 0 {
+	filter := bson.M{"_id": bson.M{"$in": ids}}
+	if _, err := crt.repo.DeleteMany(ctx, filter); err != nil {
 		return err
 	}
-	_, err = crt.Refresh(ctx)
+	_, err := crt.Refresh(ctx)
 
 	return err
 }
 
-func (crt *Certificate) Detail(ctx context.Context, id int64) (*model.Certificate, error) {
-	tbl := crt.qry.Certificate
-	return tbl.WithContext(ctx).
-		Where(tbl.ID.Eq(id)).
-		First()
+func (crt *Certificate) Detail(ctx context.Context, id bson.ObjectID) (*model.Certificate, error) {
+	return crt.repo.FindByID(ctx, id)
 }
 
 func (crt *Certificate) Refresh(ctx context.Context) (int, error) {
-	tbl := crt.qry.Certificate
-	dao := tbl.WithContext(ctx)
-	dats, err := dao.Where(tbl.Enabled.Is(true)).Find()
+	crts, err := crt.repo.Find(ctx, bson.M{"enabled": true})
 	if err != nil {
-		crt.log.Error("查询所有开启的证书错误", slog.Any("error", err))
 		return 0, err
+	} else if len(crts) == 0 {
+		return 0, nil
 	}
 
-	certs := make([]tls.Certificate, 0, len(dats))
-	for _, dat := range dats {
+	certs := make([]tls.Certificate, 0, len(crts))
+	for _, dat := range crts {
 		cert, exx := tls.X509KeyPair(dat.PublicKey, dat.PrivateKey)
 		if exx != nil {
 			crt.log.Error("处理证书错误", slog.Any("error", err))
@@ -249,7 +202,6 @@ func (crt *Certificate) parseCertificate(publicKey, privateKey []byte, enabled b
 	// 计算指纹
 	certSHA256, pubKeySHA256, priKeySHA256 := crt.fingerprintSHA256(cert)
 	dat := &model.Certificate{
-		ID:                0,
 		Enabled:           enabled,
 		CommonName:        sub.CommonName,
 		PublicKey:         publicKey,
@@ -291,8 +243,8 @@ func (*Certificate) fingerprintSHA256(cert tls.Certificate) (certSHA256, pubKeyS
 	sum256 := sha256.Sum256(leaf.Raw)
 	certSHA256 = hex.EncodeToString(sum256[:])
 
-	if pkix, _ := x509.MarshalPKIXPublicKey(leaf.PublicKey); len(pkix) != 0 {
-		sum := sha256.Sum256(pkix)
+	if pki, _ := x509.MarshalPKIXPublicKey(leaf.PublicKey); len(pki) != 0 {
+		sum := sha256.Sum256(pki)
 		pubKeySHA256 = hex.EncodeToString(sum[:])
 	}
 

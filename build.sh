@@ -1,20 +1,21 @@
 #!/usr/bin/env bash
 
-directory=$(basename $(pwd))                           # 获取当前目录名字
-executable=${directory}-$(date +%Y%m%d)$(go env GOEXE) # 生成可执行文件名
+# 1. 获取程序名。
+DIR_NAME=$(basename $(pwd))
+NOW=$(date)
+VER=$(date -d "$NOW" +"%y.%-m.%-d-%H%M%S")
+BIN_NAME=${DIR_NAME}"-"v$VER$(go env GOEXE)
+echo "程序名为："${BIN_NAME}
 
-compile_time=$(date) # 生成编译时间
-if [ $(uname -s) = "Linux" ]; then
-    compile_time=$(date --iso-8601=seconds)
-fi
-
+# 2. 如果执行的是清理命令，清理完就退出。
 go clean -cache
-rm -rf ${directory}-*
-ld_flags="-s -w -extldflags -static -X 'github.com/xmx/aegis-server/banner.compileTime=${compile_time}'"
-go build -o ${executable} -v -trimpath -ldflags "${ld_flags}" ./main/
-
-if [ $? -eq 0 ]; then # 如果存在 upx 则进行压缩。
-    if command -v upx &> /dev/null; then
-        upx -9 ${executable}
-    fi
+if [ "$1" = "clean" ]; then
+    rm -rf ${DIR_NAME}*
+    echo "清理结束"
+    exit 0
 fi
+
+ld_flags="-s -w -extldflags -static -X 'github.com/xmx/aegis-server/banner.compileTime=${compile_time}'"
+go build -o ${BIN_NAME} -trimpath -v -ldflags "${ld_flags}" ./main/
+
+echo "编译结束"

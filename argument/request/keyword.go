@@ -1,56 +1,38 @@
 package request
 
 import (
-	"gorm.io/gen"
-	"gorm.io/gen/field"
+	"strings"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type PageKeyword struct {
+type PageKeywords struct {
 	Pages
-	OptionalKeyword
+	Keywords
 }
 
-type OptionalKeyword struct {
+type Keywords struct {
 	Keyword string `json:"keyword" query:"keyword" form:"keyword" validate:"lte=100"`
 }
 
-func (o OptionalKeyword) LikeScope(fields ...field.String) func(gen.Dao) gen.Dao {
-	size, kw := len(fields), o.Keyword
-	if size == 0 || kw == "" {
-		return func(dao gen.Dao) gen.Dao { return dao }
+func (k Keywords) Regexps(fields ...string) bson.A {
+	regex := k.Regexp()
+	if regex == nil || len(fields) == 0 {
+		return nil
 	}
 
-	word := "%" + kw + "%"
-	return func(dao gen.Dao) gen.Dao {
-		conds := make([]gen.Condition, 0, size)
-		for _, f := range fields {
-			conds = append(conds, f.Like(word))
-		}
-		return dao.Or(conds...)
+	arr := make(bson.A, 0, len(fields))
+	for _, field := range fields {
+		arr = append(arr, bson.M{field: regex})
 	}
+
+	return arr
 }
 
-func (o OptionalKeyword) Like() string {
-	if kw := o.String(); kw != "" {
-		return "%" + kw + "%"
+func (k Keywords) Regexp() *bson.Regex {
+	if kw := strings.TrimSpace(k.Keyword); kw == "" {
+		return nil
+	} else {
+		return &bson.Regex{Pattern: kw, Options: "i"}
 	}
-	return ""
-}
-
-func (o OptionalKeyword) LLike() string {
-	if kw := o.String(); kw != "" {
-		return "%" + kw
-	}
-	return ""
-}
-
-func (o OptionalKeyword) RLike() string {
-	if kw := o.String(); kw != "" {
-		return kw + "%"
-	}
-	return ""
-}
-
-func (o OptionalKeyword) String() string {
-	return o.Keyword
 }
