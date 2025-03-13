@@ -69,7 +69,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 
-	// mongoLogOpt := options.Logger().SetSink(logger.NewSink(log))
 	mongoLogOpt := options.Logger().
 		SetSink(logger.NewSink(logHandler, 13)).
 		SetComponentLevel(options.LogComponentCommand, options.LogLevelDebug)

@@ -5,7 +5,9 @@
   // https://docs.spring.io/spring-boot/reference/features/profiles.html
   "active": "dev",
   "server": {
+    // 服务监听地址，不填写则会随机监听一个端口（看启动日志）。
     "addr": "0.0.0.0:443",
+    // 静态资源路径，不填写则认为无需静态资源代理。
     "static": "resources/static/",
     "cert": "resources/tls/server.crt",
     "pkey": "resources/tls/server.key"

@@ -1,7 +1,7 @@
 package restapi
 
 import (
-	"log/slog"
+	"fmt"
 
 	"github.com/xgfone/ship/v5"
 )
@@ -18,7 +18,6 @@ func (a *Auth) Route(r *ship.RouteGroupBuilder) error {
 }
 
 func (a *Auth) back(c *ship.Context) error {
-	code := c.Query("code")
-	c.Infof("GitHub code", slog.String("code", code))
+	fmt.Println("UA：" + c.UserAgent())
 	return nil
 }

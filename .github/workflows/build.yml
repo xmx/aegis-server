@@ -12,10 +12,9 @@ on:
 
 jobs:
 
-  build-linux:
+  build:
     runs-on: ubuntu-latest
     steps:
-
       - name: 拉取代码
         uses: actions/checkout@v4
 
@@ -25,34 +24,18 @@ jobs:
           go-version: '1.24'
           check-latest: true
 
-      - name: 编译程序
+      - name: 编译 Linux 程序
         run: sh build.sh
+
+      - name: 编译 Windows 程序
+        run: |
+          go clean -cache
+          go env -w GOOS=windows
+          sh build.sh
+          go env -u GOOS
 
       - name: 下载程序
         uses: actions/upload-artifact@v4
         with:
-          name: aegis-server-linux
-          path: aegis-server-*
-
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-
-      - name: 拉取代码
-        uses: actions/checkout@v4
-
-      - name: 安装环境
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.24'
-          check-latest: true
-
-      - name: 编译程序
-        run: sh build.sh
-
-      - name: 下载程序
-        uses: actions/upload-artifact@v4
-        with:
-          name: aegis-server-windows
+          name: aegis-server
           path: aegis-server-*

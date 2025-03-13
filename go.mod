@@ -9,7 +9,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.25.0
 	github.com/go-sql-driver/mysql v1.9.0
-	github.com/grafana/sobek v0.0.0-20250219104821-ed22af7a8d6c
+	github.com/grafana/sobek v0.0.0-20250312125646-01f8811babf6
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.1
 	go.mongodb.org/mongo-driver/v2 v2.1.0
