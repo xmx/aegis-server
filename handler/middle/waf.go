@@ -5,7 +5,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"time"
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/datalayer/model"
@@ -27,57 +26,25 @@ func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
 		if directIP == "" {
 			directIP = remoteAddr
 		}
-
 		host, method := c.Host(), c.Method()
 		req := c.Request()
 		reqURL := req.URL
-		body := wm.newRecordBody(req.Body, 4096)
-		req.Body = body
 
-		var err error
-		accessedAt := time.Now()
-		oplog := &model.Oplog{
-			// Name:       "",
-			Host:       host,
-			Method:     method,
-			Path:       reqURL.Path,
-			Query:      reqURL.Query(),
-			Header:     req.Header,
-			ClientIP:   clientIP,
-			DirectIP:   directIP,
-			AccessedAt: accessedAt,
+		attrs := []any{
+			slog.String("client_ip", clientIP),
+			slog.String("remote_addr", remoteAddr),
+			slog.String("method", method),
+			slog.String("host", host),
+			slog.String("path", reqURL.Path),
 		}
-		defer func() {
-			var failed bool
-			if val := recover(); val != nil {
-				failed = true
-			}
-			if err != nil {
-				failed = true
-				oplog.Reason = err.Error()
-			}
-			oplog.FinishedAt = time.Now()
-			oplog.Succeed = !failed
-			oplog.Body = body.Data()
-			attr := slog.Any("oplog", oplog)
 
-			if fn := wm.writeLog; fn != nil {
-				background := context.Background()
-				ctx, cancel := context.WithTimeout(background, 5*time.Second)
-				exx := wm.writeLog(ctx, oplog)
-				cancel()
-				if exx != nil {
-					c.Errorf("保存访问日志出错", attr, slog.Any("error", exx))
-				}
-			}
-			if failed {
-				c.Warnf("接口访问", attr)
-			} else {
-				c.Infof("接口访问", attr)
-			}
-		}()
-
-		err = h(c)
+		err := h(c)
+		if err != nil {
+			attrs = append(attrs, slog.String("error", err.Error()))
+			c.Warnf("访问接口出错", attrs...)
+		} else {
+			c.Infof("访问接口", attrs...)
+		}
 
 		return err
 	}

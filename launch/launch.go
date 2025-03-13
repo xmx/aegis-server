@@ -12,6 +12,7 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/repository"
+	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/library/credential"
@@ -99,7 +100,8 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	if err != nil {
 		return err
 	}
-	//
+	logSvc := service.NewLog(logLevel, logWriter, log)
+
 	if num, exx := certificateSvc.Refresh(ctx); exx != nil { // 初始化刷新证书池。
 		log.Error("初始化证书错误", slog.Any("error", exx))
 		return exx
@@ -112,6 +114,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	routes := []shipx.Router{
 		restapi.NewAuth(),
 		restapi.NewCertificate(certificateSvc),
+		restapi.NewLog(logSvc),
 		restapi.NewDAV(basePath, "/"),
 		// restapi.NewFile(fileSvc),
 		// restapi.NewLog(logSvc),
@@ -130,7 +133,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		sh.Route("/").Static(static)
 	}
 
-	baseAPI := sh.Group(basePath)                             /*.Use(middle.WAF(oplogSvc.Create))*/
+	baseAPI := sh.Group(basePath).Use(middle.WAF(nil))
 	if err = shipx.BindRouters(baseAPI, routes); err != nil { // 注册路由
 		return err
 	}

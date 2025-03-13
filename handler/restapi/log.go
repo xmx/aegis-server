@@ -35,11 +35,8 @@ func (l *Log) Route(r *ship.RouteGroupBuilder) error {
 }
 
 func (l *Log) level(c *ship.Context) error {
-	logLevel, gormLevel := l.svc.Level()
-	ret := &response.LogLevel{
-		Log:  logLevel,
-		Gorm: gormLevel,
-	}
+	lvl := l.svc.Level()
+	ret := &response.LogLevel{Level: lvl}
 	return c.JSON(http.StatusOK, ret)
 }
 
