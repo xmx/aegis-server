@@ -16,6 +16,7 @@ import (
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/library/credential"
+	"github.com/xmx/aegis-server/library/cronv3"
 	"github.com/xmx/aegis-server/library/multiwrite"
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
@@ -81,6 +82,11 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 	defer disconnectDB(cli)
+
+	cronLog := slog.New(logger.Skip(logHandler, 5))
+	crontab := cronv3.New(cronLog)
+	crontab.Start()
+	defer crontab.Stop()
 
 	mongoDB := cli.Database(mongoURL.Database)
 	certificateRepo := repository.NewCertificate(mongoDB)
