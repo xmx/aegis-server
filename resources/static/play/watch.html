@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="color-scheme" content="light dark">
+    <title>实时日志</title>
+
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono/index.min.css">
+</head>
+<body class="shiki tailwindcss-theme">
+
+<div style="font-family: plexMono, monospace; font-size: x-small">
+    <pre id="banner"></pre>
+</div>
+
+<script type="module">
+    import {AnsiUp} from 'https://cdn.jsdelivr.net/npm/ansi_up/ansi_up.min.js'
+
+    const node = document.querySelector('#banner');
+    fetch("/api/system/banner")
+        .then(w => w.text())
+        .then(txt => node.innerHTML = new AnsiUp().ansi_to_html(txt))
+</script>
+</body>
+</html>

@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/robfig/cron/v3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/repository"
@@ -84,9 +85,15 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	defer disconnectDB(cli)
 
 	cronLog := slog.New(logger.Skip(logHandler, 5))
-	crontab := cronv3.New(cronLog)
+	crontab := cronv3.New(cronLog, cron.WithSeconds())
 	crontab.Start()
 	defer crontab.Stop()
+
+	crontab.AddJob("测试定时输出", "*/5 * * * * *", func() {
+		for i := 0; i < 10; i++ {
+			log.Info("计数器执行", slog.Int("index", i))
+		}
+	})
 
 	mongoDB := cli.Database(mongoURL.Database)
 	certificateRepo := repository.NewCertificate(mongoDB)
@@ -122,6 +129,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logSvc),
 		restapi.NewDAV(basePath, "/"),
+		restapi.NewSystem(),
 		// restapi.NewFile(fileSvc),
 		// restapi.NewLog(logSvc),
 		// restapi.NewOplog(oplogSvc),
