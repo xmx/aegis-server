@@ -30,13 +30,13 @@ type Certificate struct {
 }
 
 type PKIXName struct {
-	Country            []string `json:"country"`
-	Organization       []string `json:"organization"`
-	OrganizationalUnit []string `json:"organizational_unit"`
-	Locality           []string `json:"locality"`
-	Province           []string `json:"province"`
-	StreetAddress      []string `json:"street_address"`
-	PostalCode         []string `json:"postal_code"`
-	SerialNumber       string   `json:"serial_number"`
-	CommonName         string   `json:"common_name"`
+	Country            []string `json:"country"             bson:"country"`
+	Organization       []string `json:"organization"        bson:"organization"`
+	OrganizationalUnit []string `json:"organizational_unit" bson:"organizational_unit"`
+	Locality           []string `json:"locality"            bson:"locality"`
+	Province           []string `json:"province"            bson:"province"`
+	StreetAddress      []string `json:"street_address"      bson:"street_address"`
+	PostalCode         []string `json:"postal_code"         bson:"postal_code"`
+	SerialNumber       string   `json:"serial_number"       bson:"serial_number"`
+	CommonName         string   `json:"common_name"         bson:"common_name"`
 }

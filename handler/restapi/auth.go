@@ -1,10 +1,6 @@
 package restapi
 
-import (
-	"fmt"
-
-	"github.com/xgfone/ship/v5"
-)
+import "github.com/xgfone/ship/v5"
 
 func NewAuth() *Auth {
 	return &Auth{}
@@ -18,6 +14,6 @@ func (a *Auth) Route(r *ship.RouteGroupBuilder) error {
 }
 
 func (a *Auth) back(c *ship.Context) error {
-	fmt.Println("UA：" + c.UserAgent())
+	c.Infof("UserAgnet: %s", c.UserAgent())
 	return nil
 }

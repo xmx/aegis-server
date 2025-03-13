@@ -91,39 +91,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 
-	//dbCfg := mapstruct.ConfigDatabase(cfg.Database)
-	//gormLog, gormLevel := sqldb.NewLog(logWriter, dbCfg.LogConfig)
-	//
-	//// 连接数据库
-	//db, err := sqldb.Open(dbCfg, sqldb.NewMySQLLog(log))
-	//if err != nil {
-	//	log.Error("数据库连接失败", slog.Any("error", err))
-	//	return err
-	//}
-	//defer db.Close()
-	//
-	//mysqlCfg := &mysql.Config{Conn: db}
-	//gdb, err := gorm.Open(mysql.Dialector{Config: mysqlCfg}, &gorm.Config{Logger: gormLog})
-	//if err != nil {
-	//	log.Error("数据库连接(gorm)失败", slog.Any("error", err))
-	//	return err
-	//}
-	//qry := query.Use(gdb)
-	//
-	//if cfg.Database.Migrate {
-	//	log.Info("准备检查合并数据库表结构")
-	//	if err = autoMigrate(gdb); err != nil {
-	//		log.Error("合并数据库错误", slog.Any("error", err))
-	//		return err
-	//	}
-	//	log.Info("检查合并数据库表结构结束")
-	//}
-	//
 	var useTLS bool
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
 	poolTLS := credential.NewPool(baseTLS)
 
-	// oplogSvc := service.NewOplog(qry, log)
 	certificateSvc, err := service.NewCertificate(certificateRepo, poolTLS, log)
 	if err != nil {
 		return err
@@ -135,15 +106,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	} else {
 		useTLS = num > 0
 	}
-	//
-	//dbfs := gridfs.NewFS(qry)
-	//logSvc := service.NewLog(logLevel, gormLevel, logWriter, log)
-	//termSvc := service.NewTerm(log)
-	//fileSvc, err := service.NewFile(qry, dbfs, log)
-	//if err != nil {
-	//	return err
-	//}
-	//
+
 	const basePath = "/api"
 	// modules := []jsvm.Module{fileSvc}
 	routes := []shipx.Router{
@@ -162,7 +125,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	sh.Validator = valid
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
-	// sh.Logger = logger.Ship(logHandler)
+	sh.Logger = logger.NewShip(logHandler, 6)
 	if static := srvCfg.Static; static != "" {
 		sh.Route("/").Static(static)
 	}
@@ -172,7 +135,9 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 
-	lis, err := net.Listen("tcp", srvCfg.Addr)
+	lc := new(net.ListenConfig)
+	lc.SetMultipathTCP(true)
+	lis, err := lc.Listen(ctx, "tcp", srvCfg.Addr)
 	if err != nil {
 		return err
 	}

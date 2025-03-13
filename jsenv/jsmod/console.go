@@ -130,8 +130,6 @@ func (*writerConsole) reflectParse(buf *bytes.Buffer, v any) error {
 		if err := json.NewEncoder(tmp).Encode(v); err != nil || tmp.Len() == 0 {
 			return err
 		}
-		// 标准库 JSON 序列化后会在最后面加换行符，这样输出到前端会有个换行，
-		// 下面的操作就是去除 JSON 字符串后面的换行符。当然不处理也无伤大雅。
 		_, _ = buf.ReadFrom(tmp)
 	}
 
