@@ -95,8 +95,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		}
 	})
 
-	go listenTCP(logWriter, log)
-
 	mongoDB := cli.Database(mongoURL.Database)
 	certificateRepo := repository.NewCertificate(mongoDB)
 
@@ -205,21 +203,4 @@ func disconnectDB(cli *mongo.Client) {
 	defer cancel()
 
 	_ = cli.Disconnect(ctx)
-}
-
-func listenTCP(w dynwriter.Writer, log *slog.Logger) {
-	lis, err := net.Listen("tcp", ":30059")
-	if err != nil {
-		log.Warn("listen error", slog.Any("error", err))
-		return
-	}
-
-	for {
-		conn, err := lis.Accept()
-		if err != nil {
-			continue
-		}
-
-		w.Attach(conn)
-	}
 }
