@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>日志查看</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/tokyo-night-dark.min.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/tokyo-night-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
     <style>
         body {
@@ -13,9 +14,11 @@
             background-color: #0d1117;
             color: #c9d1d9;
         }
+
         .selected {
             background-color: rgba(100, 149, 237, 0.3);
         }
+
         .log-entry {
             display: flex;
             justify-content: space-between;
@@ -25,9 +28,11 @@
             padding: 4px 8px;
             border-bottom: 1px solid #30363d;
         }
+
         .log-entry:hover {
             background-color: rgba(255, 255, 255, 0.05);
         }
+
         .log-raw {
             color: rgba(139, 148, 158, 0.8);
             flex-shrink: 1;
@@ -69,11 +74,11 @@
     }
 
     function truncateText(text, maxLength = 200) {
-        return text.length > maxLength ? text.substr(0, maxLength) + "..." : text;
+        return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
     }
 
     const eventSource = new EventSource("/api/sse/log/tail");
-    eventSource.onmessage = function(event) {
+    eventSource.onmessage = function (event) {
         try {
             const logData = JSON.parse(event.data);
             const logLine = document.createElement("div");
@@ -97,7 +102,7 @@
             logLine.appendChild(logInfo);
             logLine.appendChild(logRaw);
 
-            logLine.onclick = function() {
+            logLine.onclick = function () {
                 if (selectedLog) {
                     selectedLog.classList.remove("selected");
                 }
