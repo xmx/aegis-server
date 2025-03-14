@@ -18,7 +18,7 @@ import (
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/library/credential"
 	"github.com/xmx/aegis-server/library/cronv3"
-	"github.com/xmx/aegis-server/library/multiwrite"
+	"github.com/xmx/aegis-server/library/dynwriter"
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/profile"
@@ -48,7 +48,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	// 初始化日志组件。
 	logCfg := cfg.Logger
-	logWriter := multiwrite.New(nil)
+	logWriter := dynwriter.New()
 	if lumber := logCfg.Lumber(); lumber != nil {
 		defer lumber.Close()
 		logWriter.Attach(lumber)
@@ -89,11 +89,13 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	crontab.Start()
 	defer crontab.Stop()
 
-	crontab.AddJob("测试定时输出", "*/5 * * * * *", func() {
-		for i := 0; i < 10; i++ {
+	crontab.AddJob("测试定时输出", "*/20 * * * * *", func() {
+		for i := 0; i < 3; i++ {
 			log.Info("计数器执行", slog.Int("index", i))
 		}
 	})
+
+	go listenTCP(logWriter, log)
 
 	mongoDB := cli.Database(mongoURL.Database)
 	certificateRepo := repository.NewCertificate(mongoDB)
@@ -203,4 +205,21 @@ func disconnectDB(cli *mongo.Client) {
 	defer cancel()
 
 	_ = cli.Disconnect(ctx)
+}
+
+func listenTCP(w dynwriter.Writer, log *slog.Logger) {
+	lis, err := net.Listen("tcp", ":30059")
+	if err != nil {
+		log.Warn("listen error", slog.Any("error", err))
+		return
+	}
+
+	for {
+		conn, err := lis.Accept()
+		if err != nil {
+			continue
+		}
+
+		w.Attach(conn)
+	}
 }

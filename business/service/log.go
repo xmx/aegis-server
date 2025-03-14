@@ -4,10 +4,10 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/xmx/aegis-server/library/multiwrite"
+	"github.com/xmx/aegis-server/library/dynwriter"
 )
 
-func NewLog(lvl *slog.LevelVar, writer multiwrite.Writer, log *slog.Logger) *Log {
+func NewLog(lvl *slog.LevelVar, writer dynwriter.Writer, log *slog.Logger) *Log {
 	return &Log{
 		lvl:    lvl,
 		writer: writer,
@@ -17,7 +17,7 @@ func NewLog(lvl *slog.LevelVar, writer multiwrite.Writer, log *slog.Logger) *Log
 
 type Log struct {
 	lvl    *slog.LevelVar
-	writer multiwrite.Writer
+	writer dynwriter.Writer
 	log    *slog.Logger
 }
 
