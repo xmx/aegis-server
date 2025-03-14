@@ -89,12 +89,6 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	crontab.Start()
 	defer crontab.Stop()
 
-	crontab.AddJob("测试定时输出", "*/20 * * * * *", func() {
-		for i := 0; i < 3; i++ {
-			log.Info("计数器执行", slog.Int("index", i))
-		}
-	})
-
 	mongoDB := cli.Database(mongoURL.Database)
 	certificateRepo := repository.NewCertificate(mongoDB)
 
