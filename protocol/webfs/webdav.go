@@ -6,21 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"golang.org/x/net/webdav"
 )
 
-func DAV(prefix, dir string) http.Handler {
-	prefix = strings.TrimRight(prefix, "/")
-	if !strings.HasPrefix(prefix, "/") {
-		prefix = "/" + prefix
-	}
+func New(dir string) http.Handler {
 	dir = filepath.Clean(dir)
-
 	dav := &webdav.Handler{
-		Prefix:     prefix,
 		FileSystem: webdav.Dir(dir),
 		LockSystem: webdav.NewMemLS(),
 	}
@@ -36,7 +29,7 @@ func DAV(prefix, dir string) http.Handler {
 type davFS struct {
 	dav *webdav.Handler
 	hfs http.FileSystem
-	han http.Handler
+	han http.Handler // GET webui
 }
 
 func (f *davFS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -45,9 +38,8 @@ func (f *davFS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := strings.TrimPrefix(r.URL.Path, f.dav.Prefix)
+	path := r.URL.Path
 	if !f.tryServeJSONDir(w, r, path) {
-		r.URL.Path = path
 		f.han.ServeHTTP(w, r)
 	}
 }
