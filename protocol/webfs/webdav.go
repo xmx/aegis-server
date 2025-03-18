@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -40,20 +41,19 @@ func (f *davFS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	path := r.URL.Path
-	if !f.tryServeJSONDir(w, r, path) {
+	if !f.tryServeJSONDir(w, r, r.URL.Path) {
 		f.han.ServeHTTP(w, r)
 	}
 }
 
-func (f *davFS) tryServeJSONDir(w http.ResponseWriter, r *http.Request, path string) bool {
+func (f *davFS) tryServeJSONDir(w http.ResponseWriter, r *http.Request, reqPath string) bool {
 	accept := r.Header.Get("Accept")
 	if accept != "application/json" {
 		return false
 	}
 
-	path = strings.TrimPrefix(path, f.dav.Prefix)
-	file, err := f.hfs.Open(path)
+	fpath := strings.TrimPrefix(reqPath, f.dav.Prefix)
+	file, err := f.hfs.Open(fpath)
 	if err != nil {
 		return false
 	}
@@ -92,12 +92,12 @@ func (f *davFS) tryServeJSONDir(w http.ResponseWriter, r *http.Request, path str
 			continue
 		}
 		// 链接类型文件
-		if link, exx := os.Readlink(filepath.Join(path, name)); exx == nil {
+		if link, exx := os.Readlink(filepath.Join(fpath, name)); exx == nil {
 			info.Symlink = link
 		}
 	}
 	sort.Sort(files)
-	ret := &dirInfo{Path: filepath.Clean(path), Files: files}
+	ret := &dirInfo{Path: path.Clean(fpath), Files: files}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(ret)
