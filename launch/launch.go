@@ -3,11 +3,15 @@ package launch
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/xmx/aegis-server/jsenv/jsmod"
+	"github.com/xmx/aegis-server/jsenv/jsvm"
 
 	"github.com/robfig/cron/v3"
 	"github.com/xgfone/ship/v5"
@@ -117,13 +121,20 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	const basePath = "/api"
-	// modules := []jsvm.Module{fileSvc}
+	modules := []jsvm.GlobalRegister{
+		jsmod.NewConsole(io.Discard),
+		jsmod.NewMongoDB(mongoDB),
+		logSvc,
+		jsmod.NewOS(),
+		jsmod.NewRuntime(),
+	}
 	routes := []shipx.Router{
 		restapi.NewAuth(),
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logSvc),
 		restapi.NewDAV(basePath, "/"),
 		restapi.NewSystem(),
+		restapi.NewPlay(modules),
 		// restapi.NewFile(fileSvc),
 		// restapi.NewLog(logSvc),
 		// restapi.NewOplog(oplogSvc),

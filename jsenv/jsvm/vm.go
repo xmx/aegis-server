@@ -50,3 +50,17 @@ func (o *Object) Sub(name string) *Object {
 func (o *Object) Set(name string, val any) {
 	_ = o.obj.Set(name, val)
 }
+
+type GlobalRegister interface {
+	RegisterGlobal(vm *sobek.Runtime) error
+}
+
+func RegisterGlobals(vm *sobek.Runtime, mods []GlobalRegister) error {
+	for _, mod := range mods {
+		if err := mod.RegisterGlobal(vm); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

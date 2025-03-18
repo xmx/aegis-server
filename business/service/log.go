@@ -4,6 +4,7 @@ import (
 	"io"
 	"log/slog"
 
+	"github.com/grafana/sobek"
 	"github.com/xmx/aegis-server/library/dynwriter"
 )
 
@@ -19,6 +20,14 @@ type Log struct {
 	lvl    *slog.LevelVar
 	writer dynwriter.Writer
 	log    *slog.Logger
+}
+
+func (l *Log) RegisterGlobal(vm *sobek.Runtime) error {
+	fns := map[string]any{
+		"level":    l.Level,
+		"setLevel": l.SetLevel,
+	}
+	return vm.Set("log", fns)
 }
 
 func (l *Log) Level() slog.Level {

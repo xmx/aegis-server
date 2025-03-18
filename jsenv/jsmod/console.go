@@ -10,9 +10,10 @@ import (
 	"strconv"
 
 	"github.com/grafana/sobek"
+	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
-func NewConsole(w io.Writer) interface{ SetGlobal(vm *sobek.Runtime) error } {
+func NewConsole(w io.Writer) jsvm.GlobalRegister {
 	if w == nil || w == io.Discard {
 		return new(discardConsole)
 	}
@@ -22,7 +23,7 @@ func NewConsole(w io.Writer) interface{ SetGlobal(vm *sobek.Runtime) error } {
 
 type discardConsole struct{}
 
-func (c *discardConsole) SetGlobal(vm *sobek.Runtime) error {
+func (c *discardConsole) RegisterGlobal(vm *sobek.Runtime) error {
 	fields := map[string]any{
 		"log":   c.discord,
 		"error": c.discord,
@@ -43,7 +44,7 @@ type writerConsole struct {
 	vm *sobek.Runtime
 }
 
-func (wc *writerConsole) SetGlobal(vm *sobek.Runtime) error {
+func (wc *writerConsole) RegisterGlobal(vm *sobek.Runtime) error {
 	wc.vm = vm
 	fields := map[string]any{
 		"log":   wc.write,
