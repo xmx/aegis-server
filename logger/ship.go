@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/xgfone/ship/v5"
+	"github.com/xmx/ship"
 )
 
 func NewShip(h slog.Handler, skip int) ship.Logger {

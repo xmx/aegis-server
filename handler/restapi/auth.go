@@ -1,6 +1,6 @@
 package restapi
 
-import "github.com/xgfone/ship/v5"
+import "github.com/xmx/ship"
 
 func NewAuth() *Auth {
 	return &Auth{}
@@ -14,6 +14,13 @@ func (a *Auth) Route(r *ship.RouteGroupBuilder) error {
 }
 
 func (a *Auth) back(c *ship.Context) error {
-	c.Infof("UserAgnet: %s", c.UserAgent())
+	type request struct {
+		Name string `json:"name" query:"name" validate:"required,lte=10"`
+	}
+	req := new(request)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+
 	return nil
 }

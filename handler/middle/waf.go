@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"net"
 
-	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/datalayer/model"
+	"github.com/xmx/ship"
 )
 
 func WAF(writeLog func(context.Context, *model.Oplog) error) ship.Middleware {

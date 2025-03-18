@@ -1,8 +1,8 @@
 package restapi
 
 import (
-	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/banner"
+	"github.com/xmx/ship"
 )
 
 func NewSystem() *System {

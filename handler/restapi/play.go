@@ -6,9 +6,9 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 	"github.com/grafana/sobek"
-	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/jsenv/jsmod"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
+	"github.com/xmx/ship"
 )
 
 func NewPlay(mods []jsvm.GlobalRegister) *Play {

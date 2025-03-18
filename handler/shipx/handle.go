@@ -7,15 +7,16 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/problem"
 	"github.com/xmx/aegis-server/library/i18n"
 	"github.com/xmx/aegis-server/library/validation"
+	"github.com/xmx/ship"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/text/language"
 )
@@ -25,7 +26,8 @@ func NotFound(_ *ship.Context) error {
 }
 
 func HandleError(c *ship.Context, e error) {
-	statusCode, title, detail := UnpackError(e)
+	statusCode, title, detail := UnpackError(c, e)
+	c.Accept()
 
 	pd := &problem.Details{
 		Host:     c.Host(),
@@ -39,7 +41,7 @@ func HandleError(c *ship.Context, e error) {
 	_ = c.JSON(statusCode, pd)
 }
 
-func UnpackError(err error) (statusCode int, title string, detail string) {
+func UnpackError(c *ship.Context, err error) (statusCode int, title string, detail string) {
 	statusCode = http.StatusBadRequest
 	title = "请求错误"
 	detail = err.Error()
@@ -49,8 +51,10 @@ func UnpackError(err error) (statusCode int, title string, detail string) {
 		statusCode = ce.Code
 	case *ship.HTTPServerError:
 		statusCode = ce.Code
-	case *validation.Error, *validation.NilError:
+	case *validation.ValidError:
+		lang := parseAcceptLanguage(c.GetReqHeader(ship.HeaderAcceptLanguage))
 		title = "参数校验错误"
+		detail = ce.Translate(lang)
 	case *time.ParseError:
 		detail = "时间格式错误，正确格式：" + ce.Layout
 	case *net.ParseError:
@@ -126,4 +130,57 @@ func (eh ErrorHandler) unpack(e error, c *ship.Context) *problem.Details {
 
 func (eh ErrorHandler) acceptLanguages(value string) []language.Tag {
 	return nil
+}
+
+// zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6
+func parseAcceptLanguage(str string) []string {
+	if str == "" {
+		return nil
+	}
+	type acceptT struct {
+		ct string
+		q  float64
+	}
+
+	ss := strings.Split(str, ",")
+	accepts := make([]acceptT, 0, len(ss))
+	for _, s := range ss {
+		q := 1.0
+		if k := strings.IndexByte(s, ';'); k > 0 {
+			qs := s[k+1:]
+			s = s[:k]
+
+			if j := strings.IndexByte(qs, '='); j > 0 {
+				if qs = qs[j+1:]; qs == "" {
+					continue
+				}
+				if v, _ := strconv.ParseFloat(qs, 32); v > 1.0 || v <= 0.0 {
+					continue
+				} else {
+					q = v
+				}
+			} else {
+				continue
+			}
+		}
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		} else if s == "*/*" {
+			s = ""
+		} else if strings.HasSuffix(s, "/*") {
+			s = s[:len(s)-1]
+		}
+		accepts = append(accepts, acceptT{ct: s, q: -q})
+	}
+
+	sort.SliceStable(accepts, func(i, j int) bool {
+		return accepts[i].q < accepts[j].q
+	})
+
+	results := make([]string, len(accepts))
+	for i := range accepts {
+		results[i] = accepts[i].ct
+	}
+	return results
 }

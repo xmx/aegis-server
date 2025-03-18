@@ -1,6 +1,6 @@
 package shipx
 
-import "github.com/xgfone/ship/v5"
+import "github.com/xmx/ship"
 
 type Router interface {
 	Route(r *ship.RouteGroupBuilder) error

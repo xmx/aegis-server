@@ -10,7 +10,7 @@ require (
 	github.com/go-playground/validator/v10 v10.25.0
 	github.com/grafana/sobek v0.0.0-20250312125646-01f8811babf6
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/xgfone/ship/v5 v5.3.1
+	github.com/xmx/ship v0.0.0-20250318102844-8fad8e7bab7d
 	go.mongodb.org/mongo-driver/v2 v2.1.0
 	golang.org/x/crypto v0.36.0
 	golang.org/x/net v0.37.0

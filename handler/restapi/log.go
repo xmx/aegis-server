@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/protocol/eventsource"
+	"github.com/xmx/ship"
 )
 
 func NewLog(svc *service.Log) *Log {

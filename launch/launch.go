@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
-	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
@@ -25,6 +24,7 @@ import (
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/profile"
+	"github.com/xmx/ship"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
@@ -44,8 +44,8 @@ func Run(ctx context.Context, path string) error {
 //goland:noinspection GoUnhandledErrorResult
 func Exec(ctx context.Context, cfg *profile.Config) error {
 	// 创建参数校验器，并校验配置文件。
-	valid := validation.NewValidator(validation.TagNameFunc([]string{"json"}))
-	if err := valid.Validate(cfg); err != nil {
+	valid := validation.New(validation.TagNameFunc([]string{"json"}))
+	if err := valid.Validate(ctx, cfg); err != nil {
 		return err
 	}
 
