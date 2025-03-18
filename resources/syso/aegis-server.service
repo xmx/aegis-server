@@ -5,8 +5,8 @@ After=network.target
 [Service]
 Type=simple
 LimitNOFILE=65535
-WorkingDirectory=/opt/xmx
-ExecStart=/opt/xmx/aegis-server
+WorkingDirectory=/opt/aegis
+ExecStart=/opt/aegis/aegis-server
 ExecStop=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=5

@@ -9,6 +9,7 @@ func machineID() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	//goland:noinspection GoUnhandledErrorResult
 	defer k.Close()
 
 	s, _, err := k.GetStringValue("MachineGuid")

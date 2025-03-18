@@ -16,8 +16,8 @@ import (
 	"github.com/xmx/aegis-server/argument/problem"
 	"github.com/xmx/aegis-server/library/i18n"
 	"github.com/xmx/aegis-server/library/validation"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"golang.org/x/text/language"
-	"gorm.io/gorm"
 )
 
 func NotFound(_ *ship.Context) error {
@@ -75,7 +75,7 @@ func UnpackError(err error) (statusCode int, title string, detail string) {
 		statusCode = http.StatusRequestEntityTooLarge
 	default:
 		switch {
-		case errors.Is(err, gorm.ErrRecordNotFound):
+		case errors.Is(err, mongo.ErrNoDocuments):
 			detail = "数据不存在"
 		case errors.Is(err, ship.ErrSessionNotExist), errors.Is(err, ship.ErrInvalidSession):
 			statusCode = http.StatusUnauthorized
