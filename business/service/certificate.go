@@ -11,14 +11,13 @@ import (
 	"log/slog"
 	"time"
 
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
-
 	"github.com/xmx/aegis-server/argument/errcode"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/library/credential"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func NewCertificate(repo repository.Certificate, pool credential.Certifier, log *slog.Logger) (*Certificate, error) {
