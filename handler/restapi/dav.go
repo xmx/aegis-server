@@ -13,12 +13,12 @@ func NewDAV(basepath, dir string) *DAV {
 	const subpath = "/dav"
 	basepath = strings.TrimRight(basepath, "/")
 	prefix := path.Join(basepath, subpath)
-	dav := webfs.New(dir)
+	dav := webfs.New(prefix, dir)
 
 	return &DAV{
 		prefix:  prefix,
 		subpath: subpath,
-		handler: http.StripPrefix(prefix, dav),
+		handler: dav,
 	}
 }
 
