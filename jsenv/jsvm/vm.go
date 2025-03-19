@@ -55,20 +55,24 @@ func (fnm *fieldNameMapper) MethodName(t reflect.Type, m reflect.Method) string 
 	return fnm.lowerCase(m.Name)
 }
 
-func (*fieldNameMapper) lowerCase(str string) string {
-	runes := []rune(str)
+// lowerCase 将 Go 可导出变量转为 JS 风格的变量。
+//
+//	HTTP -> http
+//	MyHTTP -> myHTTP
+//	CopyN -> copyN
+//	N -> n
+func (*fieldNameMapper) lowerCase(s string) string {
+	runes := []rune(s)
 	size := len(runes)
 	for i, r := range runes {
-		if i == 0 {
-			if unicode.IsLower(r) {
-				break
-			} else {
-				runes[i] = unicode.ToLower(r)
-			}
-		} else if unicode.IsUpper(r) && i+1 < size && unicode.IsUpper(runes[i+1]) {
-			runes[i] = unicode.ToLower(r)
-		} else if unicode.IsLower(r) {
+		if unicode.IsLower(r) {
 			break
+		}
+		next := i + 1
+		if i == 0 ||
+			next >= size ||
+			unicode.IsUpper(runes[next]) {
+			runes[i] = unicode.ToLower(r)
 		}
 	}
 
