@@ -21,6 +21,7 @@ func (ve *ValidError) Translate(langs []string) string {
 	var tran ut.Translator
 	var found bool
 	for _, lang := range langs {
+		lang = strings.Replace(lang, "-", "_", -1)
 		if tran, found = ve.unitran.GetTranslator(lang); found {
 			break
 		}

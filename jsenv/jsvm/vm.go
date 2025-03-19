@@ -1,10 +1,10 @@
 package jsvm
 
-import "github.com/grafana/sobek"
+import "github.com/dop251/goja"
 
-func New() *sobek.Runtime {
-	vm := sobek.New()
-	mapper := sobek.TagFieldNameMapper("json", true)
+func New() *goja.Runtime {
+	vm := goja.New()
+	mapper := goja.TagFieldNameMapper("json", true)
 	vm.SetFieldNameMapper(mapper)
 	vm.SetMaxCallStackSize(64)
 
@@ -12,10 +12,10 @@ func New() *sobek.Runtime {
 }
 
 type GlobalRegister interface {
-	RegisterGlobal(vm *sobek.Runtime) error
+	RegisterGlobal(vm *goja.Runtime) error
 }
 
-func RegisterGlobals(vm *sobek.Runtime, mods []GlobalRegister) error {
+func RegisterGlobals(vm *goja.Runtime, mods []GlobalRegister) error {
 	for _, mod := range mods {
 		if err := mod.RegisterGlobal(vm); err != nil {
 			return err

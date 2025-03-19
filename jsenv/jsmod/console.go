@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/grafana/sobek"
+	"github.com/dop251/goja"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
@@ -23,7 +23,7 @@ func NewConsole(w io.Writer) jsvm.GlobalRegister {
 
 type discardConsole struct{}
 
-func (c *discardConsole) RegisterGlobal(vm *sobek.Runtime) error {
+func (c *discardConsole) RegisterGlobal(vm *goja.Runtime) error {
 	fields := map[string]any{
 		"log":   c.discord,
 		"error": c.discord,
@@ -35,16 +35,16 @@ func (c *discardConsole) RegisterGlobal(vm *sobek.Runtime) error {
 	return vm.Set("console", fields)
 }
 
-func (*discardConsole) discord(sobek.FunctionCall) sobek.Value {
-	return sobek.Undefined()
+func (*discardConsole) discord(goja.FunctionCall) goja.Value {
+	return goja.Undefined()
 }
 
 type writerConsole struct {
 	w  io.Writer
-	vm *sobek.Runtime
+	vm *goja.Runtime
 }
 
-func (wc *writerConsole) RegisterGlobal(vm *sobek.Runtime) error {
+func (wc *writerConsole) RegisterGlobal(vm *goja.Runtime) error {
 	wc.vm = vm
 	fields := map[string]any{
 		"log":   wc.write,
@@ -57,7 +57,7 @@ func (wc *writerConsole) RegisterGlobal(vm *sobek.Runtime) error {
 	return vm.Set("console", fields)
 }
 
-func (wc *writerConsole) write(call sobek.FunctionCall) sobek.Value {
+func (wc *writerConsole) write(call goja.FunctionCall) goja.Value {
 	msg, err := wc.format(call)
 	if err == nil {
 		_, err = wc.w.Write(msg)
@@ -65,10 +65,10 @@ func (wc *writerConsole) write(call sobek.FunctionCall) sobek.Value {
 	if err != nil {
 		return wc.vm.ToValue(err)
 	}
-	return sobek.Undefined()
+	return goja.Undefined()
 }
 
-func (wc *writerConsole) format(call sobek.FunctionCall) ([]byte, error) {
+func (wc *writerConsole) format(call goja.FunctionCall) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	for _, arg := range call.Arguments {
 		if err := wc.parse(buf, arg); err != nil {
@@ -80,9 +80,9 @@ func (wc *writerConsole) format(call sobek.FunctionCall) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (wc *writerConsole) parse(buf *bytes.Buffer, val sobek.Value) error {
+func (wc *writerConsole) parse(buf *bytes.Buffer, val goja.Value) error {
 	switch {
-	case sobek.IsUndefined(val), sobek.IsNull(val):
+	case goja.IsUndefined(val), goja.IsNull(val):
 		buf.WriteString(val.String())
 		return nil
 	}
@@ -102,9 +102,9 @@ func (wc *writerConsole) parse(buf *bytes.Buffer, val sobek.Value) error {
 	case []byte:
 		str := base64.StdEncoding.EncodeToString(v)
 		buf.WriteString(str)
-	case func(sobek.FunctionCall) sobek.Value:
+	case func(goja.FunctionCall) goja.Value:
 		buf.WriteString("<Function>")
-	case sobek.ArrayBuffer:
+	case goja.ArrayBuffer:
 		bs := v.Bytes()
 		str := base64.StdEncoding.EncodeToString(bs)
 		buf.WriteString(str)

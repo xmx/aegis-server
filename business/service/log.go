@@ -4,7 +4,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/grafana/sobek"
+	"github.com/dop251/goja"
 	"github.com/xmx/aegis-server/library/dynwriter"
 )
 
@@ -22,7 +22,7 @@ type Log struct {
 	log    *slog.Logger
 }
 
-func (l *Log) RegisterGlobal(vm *sobek.Runtime) error {
+func (l *Log) RegisterGlobal(vm *goja.Runtime) error {
 	fns := map[string]any{
 		"level":    l.Level,
 		"setLevel": l.SetLevel,

@@ -5,7 +5,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
-	"github.com/grafana/sobek"
+	"github.com/dop251/goja"
 	"github.com/xmx/aegis-server/jsenv/jsmod"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"github.com/xmx/ship"
@@ -48,7 +48,7 @@ func (ply *Play) run(c *ship.Context) error {
 		}
 		if val, err := vm.RunString(data.Code); err != nil {
 			out.WriteError(err)
-		} else if val != nil && val != sobek.Undefined() {
+		} else if val != nil && val != goja.Undefined() {
 			out.Write([]byte(val.String()))
 		}
 	}

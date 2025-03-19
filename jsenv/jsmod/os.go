@@ -3,7 +3,7 @@ package jsmod
 import (
 	"os"
 
-	"github.com/grafana/sobek"
+	"github.com/dop251/goja"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
@@ -12,10 +12,10 @@ func NewOS() jsvm.GlobalRegister {
 }
 
 type stdOS struct {
-	vm *sobek.Runtime
+	vm *goja.Runtime
 }
 
-func (s *stdOS) RegisterGlobal(vm *sobek.Runtime) error {
+func (s *stdOS) RegisterGlobal(vm *goja.Runtime) error {
 	hm := map[string]any{
 		"pid":      os.Getpid,
 		"hostname": os.Hostname,

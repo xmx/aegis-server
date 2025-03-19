@@ -5,10 +5,10 @@ go 1.24.0
 require (
 	github.com/coder/websocket v1.8.13
 	github.com/creack/pty v1.1.24
+	github.com/dop251/goja v0.0.0-20250309171923-bcd7cc6bf64c
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.25.0
-	github.com/grafana/sobek v0.0.0-20250312125646-01f8811babf6
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xmx/ship v0.0.0-20250318102844-8fad8e7bab7d
 	go.mongodb.org/mongo-driver/v2 v2.1.0

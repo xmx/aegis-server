@@ -10,8 +10,11 @@ import (
 	eslocale "github.com/go-playground/locales/es"
 	falocale "github.com/go-playground/locales/fa"
 	frlocale "github.com/go-playground/locales/fr"
+	frchlocale "github.com/go-playground/locales/fr_CH"
 	rulocale "github.com/go-playground/locales/ru"
 	zhlocale "github.com/go-playground/locales/zh"
+	zhhanslocale "github.com/go-playground/locales/zh_Hans"
+	zhhanttwlocate "github.com/go-playground/locales/zh_Hant_TW"
 	"github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
 	artrans "github.com/go-playground/validator/v10/translations/ar"
@@ -21,6 +24,7 @@ import (
 	frtrans "github.com/go-playground/validator/v10/translations/fr"
 	rutrans "github.com/go-playground/validator/v10/translations/ru"
 	zhtrans "github.com/go-playground/validator/v10/translations/zh"
+	zhtwtrans "github.com/go-playground/validator/v10/translations/zh_tw"
 )
 
 func New(tagNameFunc validator.TagNameFunc) *Validate {
@@ -34,28 +38,37 @@ func New(tagNameFunc validator.TagNameFunc) *Validate {
 	esloc := eslocale.New()
 	faloc := falocale.New()
 	frloc := frlocale.New()
+	frchloc := frchlocale.New()
 	ruloc := rulocale.New()
 	zhloc := zhlocale.New()
+	zhhansloc := zhhanslocale.New()
+	zhhanttwloc := zhhanttwlocate.New()
 
-	unitran := ut.New(zhloc, arloc, enloc, esloc, faloc, frloc, ruloc, zhloc)
+	unitran := ut.New(zhloc, arloc, enloc, esloc, faloc, frloc, frchloc, ruloc, zhloc, zhhansloc, zhhanttwloc)
 	artran, _ := unitran.GetTranslator(arloc.Locale())
 	entran, _ := unitran.GetTranslator(enloc.Locale())
 	estran, _ := unitran.GetTranslator(esloc.Locale())
 	fatran, _ := unitran.GetTranslator(faloc.Locale())
 	frtran, _ := unitran.GetTranslator(frloc.Locale())
+	frchtran, _ := unitran.GetTranslator(frchloc.Locale())
 	rutran, _ := unitran.GetTranslator(ruloc.Locale())
 	zhtran, _ := unitran.GetTranslator(zhloc.Locale())
+	zhhanstran, _ := unitran.GetTranslator(zhhansloc.Locale())
+	zhhanttwtran, _ := unitran.GetTranslator(zhhanttwloc.Locale())
 	trans := []ut.Translator{
-		artran, entran, estran, fatran, frtran, rutran, zhtran,
+		artran, entran, estran, fatran, frtran, rutran, zhtran, zhhanstran, zhhanttwtran,
 	}
 
-	_ = zhtrans.RegisterDefaultTranslations(valid, zhtran)
 	_ = artrans.RegisterDefaultTranslations(valid, artran)
 	_ = entrans.RegisterDefaultTranslations(valid, entran)
 	_ = estrans.RegisterDefaultTranslations(valid, estran)
 	_ = fatrans.RegisterDefaultTranslations(valid, fatran)
 	_ = frtrans.RegisterDefaultTranslations(valid, frtran)
+	_ = frtrans.RegisterDefaultTranslations(valid, frchtran)
 	_ = rutrans.RegisterDefaultTranslations(valid, rutran)
+	_ = zhtrans.RegisterDefaultTranslations(valid, zhtran)
+	_ = zhtrans.RegisterDefaultTranslations(valid, zhhanstran)
+	_ = zhtwtrans.RegisterDefaultTranslations(valid, zhhanttwtran)
 
 	return &Validate{
 		valid:   valid,

@@ -3,7 +3,7 @@ package jsmod
 import (
 	"context"
 
-	"github.com/grafana/sobek"
+	"github.com/dop251/goja"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -14,24 +14,24 @@ func NewMongoDB(db *mongo.Database) jsvm.GlobalRegister {
 }
 
 type mongoDB struct {
-	vm *sobek.Runtime
+	vm *goja.Runtime
 	db *mongo.Database
 }
 
-func (db *mongoDB) RegisterGlobal(vm *sobek.Runtime) error {
+func (db *mongoDB) RegisterGlobal(vm *goja.Runtime) error {
 	db.vm = vm
 	px := vm.NewProxy(vm.NewObject(), db.proxyTrapConfig())
 	return vm.Set("db", px)
 }
 
-func (db *mongoDB) proxyTrapConfig() *sobek.ProxyTrapConfig {
-	props := map[string]sobek.Value{
+func (db *mongoDB) proxyTrapConfig() *goja.ProxyTrapConfig {
+	props := map[string]goja.Value{
 		"getName":            db.vm.ToValue(db.getName),
 		"getCollectionNames": db.vm.ToValue(db.getCollectionNames),
 	}
 
-	return &sobek.ProxyTrapConfig{
-		Get: func(target *sobek.Object, property string, receiver sobek.Value) sobek.Value {
+	return &goja.ProxyTrapConfig{
+		Get: func(target *goja.Object, property string, receiver goja.Value) goja.Value {
 			if val, exists := props[property]; exists {
 				return val
 			}
@@ -55,6 +55,6 @@ func (db *mongoDB) getCollectionNames() ([]string, error) {
 }
 
 type mongoColl struct {
-	vm   *sobek.Runtime
+	vm   *goja.Runtime
 	coll *mongo.Collection
 }
