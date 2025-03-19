@@ -3,7 +3,6 @@ package jsmod
 import (
 	"context"
 
-	"github.com/dop251/goja"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
@@ -13,7 +12,7 @@ func NewContext() jsvm.GlobalRegister {
 
 type stdContext struct{}
 
-func (*stdContext) RegisterGlobal(vm *goja.Runtime) error {
+func (*stdContext) RegisterGlobal(vm jsvm.Runtime) error {
 	fns := map[string]any{
 		"background":   context.Background,
 		"todo":         context.TODO,
@@ -23,5 +22,5 @@ func (*stdContext) RegisterGlobal(vm *goja.Runtime) error {
 		"withDeadline": context.WithDeadline,
 	}
 
-	return vm.Set("context", fns)
+	return vm.Runtime().Set("context", fns)
 }

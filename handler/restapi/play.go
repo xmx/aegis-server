@@ -52,7 +52,7 @@ func (ply *Play) run(c *ship.Context) error {
 		case "kill":
 			sig.kill()
 		case "exec":
-			vm := goja.New()
+			vm := jsvm.New()
 			sig.set(vm)
 			go ply.newInstanceExec(vm, ws, data.Data)
 		}
@@ -61,14 +61,14 @@ func (ply *Play) run(c *ship.Context) error {
 	return nil
 }
 
-func (ply *Play) newInstanceExec(vm *goja.Runtime, ws *websocket.Conn, code string) error {
+func (ply *Play) newInstanceExec(vm jsvm.Runtime, ws *websocket.Conn, code string) error {
 	stdout, stderr := ply.stdout(ws), ply.stderr(ws)
 	mods := append(ply.mods, jsmod.NewConsole(stdout))
-	if err := jsvm.RegisterGlobals(vm, mods); err != nil {
+	if err := vm.RegisterGlobals(mods); err != nil {
 		return err
 	}
 
-	val := vm.GlobalObject().Get("os")
+	val := vm.Runtime().Get("os")
 	if obj, _ := val.(*goja.Object); obj != nil {
 		_ = obj.Set("stdout", stdout)
 		_ = obj.Set("stderr", stderr)
@@ -111,10 +111,10 @@ func (sc *socketConn) Write(p []byte) (int, error) {
 
 type singleVM struct {
 	mu sync.Mutex
-	vm *goja.Runtime
+	vm jsvm.Runtime
 }
 
-func (sig *singleVM) set(vm *goja.Runtime) {
+func (sig *singleVM) set(vm jsvm.Runtime) {
 	sig.mu.Lock()
 	sig.interrupt()
 	sig.vm = vm

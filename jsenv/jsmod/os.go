@@ -4,7 +4,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/dop251/goja"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"github.com/xmx/aegis-server/library/machine"
 )
@@ -13,12 +12,9 @@ func NewOS() jsvm.GlobalRegister {
 	return new(stdOS)
 }
 
-type stdOS struct {
-	vm *goja.Runtime
-}
+type stdOS struct{}
 
-func (std *stdOS) RegisterGlobal(vm *goja.Runtime) error {
-	std.vm = vm
+func (std *stdOS) RegisterGlobal(vm jsvm.Runtime) error {
 	hm := map[string]any{
 		"pid":    os.Getpid,
 		"open":   os.Open,
@@ -27,5 +23,5 @@ func (std *stdOS) RegisterGlobal(vm *goja.Runtime) error {
 		"id":     machine.ID,
 	}
 
-	return vm.Set("os", hm)
+	return vm.Runtime().Set("os", hm)
 }

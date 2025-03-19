@@ -31,7 +31,18 @@
 
     let code = localStorage.getItem("code");
     if (!code) {
-        code = "console.log('HELLO')"
+        code = `// 每隔两秒打印一下内存占用
+crontab.addJob("*/2 * * * * *", () => {
+    const stats = runtime.memStats()
+    console.log("------------------------> 内存占用：", stats.alloc, " bytes")
+})
+
+// 调用系统命令一直ping
+const cmd = exec.command("ping", "baidu.com")
+cmd.stderr = os.stderr
+cmd.stdout = os.stdout
+cmd.run()
+`
     }
     require.config({paths: {'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.41.0/min/vs'}});
     require(['vs/editor/editor.main'], function () {

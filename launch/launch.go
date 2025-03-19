@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/robfig/cron/v3"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
@@ -87,7 +88,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	defer disconnectDB(cli)
 
 	cronLog := slog.New(logger.Skip(logHandler, 5))
-	crontab := cronv3.New(cronLog)
+	crontab := cronv3.New(cronLog, cron.WithSeconds())
 	crontab.Start()
 	defer crontab.Stop()
 
@@ -123,14 +124,11 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		logSvc,
 		jsmod.NewConsole(io.Discard),
 		jsmod.NewExec(),
-		jsmod.NewHTTP(),
 		jsmod.NewContext(),
-		jsmod.NewIO(),
 		jsmod.NewOS(),
 		jsmod.NewRuntime(),
 		jsmod.NewTime(),
 		jsmod.NewCrontab(crontab),
-		jsmod.NewMongoDB(mongoDB),
 	}
 	routes := []shipx.Router{
 		restapi.NewAuth(),

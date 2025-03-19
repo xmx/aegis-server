@@ -3,7 +3,6 @@ package jsmod
 import (
 	"time"
 
-	"github.com/dop251/goja"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
@@ -13,7 +12,7 @@ func NewTime() jsvm.GlobalRegister {
 
 type stdTime struct{}
 
-func (*stdTime) RegisterGlobal(vm *goja.Runtime) error {
+func (*stdTime) RegisterGlobal(vm jsvm.Runtime) error {
 	fns := map[string]interface{}{
 		"nanosecond ":   time.Nanosecond,
 		"microsecond":   time.Microsecond,
@@ -44,5 +43,5 @@ func (*stdTime) RegisterGlobal(vm *goja.Runtime) error {
 		"local":         time.Local,
 		"parseDuration": time.ParseDuration,
 	}
-	return vm.Set("time", fns)
+	return vm.Runtime().Set("time", fns)
 }

@@ -23,7 +23,7 @@ func NewConsole(w io.Writer) jsvm.GlobalRegister {
 
 type discardConsole struct{}
 
-func (c *discardConsole) RegisterGlobal(vm *goja.Runtime) error {
+func (c *discardConsole) RegisterGlobal(vm jsvm.Runtime) error {
 	fields := map[string]any{
 		"log":   c.discord,
 		"error": c.discord,
@@ -32,7 +32,7 @@ func (c *discardConsole) RegisterGlobal(vm *goja.Runtime) error {
 		"debug": c.discord,
 	}
 
-	return vm.Set("console", fields)
+	return vm.Runtime().Set("console", fields)
 }
 
 func (*discardConsole) discord(goja.FunctionCall) goja.Value {
@@ -41,10 +41,10 @@ func (*discardConsole) discord(goja.FunctionCall) goja.Value {
 
 type writerConsole struct {
 	w  io.Writer
-	vm *goja.Runtime
+	vm jsvm.Runtime
 }
 
-func (wc *writerConsole) RegisterGlobal(vm *goja.Runtime) error {
+func (wc *writerConsole) RegisterGlobal(vm jsvm.Runtime) error {
 	wc.vm = vm
 	fields := map[string]any{
 		"log":   wc.write,
@@ -54,7 +54,7 @@ func (wc *writerConsole) RegisterGlobal(vm *goja.Runtime) error {
 		"debug": wc.write,
 	}
 
-	return vm.Set("console", fields)
+	return vm.Runtime().Set("console", fields)
 }
 
 func (wc *writerConsole) write(call goja.FunctionCall) goja.Value {
@@ -63,7 +63,7 @@ func (wc *writerConsole) write(call goja.FunctionCall) goja.Value {
 		_, err = wc.w.Write(msg)
 	}
 	if err != nil {
-		return wc.vm.ToValue(err)
+		return wc.vm.Runtime().ToValue(err)
 	}
 	return goja.Undefined()
 }

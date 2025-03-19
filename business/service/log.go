@@ -4,7 +4,7 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/dop251/goja"
+	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"github.com/xmx/aegis-server/library/dynwriter"
 )
 
@@ -22,12 +22,12 @@ type Log struct {
 	log    *slog.Logger
 }
 
-func (l *Log) RegisterGlobal(vm *goja.Runtime) error {
+func (l *Log) RegisterGlobal(vm jsvm.Runtime) error {
 	fns := map[string]any{
 		"level":    l.Level,
 		"setLevel": l.SetLevel,
 	}
-	return vm.Set("log", fns)
+	return vm.Runtime().Set("log", fns)
 }
 
 func (l *Log) Level() slog.Level {
