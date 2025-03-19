@@ -15,10 +15,13 @@
 
 <div class="flex p-2 gap-2">
     <button id="run" class="bg-green-600 hover:bg-green-700 text-white py-1 px-3 flex items-center">
-        ▶ 运行
+        ▶️ 运行
     </button>
-    <button id="clear" class="bg-red-600 hover:bg-red-700 text-white py-1 px-3 flex items-center">
-        ⌫ 清除
+    <button id="clear" class="bg-yellow-800 hover:bg-red-700 text-white py-1 px-3 flex items-center">
+        🗑️ 清除
+    </button>
+    <button id="kill" class="bg-red-600 hover:bg-red-700 text-white py-1 px-3 flex items-center">
+        ☠️ 结束进程
     </button>
 </div>
 
@@ -45,16 +48,22 @@
         if (socket.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({type: "exec", data: code}));
         } else {
-            consoleRed("WebSocket 未连接");
+            consoleRed("未连接服务器");
         }
     });
-
+    document.getElementById("kill").addEventListener("click", function () {
+        if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({type: "kill"}));
+        } else {
+            consoleRed("未连接服务器");
+        }
+    });
     document.getElementById("clear").addEventListener("click", function () {
         document.getElementById("console").innerHTML = "";
     });
 
     socket.onopen = function () {
-        consoleGreen("WebSocket 连接成功");
+        consoleGreen("连接服务器成功");
     };
 
     socket.onmessage = function (evt) {
@@ -69,11 +78,11 @@
     };
 
     socket.onerror = function () {
-        consoleRed("WebSocket 发生错误");
+        consoleRed("连接发生错误");
     };
 
     socket.onclose = function () {
-        consoleRed("WebSocket 连接已关闭");
+        consoleRed("服务器连接已关闭");
     };
 
     function consoleOutput(msg, colorClass) {

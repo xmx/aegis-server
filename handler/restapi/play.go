@@ -3,6 +3,7 @@ package restapi
 import (
 	"context"
 	"io"
+	"sync"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -34,8 +35,11 @@ func (ply *Play) run(c *ship.Context) error {
 		return err
 	}
 
+	sig := new(singleVM)
 	ctx := r.Context()
+	context.AfterFunc(ctx, sig.kill)
 	type tempData struct {
+		Type string `json:"type"`
 		Data string `json:"data"`
 	}
 	for {
@@ -43,14 +47,21 @@ func (ply *Play) run(c *ship.Context) error {
 		if err = wsjson.Read(ctx, ws, data); err != nil {
 			break
 		}
-		_ = ply.newInstanceExec(ws, data.Data)
+
+		switch data.Type {
+		case "kill":
+			sig.kill()
+		case "exec":
+			vm := goja.New()
+			sig.set(vm)
+			go ply.newInstanceExec(vm, ws, data.Data)
+		}
 	}
 
 	return nil
 }
 
-func (ply *Play) newInstanceExec(ws *websocket.Conn, code string) error {
-	vm := jsvm.New()
+func (ply *Play) newInstanceExec(vm *goja.Runtime, ws *websocket.Conn, code string) error {
 	stdout, stderr := ply.stdout(ws), ply.stderr(ws)
 	mods := append(ply.mods, jsmod.NewConsole(stdout))
 	if err := jsvm.RegisterGlobals(vm, mods); err != nil {
@@ -96,4 +107,28 @@ func (sc *socketConn) Write(p []byte) (int, error) {
 	err := wsjson.Write(context.Background(), sc.ws, data)
 
 	return len(p), err
+}
+
+type singleVM struct {
+	mu sync.Mutex
+	vm *goja.Runtime
+}
+
+func (sig *singleVM) set(vm *goja.Runtime) {
+	sig.mu.Lock()
+	sig.interrupt()
+	sig.vm = vm
+	sig.mu.Unlock()
+}
+
+func (sig *singleVM) kill() {
+	sig.mu.Lock()
+	sig.interrupt()
+	sig.mu.Unlock()
+}
+
+func (sig *singleVM) interrupt() {
+	if vm := sig.vm; vm != nil {
+		vm.Interrupt("killed")
+	}
 }

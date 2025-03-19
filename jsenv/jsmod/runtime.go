@@ -16,6 +16,8 @@ type stdRuntime struct{}
 func (s *stdRuntime) RegisterGlobal(vm *goja.Runtime) error {
 	fns := map[string]any{
 		"memStats": s.memStats,
+		"goos":     runtime.GOOS,
+		"goarch":   runtime.GOARCH,
 	}
 	return vm.Set("runtime", fns)
 }

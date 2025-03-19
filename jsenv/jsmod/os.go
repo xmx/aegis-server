@@ -6,6 +6,7 @@ import (
 
 	"github.com/dop251/goja"
 	"github.com/xmx/aegis-server/jsenv/jsvm"
+	"github.com/xmx/aegis-server/library/machine"
 )
 
 func NewOS() jsvm.GlobalRegister {
@@ -23,6 +24,7 @@ func (std *stdOS) RegisterGlobal(vm *goja.Runtime) error {
 		"open":   os.Open,
 		"stdout": io.Discard,
 		"stderr": io.Discard,
+		"id":     machine.ID,
 	}
 
 	return vm.Set("os", hm)
