@@ -2,6 +2,7 @@ package restapi
 
 import (
 	"context"
+	"io"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -33,49 +34,66 @@ func (ply *Play) run(c *ship.Context) error {
 		return err
 	}
 
-	vm := jsvm.New()
-	out := &wsout{ws: ws}
-	mods := append(ply.mods, jsmod.NewConsole(out))
-	if err = jsvm.RegisterGlobals(vm, mods); err != nil {
-		return err
-	}
-
 	ctx := r.Context()
+	type tempData struct {
+		Data string `json:"data"`
+	}
 	for {
-		data := new(Data)
+		data := new(tempData)
 		if err = wsjson.Read(ctx, ws, data); err != nil {
 			break
 		}
-		if val, err := vm.RunString(data.Code); err != nil {
-			out.WriteError(err)
-		} else if val != nil && val != goja.Undefined() {
-			out.Write([]byte(val.String()))
-		}
+		_ = ply.newInstanceExec(ws, data.Data)
 	}
 
 	return nil
 }
 
-type Data struct {
-	Code string `json:"code"`
+func (ply *Play) newInstanceExec(ws *websocket.Conn, code string) error {
+	vm := jsvm.New()
+	stdout, stderr := ply.stdout(ws), ply.stderr(ws)
+	mods := append(ply.mods, jsmod.NewConsole(stdout))
+	if err := jsvm.RegisterGlobals(vm, mods); err != nil {
+		return err
+	}
+
+	val := vm.GlobalObject().Get("os")
+	if obj, _ := val.(*goja.Object); obj != nil {
+		_ = obj.Set("stdout", stdout)
+		_ = obj.Set("stderr", stderr)
+	}
+	if ret, exx := vm.RunString(code); exx != nil {
+		_, _ = stderr.Write([]byte(exx.Error()))
+		return exx
+	} else if ret != nil && ret != goja.Undefined() {
+		_, _ = stdout.Write([]byte(ret.String()))
+	}
+
+	return nil
 }
 
-type Response struct {
-	Type string `json:"type"`
-	Data string `json:"data"`
+func (ply *Play) stderr(ws *websocket.Conn) io.Writer {
+	return &socketConn{tp: "stderr", ws: ws}
 }
 
-type wsout struct {
+func (ply *Play) stdout(ws *websocket.Conn) io.Writer {
+	return &socketConn{tp: "stdout", ws: ws}
+}
+
+type socketConn struct {
+	tp string
 	ws *websocket.Conn
 }
 
-func (w *wsout) Write(p []byte) (int, error) {
-	data := &Response{Type: "stdout", Data: string(p)}
-	err := wsjson.Write(context.Background(), w.ws, data)
-	return len(p), err
-}
+func (sc *socketConn) Write(p []byte) (int, error) {
+	data := struct {
+		Type string `json:"type"`
+		Data string `json:"data"`
+	}{
+		Type: sc.tp,
+		Data: string(p),
+	}
+	err := wsjson.Write(context.Background(), sc.ws, data)
 
-func (w *wsout) WriteError(err error) {
-	data := &Response{Type: "stderr", Data: err.Error()}
-	wsjson.Write(context.Background(), w.ws, data)
+	return len(p), err
 }

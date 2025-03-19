@@ -121,11 +121,15 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	const basePath = "/api"
 	modules := []jsvm.GlobalRegister{
-		jsmod.NewConsole(io.Discard),
-		jsmod.NewMongoDB(mongoDB),
 		logSvc,
+		jsmod.NewConsole(io.Discard),
+		jsmod.NewExec(),
+		jsmod.NewContext(),
+		jsmod.NewIO(),
+		jsmod.NewMongoDB(mongoDB),
 		jsmod.NewOS(),
 		jsmod.NewRuntime(),
+		jsmod.NewTime(),
 	}
 	routes := []shipx.Router{
 		restapi.NewAuth(),

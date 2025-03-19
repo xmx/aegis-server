@@ -43,7 +43,7 @@
         const code = editor.getValue();
         localStorage.setItem("code", code);
         if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({type: "execute", code: code}));
+            socket.send(JSON.stringify({type: "exec", data: code}));
         } else {
             consoleRed("WebSocket 未连接");
         }
@@ -78,7 +78,7 @@
 
     function consoleOutput(msg, colorClass) {
         const consoleDiv = document.getElementById("console");
-        consoleDiv.innerHTML += `<div class='${colorClass}'>${msg}</div>`;
+        consoleDiv.innerHTML += `<div class='${colorClass}'><pre>${msg}</pre></div>`;
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 

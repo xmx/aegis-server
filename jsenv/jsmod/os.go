@@ -1,6 +1,7 @@
 package jsmod
 
 import (
+	"io"
 	"os"
 
 	"github.com/dop251/goja"
@@ -15,10 +16,13 @@ type stdOS struct {
 	vm *goja.Runtime
 }
 
-func (s *stdOS) RegisterGlobal(vm *goja.Runtime) error {
+func (std *stdOS) RegisterGlobal(vm *goja.Runtime) error {
+	std.vm = vm
 	hm := map[string]any{
-		"pid":      os.Getpid,
-		"hostname": os.Hostname,
+		"pid":    os.Getpid,
+		"open":   os.Open,
+		"stdout": io.Discard,
+		"stderr": io.Discard,
 	}
 
 	return vm.Set("os", hm)
