@@ -13,10 +13,9 @@ import (
 	"golang.org/x/net/webdav"
 )
 
-func New(prefix, dir string) http.Handler {
+func New(dir string) http.Handler {
 	dir = filepath.Clean(dir)
 	dav := &webdav.Handler{
-		Prefix:     prefix,
 		FileSystem: webdav.Dir(dir),
 		LockSystem: webdav.NewMemLS(),
 	}
@@ -25,7 +24,7 @@ func New(prefix, dir string) http.Handler {
 	return &davFS{
 		dav: dav,
 		hfs: d,
-		han: http.StripPrefix(prefix, http.FileServer(d)),
+		han: http.FileServer(d),
 	}
 }
 
@@ -52,8 +51,7 @@ func (f *davFS) tryServeJSONDir(w http.ResponseWriter, r *http.Request, reqPath 
 		return false
 	}
 
-	fpath := strings.TrimPrefix(reqPath, f.dav.Prefix)
-	file, err := f.hfs.Open(fpath)
+	file, err := f.hfs.Open(reqPath)
 	if err != nil {
 		return false
 	}
