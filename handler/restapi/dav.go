@@ -18,7 +18,7 @@ func NewDAV(basepath, dir string) *DAV {
 	return &DAV{
 		prefix:  prefix,
 		subpath: subpath,
-		handler: dav,
+		handler: http.StripPrefix(prefix, dav),
 	}
 }
 

@@ -118,6 +118,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	} else {
 		useTLS = num > 0
 	}
+	termSvc := service.NewTerm(log)
 
 	const basePath = "/api"
 	modules := []jsvm.GlobalRegister{
@@ -135,8 +136,9 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logSvc),
 		restapi.NewDAV(basePath, "/"),
-		restapi.NewSystem(),
 		restapi.NewPlay(modules),
+		restapi.NewSystem(),
+		restapi.NewTerm(termSvc),
 		// restapi.NewFile(fileSvc),
 		// restapi.NewLog(logSvc),
 		// restapi.NewOplog(oplogSvc),

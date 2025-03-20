@@ -7,7 +7,6 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"golang.org/x/net/webdav"
@@ -90,12 +89,12 @@ func (f *davFS) tryServeJSONDir(w http.ResponseWriter, r *http.Request, reqPath 
 			continue
 		}
 		// 链接类型文件
-		if link, exx := os.Readlink(filepath.Join(fpath, name)); exx == nil {
+		if link, exx := os.Readlink(filepath.Join(reqPath, name)); exx == nil {
 			info.Symlink = link
 		}
 	}
 	sort.Sort(files)
-	ret := &dirInfo{Path: path.Clean(fpath), Files: files}
+	ret := &dirInfo{Path: path.Clean(reqPath), Files: files}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	_ = json.NewEncoder(w).Encode(ret)
