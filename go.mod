@@ -10,7 +10,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.25.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/xmx/ship v0.0.0-20250318102844-8fad8e7bab7d
+	github.com/xmx/ship v0.0.0-20250319010933-9bdf9a01fa3a
 	go.mongodb.org/mongo-driver/v2 v2.1.0
 	golang.org/x/crypto v0.36.0
 	golang.org/x/net v0.37.0
