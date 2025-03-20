@@ -18,23 +18,19 @@ type shipLog struct {
 	log *slog.Logger
 }
 
-func (s *shipLog) Tracef(format string, args ...any) {
+func (s *shipLog) Debug(format string, args ...any) {
 	s.logf(slog.LevelDebug, format, args...)
 }
 
-func (s *shipLog) Debugf(format string, args ...any) {
-	s.logf(slog.LevelDebug, format, args...)
-}
-
-func (s *shipLog) Infof(format string, args ...any) {
+func (s *shipLog) Info(format string, args ...any) {
 	s.logf(slog.LevelInfo, format, args...)
 }
 
-func (s *shipLog) Warnf(format string, args ...any) {
+func (s *shipLog) Warn(format string, args ...any) {
 	s.logf(slog.LevelWarn, format, args...)
 }
 
-func (s *shipLog) Errorf(format string, args ...any) {
+func (s *shipLog) Error(format string, args ...any) {
 	s.logf(slog.LevelError, format, args...)
 }
 

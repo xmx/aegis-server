@@ -101,7 +101,7 @@ func (eh ErrorHandler) NotFound(_ *ship.Context) error {
 func (eh ErrorHandler) HandleError(e error, c *ship.Context) {
 	dat := eh.unpack(e, c)
 	if err := c.JSON(dat.Status, dat); err != nil {
-		c.Warnf("响应报文写入出错", slog.Any("error", err), slog.Any("details", dat))
+		c.Warn("响应报文写入出错", slog.Any("error", err), slog.Any("details", dat))
 	}
 }
 
