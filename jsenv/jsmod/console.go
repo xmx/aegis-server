@@ -13,42 +13,21 @@ import (
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 )
 
-func NewConsole(w io.Writer) jsvm.GlobalRegister {
-	if w == nil || w == io.Discard {
-		return new(discardConsole)
-	}
-
-	return &writerConsole{w: w}
-}
-
-type discardConsole struct{}
-
-func (c *discardConsole) RegisterGlobal(vm jsvm.Runtime) error {
-	fields := map[string]any{
-		"log":   c.discord,
-		"error": c.discord,
-		"warn":  c.discord,
-		"info":  c.discord,
-		"debug": c.discord,
-	}
-
-	return vm.Runtime().Set("console", fields)
-}
-
-func (*discardConsole) discord(goja.FunctionCall) goja.Value {
-	return goja.Undefined()
+func NewConsole(stdout, stderr io.Writer) jsvm.GlobalRegister {
+	return &writerConsole{stdout: stdout, stderr: stderr}
 }
 
 type writerConsole struct {
-	w  io.Writer
-	vm jsvm.Runtime
+	stdout io.Writer
+	stderr io.Writer
+	vm     jsvm.Runtime
 }
 
 func (wc *writerConsole) RegisterGlobal(vm jsvm.Runtime) error {
 	wc.vm = vm
 	fields := map[string]any{
 		"log":   wc.write,
-		"error": wc.write,
+		"error": wc.writeToStdout,
 		"warn":  wc.write,
 		"info":  wc.write,
 		"debug": wc.write,
@@ -60,7 +39,18 @@ func (wc *writerConsole) RegisterGlobal(vm jsvm.Runtime) error {
 func (wc *writerConsole) write(call goja.FunctionCall) goja.Value {
 	msg, err := wc.format(call)
 	if err == nil {
-		_, err = wc.w.Write(msg)
+		_, err = wc.stdout.Write(msg)
+	}
+	if err != nil {
+		return wc.vm.Runtime().ToValue(err)
+	}
+	return goja.Undefined()
+}
+
+func (wc *writerConsole) writeToStdout(call goja.FunctionCall) goja.Value {
+	msg, err := wc.format(call)
+	if err == nil {
+		_, err = wc.stderr.Write(msg)
 	}
 	if err != nil {
 		return wc.vm.Runtime().ToValue(err)

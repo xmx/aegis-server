@@ -123,9 +123,11 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	const basePath = "/api"
 	modules := []jsvm.GlobalRegister{
 		logSvc,
-		jsmod.NewConsole(io.Discard),
-		jsmod.NewExec(),
+		jsmod.NewConsole(io.Discard, io.Discard),
 		jsmod.NewContext(),
+		jsmod.NewExec(),
+		jsmod.NewHTTP(),
+		jsmod.NewIO(),
 		jsmod.NewOS(),
 		jsmod.NewRuntime(),
 		jsmod.NewTime(),

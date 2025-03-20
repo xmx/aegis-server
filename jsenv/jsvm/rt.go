@@ -65,6 +65,8 @@ func (frt *firstRuntime) RunProgram(pgm *goja.Program) (goja.Value, error) {
 }
 
 func (frt *firstRuntime) Interrupt(v any) {
+	frt.vm.Interrupt(v)
+
 	frt.finmu.Lock()
 	defer frt.finmu.Unlock()
 
@@ -72,7 +74,6 @@ func (frt *firstRuntime) Interrupt(v any) {
 		_ = final.Finalize()
 	}
 	clear(frt.finhm)
-	frt.vm.Interrupt(v)
 }
 
 func (frt *firstRuntime) ClearInterrupt() {

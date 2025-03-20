@@ -63,7 +63,7 @@ func (ply *Play) run(c *ship.Context) error {
 
 func (ply *Play) newInstanceExec(vm jsvm.Runtime, ws *websocket.Conn, code string) error {
 	stdout, stderr := ply.stdout(ws), ply.stderr(ws)
-	mods := append(ply.mods, jsmod.NewConsole(stdout))
+	mods := append(ply.mods, jsmod.NewConsole(stdout, stderr))
 	if err := vm.RegisterGlobals(mods); err != nil {
 		return err
 	}
