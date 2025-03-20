@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/xmx/aegis-server/protocol/webfs"
+	"github.com/xmx/aegis-server/protocol/webdavfs"
 	"github.com/xmx/ship"
 )
 
@@ -13,7 +13,7 @@ func NewDAV(basepath, dir string) *DAV {
 	const subpath = "/dav"
 	basepath = strings.TrimRight(basepath, "/")
 	prefix := path.Join(basepath, subpath)
-	dav := webfs.New(dir)
+	dav := webdavfs.New(dir)
 
 	return &DAV{
 		prefix:  prefix,

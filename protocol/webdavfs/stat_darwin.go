@@ -1,4 +1,4 @@
-package webfs
+package webdavfs
 
 import (
 	"syscall"
@@ -12,9 +12,9 @@ func readStat(v any) sysStat {
 	}
 
 	stat := sysStat{
-		AccessedAt: formatTime(st.Atim),
-		CreatedAt:  formatTime(st.Ctim),
-		UpdatedAt:  formatTime(st.Mtim),
+		AccessedAt: formatTime(st.Atimespec),
+		CreatedAt:  formatTime(st.Ctimespec),
+		UpdatedAt:  formatTime(st.Mtimespec),
 	}
 	u, g := userGroup.Lookup(st.Uid, st.Gid)
 	if u != nil {

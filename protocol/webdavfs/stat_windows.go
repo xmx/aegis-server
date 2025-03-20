@@ -1,4 +1,4 @@
-package webfs
+package webdavfs
 
 import (
 	"syscall"
