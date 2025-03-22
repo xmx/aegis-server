@@ -66,7 +66,7 @@
                         const row = document.createElement("tr");
                         row.className = "border-b border-gray-700 hover:bg-gray-800";
                         let fileTypeIcon = file.directory ? "📁" : getFileIcon(file.name);
-                        let symlinkIcon = file.symlink ? "<span class='text-yellow-400' title='指向: " + file.symlink + "'>🔗</span>" : "";
+                        let symlinkIcon = file.symlink ? "<span class='text-yellow-400' title='链接文件: " + file.symlink + "'>🔗</span>" : "";
                         row.innerHTML = `
                                 <td class="p-2 ${file.directory ? 'text-blue-400 cursor-pointer' : 'cursor-pointer'}" style="cursor: pointer;" onclick="${file.directory ? `navigateTo('${data.path}/${file.name}')` : `handleFileClick('${data.path}/${file.name}')`}">
                                     ${fileTypeIcon} ${file.name} ${symlinkIcon}
