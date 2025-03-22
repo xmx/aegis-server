@@ -101,18 +101,9 @@ func (v *Validate) RegisterValidationTranslation(tag string, trans ut.Translator
 	return v.valid.RegisterTranslation(tag, trans, registerFn, translationFn)
 }
 
-type CustomValidator interface {
-	// Tag 校验器标签
-	Tag() string
+type CustomValidatorFunc func() (tag string, valid validator.FuncCtx, trans validator.RegisterTranslationsFunc)
 
-	// ValidationFunc 参数校验器，可以为空。
-	ValidationFunc() validator.FuncCtx
-
-	// TranslationsFunc 翻译函数。
-	TranslationsFunc() validator.RegisterTranslationsFunc
-}
-
-func (v *Validate) RegisterCustomValidations(customs []CustomValidator) error {
+func (v *Validate) RegisterCustomValidations(customs []CustomValidatorFunc) error {
 	for _, custom := range customs {
 		if err := v.RegisterCustomValidation(custom); err != nil {
 			return err
@@ -122,22 +113,21 @@ func (v *Validate) RegisterCustomValidations(customs []CustomValidator) error {
 	return nil
 }
 
-func (v *Validate) RegisterCustomValidation(custom CustomValidator) error {
+func (v *Validate) RegisterCustomValidation(custom CustomValidatorFunc) error {
 	if custom == nil {
 		return nil
 	}
-	tag := custom.Tag()
+	tag, validationFunc, translationsFunc := custom()
 	if tag == "" {
 		return nil
 	}
 
-	if validationFunc := custom.ValidationFunc(); validationFunc != nil {
+	if validationFunc != nil {
 		if err := v.RegisterValidationCtx(tag, validationFunc); err != nil {
 			return err
 		}
 	}
-
-	if translationsFunc := custom.TranslationsFunc(); translationsFunc != nil {
+	if translationsFunc != nil {
 		for _, tran := range v.trans {
 			if err := v.RegisterValidationTranslation(tag, tran, translationsFunc, v.defaultTranslation); err != nil {
 				return err
