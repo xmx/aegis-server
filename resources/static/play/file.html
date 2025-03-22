@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件浏览</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 p-6">
+<div class="mb-4 flex items-center space-x-2" id="breadcrumbs"></div>
+<table class="w-full text-left border-collapse">
+    <thead>
+    <tr class="bg-gray-800">
+        <th class="p-2">名称</th>
+        <th class="p-2">大小</th>
+        <th class="p-2">权限</th>
+        <th class="p-2">修改时间</th>
+        <th class="p-2">创建时间</th>
+        <th class="p-2">访问时间</th>
+    </tr>
+    </thead>
+    <tbody id="file-list"></tbody>
+</table>
+<div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-800 p-6 rounded-lg shadow-lg max-w-3xl w-full relative">
+        <button class="absolute top-2 right-2 text-gray-300 hover:text-white" onclick="closePreview()">✖</button>
+        <div id="preview-content" class="overflow-auto max-h-96"></div>
+    </div>
+</div>
+<script>
+    let currentPath = "/api/dav";
+
+    function formatSize(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        let k = 1024, dm = 2, sizes = ["KiB", "MiB", "GiB", "TiB"];
+        let i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i - 1];
+    }
+
+    function generateBreadcrumbs(path) {
+        let parts = path.replace("/api/dav", "").split("/").filter(p => p);
+        let breadcrumbs = `<button class='px-3 py-1 bg-blue-600 rounded' onclick="navigateTo('/')">根目录</button>`;
+        let accumulatedPath = "";
+        parts.forEach(part => {
+            accumulatedPath += "/" + part;
+            breadcrumbs += ` <span class='text-gray-400'>/</span> <button class='px-3 py-1 bg-blue-600 rounded' onclick="navigateTo('${accumulatedPath}')">${part}</button>`;
+        });
+        document.getElementById("breadcrumbs").innerHTML = breadcrumbs;
+    }
+
+    function fetchFiles(path) {
+        fetch(path, { headers: { "Accept": "application/json" } })
+            .then(response => response.json())
+            .then(data => {
+                generateBreadcrumbs(data.path);
+                const fileList = document.getElementById("file-list");
+                fileList.innerHTML = "";
+                data.files.forEach(file => {
+                    const row = document.createElement("tr");
+                    row.className = "border-b border-gray-700 hover:bg-gray-800";
+                    let fileTypeIcon = file.directory ? "📁" : getFileIcon(file.name);
+                    row.innerHTML = `
+                            <td class="p-2 ${file.directory ? 'text-blue-400 cursor-pointer' : 'cursor-pointer'}" style="cursor: pointer;" onclick="${file.directory ? `navigateTo('${data.path}/${file.name}')` : `handleFileClick('${data.path}/${file.name}')`}">
+                                ${fileTypeIcon} ${file.name}
+                            </td>
+                            <td class="p-2">${file.directory ? '-' : formatSize(file.size)}</td>
+                            <td class="p-2">${file.mode}</td>
+                            <td class="p-2">${new Date(file.updated_at).toLocaleString()}</td>
+                            <td class="p-2">${new Date(file.created_at).toLocaleString()}</td>
+                            <td class="p-2">${new Date(file.accessed_at).toLocaleString()}</td>
+                        `;
+                    fileList.appendChild(row);
+                });
+            })
+            .catch(error => console.error("Error fetching files:", error));
+    }
+
+    function getFileIcon(fileName) {
+        const ext = fileName.split(".").pop().toLowerCase();
+        const icons = {
+            "jpg": "🖼️", "jpeg": "🖼️", "png": "🖼️", "gif": "🖼️", "bmp": "🖼️", "svg": "🖼️",
+            "mp4": "🎥", "mkv": "🎥", "avi": "🎥", "mov": "🎥",
+            "mp3": "🎵", "wav": "🎵", "flac": "🎵",
+            "pdf": "📄", "doc": "📄", "docx": "📄", "txt": "📄", "csv": "📄", "xlsx": "📄", "ppt": "📄",
+            "zip": "🗜", "rar": "🗜", "7z": "🗜", "tar": "🗜", "gz": "🗜"
+        };
+        return icons[ext] || "📄";
+    }
+
+    function handleFileClick(filePath) {
+        const ext = filePath.split(".").pop().toLowerCase();
+        const previewable = ["jpg", "jpeg", "png", "gif", "pdf", "txt"];
+        const fullPath = `/api/dav${filePath}`;
+        if (previewable.includes(ext)) {
+            showPreview(fullPath, ext);
+        } else {
+            window.location.href = fullPath;
+        }
+    }
+
+    function showPreview(fileUrl, fileType) {
+        const previewContent = document.getElementById("preview-content");
+        previewContent.innerHTML = "";
+        if (["jpg", "jpeg", "png", "gif"].includes(fileType)) {
+            previewContent.innerHTML = `<img src="${fileUrl}" class="max-w-full h-auto mx-auto" />`;
+        } else if (fileType === "pdf") {
+            previewContent.innerHTML = `<iframe src="${fileUrl}" class="w-full h-96"></iframe>`;
+        } else if (fileType === "txt") {
+            fetch(fileUrl).then(res => res.text()).then(text => {
+                previewContent.innerHTML = `<pre class="whitespace-pre-wrap">${text}</pre>`;
+            });
+        }
+        document.getElementById("preview-modal").classList.remove("hidden");
+    }
+
+    function closePreview() {
+        document.getElementById("preview-modal").classList.add("hidden");
+    }
+
+    function navigateTo(subPath) {
+        currentPath = `/api/dav${subPath}`;
+        fetchFiles(currentPath);
+    }
+
+    fetchFiles(currentPath);
+</script>
+</body>
+</html>
