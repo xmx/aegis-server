@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文件浏览</title>
+    <title>文件目录展示</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 p-6">
@@ -21,13 +21,11 @@
     </thead>
     <tbody id="file-list"></tbody>
 </table>
-<div id="empty-message" class="text-center text-xxl font-bold text-gray-400 mt-6 hidden">📂 当前目录为空</div>
-<div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4">
-    <div class="bg-gray-800 p-6 rounded-lg shadow-lg max-w-3xl w-full relative">
-        <button class="absolute top-2 right-2 text-gray-300 hover:text-white" onclick="closePreview()">✖</button>
-        <div id="preview-content" class="overflow-auto max-h-96"></div>
-    </div>
-</div>
+<div id="empty-message" class="text-center text-2xl font-bold text-gray-300 mt-6 hidden">📂 目录为空</div>
+
+<!-- 错误提示弹窗 -->
+<div id="error-toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-red-600 text-white px-6 py-3 rounded shadow-lg text-lg font-bold hidden">错误</div>
+
 <script>
     let currentPath = "/api/dav";
 
@@ -49,9 +47,21 @@
         document.getElementById("breadcrumbs").innerHTML = breadcrumbs;
     }
 
+    function showError(message) {
+        const errorToast = document.getElementById("error-toast");
+        errorToast.textContent = message;
+        errorToast.classList.remove("hidden");
+        setTimeout(() => errorToast.classList.add("hidden"), 2000);
+    }
+
     function fetchFiles(path) {
         fetch(path, { headers: { "Accept": "application/json" } })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`请求失败: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 generateBreadcrumbs(data.path);
                 const fileList = document.getElementById("file-list");
@@ -66,9 +76,9 @@
                         const row = document.createElement("tr");
                         row.className = "border-b border-gray-700 hover:bg-gray-800";
                         let fileTypeIcon = file.directory ? "📁" : getFileIcon(file.name);
-                        let symlinkIcon = file.symlink ? "<span class='text-yellow-400' title='链接文件: " + file.symlink + "'>🔗</span>" : "";
+                        let symlinkIcon = file.symlink ? "<span class='text-yellow-400' title='指向: " + file.symlink + "'>🔗</span>" : "";
                         row.innerHTML = `
-                                <td class="p-2 ${file.directory ? 'text-blue-400 cursor-pointer' : 'cursor-pointer'}" style="cursor: pointer;" onclick="${file.directory ? `navigateTo('${data.path}/${file.name}')` : `handleFileClick('${data.path}/${file.name}')`}">
+                                <td class="p-2 ${file.directory ? 'text-blue-400 cursor-pointer' : 'cursor-pointer'}" onclick="${file.directory ? `navigateTo('${data.path}/${file.name}')` : `handleFileClick('${data.path}/${file.name}')`}">
                                     ${fileTypeIcon} ${file.name} ${symlinkIcon}
                                 </td>
                                 <td class="p-2">${file.directory ? '-' : formatSize(file.size)}</td>
@@ -81,7 +91,10 @@
                     });
                 }
             })
-            .catch(error => console.error("Error fetching files:", error));
+            .catch(error => {
+                console.error("Error fetching files:", error);
+                showError(error.message);
+            });
     }
 
     function getFileIcon(fileName) {
