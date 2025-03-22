@@ -21,6 +21,7 @@
     </thead>
     <tbody id="file-list"></tbody>
 </table>
+<div id="empty-message" class="text-center text-xxl font-bold text-gray-400 mt-6 hidden">📂 当前目录为空</div>
 <div id="preview-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden flex items-center justify-center p-4">
     <div class="bg-gray-800 p-6 rounded-lg shadow-lg max-w-3xl w-full relative">
         <button class="absolute top-2 right-2 text-gray-300 hover:text-white" onclick="closePreview()">✖</button>
@@ -54,23 +55,31 @@
             .then(data => {
                 generateBreadcrumbs(data.path);
                 const fileList = document.getElementById("file-list");
+                const emptyMessage = document.getElementById("empty-message");
                 fileList.innerHTML = "";
-                data.files.forEach(file => {
-                    const row = document.createElement("tr");
-                    row.className = "border-b border-gray-700 hover:bg-gray-800";
-                    let fileTypeIcon = file.directory ? "📁" : getFileIcon(file.name);
-                    row.innerHTML = `
-                            <td class="p-2 ${file.directory ? 'text-blue-400 cursor-pointer' : 'cursor-pointer'}" style="cursor: pointer;" onclick="${file.directory ? `navigateTo('${data.path}/${file.name}')` : `handleFileClick('${data.path}/${file.name}')`}">
-                                ${fileTypeIcon} ${file.name}
-                            </td>
-                            <td class="p-2">${file.directory ? '-' : formatSize(file.size)}</td>
-                            <td class="p-2">${file.mode}</td>
-                            <td class="p-2">${new Date(file.updated_at).toLocaleString()}</td>
-                            <td class="p-2">${new Date(file.created_at).toLocaleString()}</td>
-                            <td class="p-2">${new Date(file.accessed_at).toLocaleString()}</td>
-                        `;
-                    fileList.appendChild(row);
-                });
+
+                if (data.files.length === 0) {
+                    emptyMessage.classList.remove("hidden");
+                } else {
+                    emptyMessage.classList.add("hidden");
+                    data.files.forEach(file => {
+                        const row = document.createElement("tr");
+                        row.className = "border-b border-gray-700 hover:bg-gray-800";
+                        let fileTypeIcon = file.directory ? "📁" : getFileIcon(file.name);
+                        let symlinkIcon = file.symlink ? "<span class='text-yellow-400' title='指向: " + file.symlink + "'>🔗</span>" : "";
+                        row.innerHTML = `
+                                <td class="p-2 ${file.directory ? 'text-blue-400 cursor-pointer' : 'cursor-pointer'}" style="cursor: pointer;" onclick="${file.directory ? `navigateTo('${data.path}/${file.name}')` : `handleFileClick('${data.path}/${file.name}')`}">
+                                    ${fileTypeIcon} ${file.name} ${symlinkIcon}
+                                </td>
+                                <td class="p-2">${file.directory ? '-' : formatSize(file.size)}</td>
+                                <td class="p-2">${file.mode}</td>
+                                <td class="p-2">${new Date(file.updated_at).toLocaleString()}</td>
+                                <td class="p-2">${new Date(file.created_at).toLocaleString()}</td>
+                                <td class="p-2">${new Date(file.accessed_at).toLocaleString()}</td>
+                            `;
+                        fileList.appendChild(row);
+                    });
+                }
             })
             .catch(error => console.error("Error fetching files:", error));
     }
@@ -85,36 +94,6 @@
             "zip": "🗜", "rar": "🗜", "7z": "🗜", "tar": "🗜", "gz": "🗜"
         };
         return icons[ext] || "📄";
-    }
-
-    function handleFileClick(filePath) {
-        const ext = filePath.split(".").pop().toLowerCase();
-        const previewable = ["jpg", "jpeg", "png", "gif", "pdf", "txt"];
-        const fullPath = `/api/dav${filePath}`;
-        if (previewable.includes(ext)) {
-            showPreview(fullPath, ext);
-        } else {
-            window.location.href = fullPath;
-        }
-    }
-
-    function showPreview(fileUrl, fileType) {
-        const previewContent = document.getElementById("preview-content");
-        previewContent.innerHTML = "";
-        if (["jpg", "jpeg", "png", "gif"].includes(fileType)) {
-            previewContent.innerHTML = `<img src="${fileUrl}" class="max-w-full h-auto mx-auto" />`;
-        } else if (fileType === "pdf") {
-            previewContent.innerHTML = `<iframe src="${fileUrl}" class="w-full h-96"></iframe>`;
-        } else if (fileType === "txt") {
-            fetch(fileUrl).then(res => res.text()).then(text => {
-                previewContent.innerHTML = `<pre class="whitespace-pre-wrap">${text}</pre>`;
-            });
-        }
-        document.getElementById("preview-modal").classList.remove("hidden");
-    }
-
-    function closePreview() {
-        document.getElementById("preview-modal").classList.add("hidden");
     }
 
     function navigateTo(subPath) {
