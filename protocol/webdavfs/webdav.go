@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"syscall"
 	"time"
 
 	"golang.org/x/net/webdav"
@@ -162,9 +161,4 @@ type sysStat struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 	User       string    `json:"user,omitempty"`
 	Group      string    `json:"group,omitempty"`
-}
-
-func devices() {
-	kernel32 := syscall.NewLazyDLL("kernel32.dll")
-	kernel32.NewProc("GetDiskFreeSpaceExW")
 }
