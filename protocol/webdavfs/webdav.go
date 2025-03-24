@@ -7,6 +7,8 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/net/webdav"
@@ -46,7 +48,15 @@ func (f *davFS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (f *davFS) tryServeJSONDir(w http.ResponseWriter, r *http.Request, reqPath string) bool {
 	accept := r.Header.Get("Accept")
-	if accept != "application/json" {
+	accepts := strings.Split(accept, ",")
+	var allowed bool
+	for _, str := range accepts {
+		ct, _, _ := strings.Cut(str, ";")
+		if allowed = ct == "application/json" || ct == "*/*"; allowed {
+			break
+		}
+	}
+	if !allowed {
 		return false
 	}
 
@@ -113,7 +123,8 @@ type dirInfo struct {
 type fileInfo struct {
 	Name       string    `json:"name"`
 	Size       int64     `json:"size"`
-	Mode       string    `json:"mode"`
+	Free       int64     `json:"free,omitempty"` // windows 磁盘
+	Mode       string    `json:"mode,omitempty"`
 	Directory  bool      `json:"directory,omitempty"`
 	Symlink    string    `json:"symlink,omitempty"`
 	UpdatedAt  time.Time `json:"updated_at,omitempty"`
@@ -151,4 +162,9 @@ type sysStat struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 	User       string    `json:"user,omitempty"`
 	Group      string    `json:"group,omitempty"`
+}
+
+func devices() {
+	kernel32 := syscall.NewLazyDLL("kernel32.dll")
+	kernel32.NewProc("GetDiskFreeSpaceExW")
 }
