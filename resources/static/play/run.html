@@ -6,6 +6,7 @@
     <title>脚本运行器</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.41.0/min/vs/loader.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono/index.min.css">
 </head>
 <body class="bg-gray-900 text-white flex flex-col h-screen">
 <div class="flex-1 p-2">
@@ -49,7 +50,8 @@ cmd.run()
         editor = monaco.editor.create(document.getElementById('editor'), {
             value: code,
             language: 'javascript',
-            theme: 'vs-dark'
+            theme: 'vs-dark',
+            fontFamily: 'IBM Plex Mono, Consolas, monospace',
         });
     });
 
