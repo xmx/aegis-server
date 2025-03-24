@@ -25,7 +25,7 @@ func main() {
 		return
 	}
 
-	if f, _ := os.Create("crash.txt"); f != nil {
+	if f, _ := os.Create(".crash.txt"); f != nil {
 		_ = debug.SetCrashOutput(f, debug.CrashOptions{})
 		_ = f.Close()
 	}
