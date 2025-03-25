@@ -92,6 +92,9 @@ func (c *Crontab) Remove(name string) bool {
 	c.mutex.Lock()
 	exists := c.remove(name)
 	c.mutex.Unlock()
+	if exists {
+		c.log.Warn("删除定时任务", slog.String("name", name))
+	}
 
 	return exists
 }

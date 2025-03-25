@@ -92,12 +92,8 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	defer crontab.Stop()
 
 	mongoDB := cli.Database(mongoURL.Database)
-	certificateRepo := repository.NewCertificate(mongoDB)
-
-	indexes := []repository.IndexCreator{
-		certificateRepo,
-	}
-	if err = repository.CreateIndex(ctx, indexes); err != nil {
+	allRepo := repository.NewAll(mongoDB)
+	if err = allRepo.CreateIndex(ctx); err != nil {
 		return err
 	}
 
@@ -105,7 +101,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
 	poolTLS := credential.NewPool(baseTLS)
 
-	certificateSvc, err := service.NewCertificate(certificateRepo, poolTLS, log)
+	certificateSvc, err := service.NewCertificate(allRepo, poolTLS, log)
 	if err != nil {
 		return err
 	}

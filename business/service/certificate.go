@@ -20,7 +20,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func NewCertificate(repo repository.Certificate, pool credential.Certifier, log *slog.Logger) (*Certificate, error) {
+func NewCertificate(repo repository.All, pool credential.Certifier, log *slog.Logger) (*Certificate, error) {
 	return &Certificate{
 		repo: repo,
 		pool: pool,
@@ -29,7 +29,7 @@ func NewCertificate(repo repository.Certificate, pool credential.Certifier, log 
 }
 
 type Certificate struct {
-	repo repository.Certificate
+	repo repository.All
 	pool credential.Certifier // 证书池。
 	log  *slog.Logger
 }
@@ -43,7 +43,7 @@ func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*r
 	projection := bson.M{"public_key": 0, "private_key": 0}
 	opt := options.Find().SetProjection(projection)
 
-	return crt.repo.FindPage(ctx, filter, req.Page, req.Size, opt)
+	return crt.repo.Certificate().FindPage(ctx, filter, req.Page, req.Size, opt)
 }
 
 func (crt *Certificate) Find(ctx context.Context, ids []bson.ObjectID) ([]*model.Certificate, error) {
@@ -51,7 +51,7 @@ func (crt *Certificate) Find(ctx context.Context, ids []bson.ObjectID) ([]*model
 		return []*model.Certificate{}, nil
 	}
 
-	return crt.repo.Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
+	return crt.repo.Certificate().Find(ctx, bson.M{"_id": bson.M{"$in": ids}})
 }
 
 //goland:noinspection GoUnhandledErrorResult
@@ -85,14 +85,15 @@ func (crt *Certificate) Create(ctx context.Context, req *request.ConfigCertifica
 	}
 
 	// 检查证书指纹，避免出现证书重复。
+	crtRepo := crt.repo.Certificate()
 	filter := bson.M{"certificate_sha256": dat.CertificateSHA256}
-	if cnt, exx := crt.repo.CountDocuments(ctx, filter); exx != nil {
+	if cnt, exx := crtRepo.CountDocuments(ctx, filter); exx != nil {
 		return exx
 	} else if cnt > 0 {
 		return errcode.ErrCertificateExisted
 	}
 	dat.CreatedAt, dat.UpdatedAt = now, now
-	_, err = crt.repo.InsertOne(ctx, dat)
+	_, err = crtRepo.InsertOne(ctx, dat)
 
 	return err
 }
@@ -142,7 +143,7 @@ func (crt *Certificate) Delete(ctx context.Context, ids []bson.ObjectID) error {
 	}
 
 	filter := bson.M{"_id": bson.M{"$in": ids}}
-	if _, err := crt.repo.DeleteMany(ctx, filter); err != nil {
+	if _, err := crt.repo.Certificate().DeleteMany(ctx, filter); err != nil {
 		return err
 	}
 	_, err := crt.Refresh(ctx)
@@ -151,11 +152,11 @@ func (crt *Certificate) Delete(ctx context.Context, ids []bson.ObjectID) error {
 }
 
 func (crt *Certificate) Detail(ctx context.Context, id bson.ObjectID) (*model.Certificate, error) {
-	return crt.repo.FindByID(ctx, id)
+	return crt.repo.Certificate().FindByID(ctx, id)
 }
 
 func (crt *Certificate) Refresh(ctx context.Context) (int, error) {
-	crts, err := crt.repo.Find(ctx, bson.M{"enabled": true})
+	crts, err := crt.repo.Certificate().Find(ctx, bson.M{"enabled": true})
 	if err != nil {
 		return 0, err
 	} else if len(crts) == 0 {
