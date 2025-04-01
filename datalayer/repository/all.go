@@ -28,21 +28,10 @@ type allRepo struct {
 	oplog       Oplog
 }
 
-func (ar allRepo) DB() *mongo.Database {
-	return ar.db
-}
-
-func (ar allRepo) Client() *mongo.Client {
-	return ar.db.Client()
-}
-
-func (ar allRepo) Certificate() Certificate {
-	return ar.certificate
-}
-
-func (ar allRepo) Oplog() Oplog {
-	return ar.oplog
-}
+func (ar allRepo) DB() *mongo.Database      { return ar.db }
+func (ar allRepo) Client() *mongo.Client    { return ar.db.Client() }
+func (ar allRepo) Certificate() Certificate { return ar.certificate }
+func (ar allRepo) Oplog() Oplog             { return ar.oplog }
 
 func (ar allRepo) CreateIndex(ctx context.Context) error {
 	indexes := []IndexCreator{

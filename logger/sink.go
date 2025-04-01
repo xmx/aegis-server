@@ -17,11 +17,6 @@ type Sink struct {
 }
 
 func (sk Sink) Info(level int, message string, keysAndValues ...interface{}) {
-	// https://github.com/mongodb/mongo-go-driver/blob/v2.1.0/internal/logger/component.go#L18
-	if message == "Command started" {
-		return
-	}
-
 	lvl := slog.LevelError
 	if level == 1 {
 		lvl = slog.LevelInfo
