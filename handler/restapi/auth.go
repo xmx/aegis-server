@@ -1,6 +1,10 @@
 package restapi
 
-import "github.com/xmx/ship"
+import (
+	"fmt"
+
+	"github.com/xmx/ship"
+)
 
 func NewAuth() *Auth {
 	return &Auth{}
@@ -14,5 +18,12 @@ func (a *Auth) RegisterRoute(r *ship.RouteGroupBuilder) error {
 }
 
 func (a *Auth) back(c *ship.Context) error {
+	req := new(User)
+	err := c.BindQuery(req)
+	fmt.Println(err)
 	return nil
+}
+
+type User struct {
+	Passwd string `json:"passwd" validate:"password"`
 }

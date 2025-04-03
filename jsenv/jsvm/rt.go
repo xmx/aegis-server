@@ -113,7 +113,7 @@ func (fnm *fieldNameMapper) FieldName(t reflect.Type, f reflect.StructField) str
 	return fnm.lowerCase(f.Name)
 }
 
-func (fnm *fieldNameMapper) MethodName(t reflect.Type, m reflect.Method) string {
+func (fnm *fieldNameMapper) MethodName(_ reflect.Type, m reflect.Method) string {
 	return fnm.lowerCase(m.Name)
 }
 

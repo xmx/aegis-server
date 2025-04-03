@@ -92,16 +92,17 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	defer crontab.Stop()
 
 	mongoDB := cli.Database(mongoURL.Database)
-	allRepo := repository.NewAll(mongoDB)
-	if err = allRepo.CreateIndex(ctx); err != nil {
+	repoAll := repository.NewAll(mongoDB)
+	if err = repoAll.CreateIndex(ctx); err != nil {
 		return err
 	}
+	registerValidator(valid, repoAll, log)
 
 	var useTLS bool
 	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
 	poolTLS := credential.NewPool(baseTLS)
 
-	certificateSvc, err := service.NewCertificate(allRepo, poolTLS, log)
+	certificateSvc, err := service.NewCertificate(repoAll, poolTLS, log)
 	if err != nil {
 		return err
 	}

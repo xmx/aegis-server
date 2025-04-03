@@ -3,7 +3,6 @@ package jsmod
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 
 	"github.com/xmx/aegis-server/jsenv/jsvm"
 	"github.com/xmx/aegis-server/library/cronv3"
@@ -28,7 +27,7 @@ func (ext *extCrontab) RegisterGlobal(rt jsvm.Runtime) error {
 }
 
 func (ext *extCrontab) addJob(spec string, cmd func()) error {
-	buf := make([]byte, 100)
+	buf := make([]byte, 30)
 	_, _ = rand.Read(buf)
 	name := hex.EncodeToString(buf)
 	ext.rt.AddFinalizer(&stopCron{name: name, crond: ext.crond})
@@ -39,9 +38,7 @@ func (ext *extCrontab) addJob(spec string, cmd func()) error {
 func (ext *extCrontab) safeCall(f func()) func() {
 	return func() {
 		defer func() {
-			if err := recover(); err != nil {
-				fmt.Println(err)
-			}
+			_ = recover()
 		}()
 		f()
 	}

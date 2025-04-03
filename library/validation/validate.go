@@ -101,7 +101,7 @@ func (v *Validate) RegisterValidationTranslation(tag string, trans ut.Translator
 	return v.valid.RegisterTranslation(tag, trans, registerFn, translationFn)
 }
 
-type CustomValidatorFunc func() (tag string, valid validator.FuncCtx, trans validator.RegisterTranslationsFunc)
+type CustomValidatorFunc func() (tag string, valid validator.FuncCtx, trans validator.RegisterTranslationsFunc, tranFunc validator.TranslationFunc)
 
 func (v *Validate) RegisterCustomValidations(customs []CustomValidatorFunc) error {
 	for _, custom := range customs {
@@ -117,7 +117,7 @@ func (v *Validate) RegisterCustomValidation(custom CustomValidatorFunc) error {
 	if custom == nil {
 		return nil
 	}
-	tag, validationFunc, translationsFunc := custom()
+	tag, validationFunc, regTranFunc, tranFunc := custom()
 	if tag == "" {
 		return nil
 	}
@@ -127,15 +127,22 @@ func (v *Validate) RegisterCustomValidation(custom CustomValidatorFunc) error {
 			return err
 		}
 	}
-	if translationsFunc != nil {
+	if regTranFunc != nil {
+		if tranFunc == nil {
+			tranFunc = v.defaultTranslation
+		}
 		for _, tran := range v.trans {
-			if err := v.RegisterValidationTranslation(tag, tran, translationsFunc, v.defaultTranslation); err != nil {
+			if err := v.RegisterValidationTranslation(tag, tran, regTranFunc, tranFunc); err != nil {
 				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+func (v *Validate) RegisterStructValidationCtx(fn validator.StructLevelFuncCtx, types ...interface{}) {
+	v.valid.RegisterStructValidationCtx(fn, types...)
 }
 
 func (v *Validate) defaultTranslation(utt ut.Translator, fe validator.FieldError) string {
