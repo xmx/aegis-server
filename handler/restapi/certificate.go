@@ -20,7 +20,7 @@ type Certificate struct {
 	svc *service.Certificate
 }
 
-func (crt *Certificate) Route(r *ship.RouteGroupBuilder) error {
+func (crt *Certificate) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/certificates").GET(crt.page)
 	r.Route("/certificate/download").GET(crt.download)
 	r.Route("/certificate/refresh").GET(crt.refresh)

@@ -128,7 +128,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		jsmod.NewTime(),
 		jsmod.NewCrontab(crontab),
 	}
-	routes := []shipx.Router{
+	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logSvc),
@@ -154,7 +154,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	baseAPI := sh.Group(basePath).Use(middle.WAF(nil))
-	if err = shipx.BindRouters(baseAPI, routes); err != nil { // 注册路由
+	if err = shipx.RegisterRoutes(baseAPI, routes); err != nil { // 注册路由
 		return err
 	}
 

@@ -28,7 +28,7 @@ type DAV struct {
 	handler http.Handler // WebDAV
 }
 
-func (d *DAV) Route(r *ship.RouteGroupBuilder) error {
+func (d *DAV) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	methods := []string{
 		http.MethodOptions, http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodDelete,
 		"LOCK", "UNLOCK", "PROPFIND", "PROPPATCH", "MKCOL", "COPY", "MOVE",

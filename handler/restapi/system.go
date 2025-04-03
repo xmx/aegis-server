@@ -11,7 +11,7 @@ func NewSystem() *System {
 
 type System struct{}
 
-func (sys *System) Route(r *ship.RouteGroupBuilder) error {
+func (sys *System) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/system/banner").GET(sys.banner)
 	return nil
 }

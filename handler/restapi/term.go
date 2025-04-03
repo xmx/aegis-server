@@ -15,7 +15,7 @@ type Term struct {
 	svc *service.Term
 }
 
-func (api *Term) Route(r *ship.RouteGroupBuilder) error {
+func (api *Term) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/ws/pty").GET(api.pty)
 	// r.Route("/ws/ssh").GET(api.ssh)
 	return nil

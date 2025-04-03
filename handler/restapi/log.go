@@ -25,7 +25,7 @@ type Log struct {
 	count atomic.Int32 // tail 连接计数器。
 }
 
-func (l *Log) Route(r *ship.RouteGroupBuilder) error {
+func (l *Log) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/log/level").
 		GET(l.level).
 		POST(l.setLevel)

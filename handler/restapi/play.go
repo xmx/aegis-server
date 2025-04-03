@@ -23,7 +23,7 @@ type Play struct {
 	mods []jsvm.GlobalRegister
 }
 
-func (ply *Play) Route(r *ship.RouteGroupBuilder) error {
+func (ply *Play) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/ws/play/js").GET(ply.run)
 	return nil
 }
