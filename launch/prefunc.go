@@ -1,7 +1,6 @@
 package launch
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/xmx/aegis-server/business/customvalid"
@@ -11,6 +10,5 @@ import (
 
 func registerValidator(valid *validation.Validate, repo repository.All, log *slog.Logger) {
 	validDB := customvalid.NewValidDB(repo, log)
-	err := valid.RegisterCustomValidation(validDB.Password)
-	fmt.Println(err)
+	_ = valid.RegisterCustomValidation(validDB.Password)
 }

@@ -15,8 +15,8 @@ import (
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
-	"github.com/xmx/aegis-server/jsenv/jsmod"
-	"github.com/xmx/aegis-server/jsenv/jsvm"
+	"github.com/xmx/aegis-server/jsrun/jsmod"
+	"github.com/xmx/aegis-server/jsrun/jsvm"
 	"github.com/xmx/aegis-server/library/credential"
 	"github.com/xmx/aegis-server/library/cronv3"
 	"github.com/xmx/aegis-server/library/dynwriter"
@@ -122,12 +122,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		jsmod.NewConsole(io.Discard, io.Discard),
 		jsmod.NewContext(),
 		jsmod.NewExec(),
-		jsmod.NewHTTP(),
 		jsmod.NewIO(),
 		jsmod.NewOS(),
 		jsmod.NewRuntime(),
 		jsmod.NewTime(),
-		jsmod.NewCrontab(crontab),
 	}
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),

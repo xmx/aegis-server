@@ -3,7 +3,7 @@ package jsmod
 import (
 	"os/exec"
 
-	"github.com/xmx/aegis-server/jsenv/jsvm"
+	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
 func NewExec() jsvm.GlobalRegister {
@@ -11,10 +11,10 @@ func NewExec() jsvm.GlobalRegister {
 }
 
 type stdExec struct {
-	vm jsvm.Runtime
+	vm jsvm.Engineer
 }
 
-func (std *stdExec) RegisterGlobal(vm jsvm.Runtime) error {
+func (std *stdExec) RegisterGlobal(vm jsvm.Engineer) error {
 	std.vm = vm
 	fns := map[string]any{
 		"command": std.command,
@@ -33,17 +33,17 @@ func (std *stdExec) command(name string, args ...string) *execCommand {
 
 type execCommand struct {
 	*exec.Cmd
-	vm jsvm.Runtime
+	vm jsvm.Engineer
 }
 
-func (ec *execCommand) Finalize() error {
+func (ec *execCommand) Run() error {
+	ec.vm.AddFinalizer(ec.kill)
+	return ec.Cmd.Run()
+}
+
+func (ec *execCommand) kill() error {
 	if proc := ec.Cmd.Process; proc != nil {
 		return proc.Kill()
 	}
 	return nil
-}
-
-func (ec *execCommand) Run() error {
-	ec.vm.AddFinalizer(ec)
-	return ec.Cmd.Run()
 }

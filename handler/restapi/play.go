@@ -8,8 +8,8 @@ import (
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 	"github.com/dop251/goja"
-	"github.com/xmx/aegis-server/jsenv/jsmod"
-	"github.com/xmx/aegis-server/jsenv/jsvm"
+	"github.com/xmx/aegis-server/jsrun/jsmod"
+	"github.com/xmx/aegis-server/jsrun/jsvm"
 	"github.com/xmx/ship"
 )
 
@@ -61,7 +61,7 @@ func (ply *Play) run(c *ship.Context) error {
 	return nil
 }
 
-func (ply *Play) newInstanceExec(vm jsvm.Runtime, ws *websocket.Conn, code string) error {
+func (ply *Play) newInstanceExec(vm jsvm.Engineer, ws *websocket.Conn, code string) error {
 	stdout, stderr := ply.stdout(ws), ply.stderr(ws)
 	mods := append(ply.mods, jsmod.NewConsole(stdout, stderr))
 	if err := vm.RegisterGlobals(mods); err != nil {
@@ -111,10 +111,10 @@ func (sc *socketConn) Write(p []byte) (int, error) {
 
 type singleVM struct {
 	mu sync.Mutex
-	vm jsvm.Runtime
+	vm jsvm.Engineer
 }
 
-func (sig *singleVM) set(vm jsvm.Runtime) {
+func (sig *singleVM) set(vm jsvm.Engineer) {
 	sig.mu.Lock()
 	sig.interrupt()
 	sig.vm = vm

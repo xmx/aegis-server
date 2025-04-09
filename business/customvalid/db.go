@@ -2,7 +2,6 @@ package customvalid
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	ut "github.com/go-playground/universal-translator"
@@ -25,7 +24,6 @@ func (vdb *ValidDB) Password() (string, validator.FuncCtx, validator.RegisterTra
 		return false
 	}
 	regFunc := func(utt ut.Translator) error {
-		fmt.Println(utt.Locale())
 		return utt.Add(tag, "{0}不符合密码强度要求", true)
 	}
 	tranFun := func(ut ut.Translator, fe validator.FieldError) string {

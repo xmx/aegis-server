@@ -3,7 +3,7 @@ package jsmod
 import (
 	"time"
 
-	"github.com/xmx/aegis-server/jsenv/jsvm"
+	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
 func NewTime() jsvm.GlobalRegister {
@@ -12,7 +12,7 @@ func NewTime() jsvm.GlobalRegister {
 
 type stdTime struct{}
 
-func (*stdTime) RegisterGlobal(vm jsvm.Runtime) error {
+func (*stdTime) RegisterGlobal(vm jsvm.Engineer) error {
 	fns := map[string]interface{}{
 		"nanosecond ":   time.Nanosecond,
 		"microsecond":   time.Microsecond,

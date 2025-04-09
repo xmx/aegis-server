@@ -4,8 +4,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/xmx/aegis-server/jsenv/jsvm"
-	"github.com/xmx/aegis-server/library/machine"
+	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
 func NewOS() jsvm.GlobalRegister {
@@ -14,13 +13,12 @@ func NewOS() jsvm.GlobalRegister {
 
 type stdOS struct{}
 
-func (std *stdOS) RegisterGlobal(vm jsvm.Runtime) error {
+func (std *stdOS) RegisterGlobal(vm jsvm.Engineer) error {
 	hm := map[string]any{
 		"pid":    os.Getpid,
 		"open":   os.Open,
 		"stdout": io.Discard,
 		"stderr": io.Discard,
-		"id":     machine.ID,
 	}
 
 	return vm.Runtime().Set("os", hm)

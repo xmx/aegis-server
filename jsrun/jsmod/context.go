@@ -3,7 +3,7 @@ package jsmod
 import (
 	"context"
 
-	"github.com/xmx/aegis-server/jsenv/jsvm"
+	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
 func NewContext() jsvm.GlobalRegister {
@@ -12,7 +12,7 @@ func NewContext() jsvm.GlobalRegister {
 
 type stdContext struct{}
 
-func (*stdContext) RegisterGlobal(vm jsvm.Runtime) error {
+func (*stdContext) RegisterGlobal(vm jsvm.Engineer) error {
 	fns := map[string]any{
 		"background":   context.Background,
 		"todo":         context.TODO,

@@ -3,7 +3,7 @@ package jsmod
 import (
 	"io"
 
-	"github.com/xmx/aegis-server/jsenv/jsvm"
+	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
 func NewIO() jsvm.GlobalRegister {
@@ -12,7 +12,7 @@ func NewIO() jsvm.GlobalRegister {
 
 type stdIO struct{}
 
-func (std *stdIO) RegisterGlobal(vm jsvm.Runtime) error {
+func (std *stdIO) RegisterGlobal(vm jsvm.Engineer) error {
 	hm := map[string]any{
 		"copy":  io.Copy,
 		"copyN": io.CopyN,
