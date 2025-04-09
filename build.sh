@@ -2,7 +2,7 @@
 
 BASE_NAME=$(basename $(pwd))
 COMPILE_TIME=$(date --rfc-2822)
-VERSION=$(TZ="Europe/London" date -d "$(git log -1 --format=%cd --date=iso)"  +"%y.%-m.%-d-%H%M%S")
+VERSION=$(TZ="Etc/GMT" date -d "$(git log -1 --format=%cd --date=iso)"  +"%y.%-m.%-d-%H%M%S")
 TARGET_NAME=${BASE_NAME}"-"v${VERSION}$(go env GOEXE)
 echo "版本号："${VERSION}
 echo "文件名："${TARGET_NAME}
