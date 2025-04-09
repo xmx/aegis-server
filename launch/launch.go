@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/xmx/aegis-server/business/jsext"
+
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
@@ -124,8 +126,10 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		jsmod.NewExec(),
 		jsmod.NewIO(),
 		jsmod.NewOS(),
+		jsmod.NewNet(),
 		jsmod.NewRuntime(),
 		jsmod.NewTime(),
+		jsext.NewCrontab(crontab),
 	}
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),

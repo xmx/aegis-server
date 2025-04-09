@@ -13,9 +13,17 @@ type Engineer interface {
 	AddFinalizer(finals ...func() error)
 	Interrupt(v any)
 	ClearInterrupt()
-	RegisterGlobals(mods []GlobalRegister) error
 }
 
-type finalizer interface {
-	finalize() error
+func RegisterGlobals(eng Engineer, mods []GlobalRegister) error {
+	for _, mod := range mods {
+		if mod == nil {
+			continue
+		}
+		if err := mod.RegisterGlobal(eng); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

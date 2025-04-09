@@ -56,24 +56,11 @@ func (jse *jsEngine) Interrupt(v any) {
 	for _, final := range jse.finals {
 		_ = final()
 	}
-	clear(jse.finals)
+	jse.finals = nil
 }
 
 func (jse *jsEngine) ClearInterrupt() {
 	jse.vm.ClearInterrupt()
-}
-
-func (jse *jsEngine) RegisterGlobals(mods []GlobalRegister) error {
-	for _, mod := range mods {
-		if mod == nil {
-			continue
-		}
-		if err := mod.RegisterGlobal(jse); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func newFieldNameMapper(tagName string) goja.FieldNameMapper {
