@@ -70,7 +70,7 @@ func (ply *Play) newInstanceExec(vm jsvm.Engineer, ws *websocket.Conn, code stri
 
 	val := vm.Runtime().Get("os")
 	if obj, _ := val.(*goja.Object); obj != nil {
-		_ = obj.Set("stdout", stdout)
+		_ = obj.Set("stdout", stdout) // AlmaLinux
 		_ = obj.Set("stderr", stderr)
 	}
 	if ret, exx := vm.RunString(code); exx != nil {
@@ -79,7 +79,6 @@ func (ply *Play) newInstanceExec(vm jsvm.Engineer, ws *websocket.Conn, code stri
 	} else if ret != nil && ret != goja.Undefined() {
 		_, _ = stdout.Write([]byte(ret.String()))
 	}
-
 	return nil
 }
 
