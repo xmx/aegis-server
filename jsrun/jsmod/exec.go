@@ -6,38 +6,39 @@ import (
 	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
-func NewExec() jsvm.GlobalRegister {
+func NewExec() jsvm.ModuleRegister {
 	return new(stdExec)
 }
 
 type stdExec struct {
-	vm jsvm.Engineer
+	eng jsvm.Engineer
 }
 
-func (std *stdExec) RegisterGlobal(vm jsvm.Engineer) error {
-	std.vm = vm
-	fns := map[string]any{
+func (std *stdExec) RegisterModule(eng jsvm.Engineer) error {
+	std.eng = eng
+	vals := map[string]any{
 		"command": std.command,
 	}
+	eng.RegisterModule("exec", vals, true)
 
-	return vm.Runtime().Set("exec", fns)
+	return nil
 }
 
 func (std *stdExec) command(name string, args ...string) *execCommand {
 	cmd := exec.Command(name, args...)
 	return &execCommand{
 		Cmd: cmd,
-		vm:  std.vm,
+		eng: std.eng,
 	}
 }
 
 type execCommand struct {
 	*exec.Cmd
-	vm jsvm.Engineer
+	eng jsvm.Engineer
 }
 
 func (ec *execCommand) Run() error {
-	ec.vm.AddFinalizer(ec.kill)
+	ec.eng.AddFinalizer(ec.kill)
 	return ec.Cmd.Run()
 }
 

@@ -1,25 +1,23 @@
 package jsmod
 
 import (
-	"io"
 	"os"
 
 	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
-func NewOS() jsvm.GlobalRegister {
+func NewOS() jsvm.ModuleRegister {
 	return new(stdOS)
 }
 
 type stdOS struct{}
 
-func (std *stdOS) RegisterGlobal(vm jsvm.Engineer) error {
-	hm := map[string]any{
-		"pid":    os.Getpid,
+func (std *stdOS) RegisterModule(eng jsvm.Engineer) error {
+	vals := map[string]any{
+		"getpid": os.Getpid,
 		"open":   os.Open,
-		"stdout": io.Discard,
-		"stderr": io.Discard,
 	}
+	eng.RegisterModule("os", vals, true)
 
-	return vm.Runtime().Set("os", hm)
+	return nil
 }

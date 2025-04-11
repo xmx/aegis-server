@@ -13,14 +13,14 @@ import (
 	"github.com/xmx/ship"
 )
 
-func NewPlay(mods []jsvm.GlobalRegister) *Play {
+func NewPlay(mods []jsvm.ModuleRegister) *Play {
 	return &Play{
 		mods: mods,
 	}
 }
 
 type Play struct {
-	mods []jsvm.GlobalRegister
+	mods []jsvm.ModuleRegister
 }
 
 func (ply *Play) RegisterRoute(r *ship.RouteGroupBuilder) error {

@@ -13,7 +13,7 @@ import (
 	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
-func NewConsole(stdout, stderr io.Writer) jsvm.GlobalRegister {
+func NewConsole(stdout, stderr io.Writer) jsvm.ModuleRegister {
 	return &writerConsole{stdout: stdout, stderr: stderr}
 }
 
@@ -23,7 +23,7 @@ type writerConsole struct {
 	vm     jsvm.Engineer
 }
 
-func (wc *writerConsole) RegisterGlobal(vm jsvm.Engineer) error {
+func (wc *writerConsole) RegisterModule(vm jsvm.Engineer) error {
 	wc.vm = vm
 	fields := map[string]any{
 		"log":   wc.write,

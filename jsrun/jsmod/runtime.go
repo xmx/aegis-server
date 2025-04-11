@@ -6,19 +6,21 @@ import (
 	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
-func NewRuntime() jsvm.GlobalRegister {
+func NewRuntime() jsvm.ModuleRegister {
 	return new(stdRuntime)
 }
 
 type stdRuntime struct{}
 
-func (s *stdRuntime) RegisterGlobal(vm jsvm.Engineer) error {
-	fns := map[string]any{
+func (s *stdRuntime) RegisterModule(eng jsvm.Engineer) error {
+	vals := map[string]any{
 		"memStats": s.memStats,
 		"goos":     runtime.GOOS,
 		"goarch":   runtime.GOARCH,
 	}
-	return vm.Runtime().Set("runtime", fns)
+	eng.RegisterModule("runtime", vals, true)
+
+	return nil
 }
 
 func (s *stdRuntime) memStats() *runtime.MemStats {

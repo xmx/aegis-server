@@ -6,14 +6,14 @@ import (
 	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
-func NewTime() jsvm.GlobalRegister {
+func NewTime() jsvm.ModuleRegister {
 	return new(stdTime)
 }
 
 type stdTime struct{}
 
-func (*stdTime) RegisterGlobal(vm jsvm.Engineer) error {
-	fns := map[string]interface{}{
+func (*stdTime) RegisterModule(eng jsvm.Engineer) error {
+	vals := map[string]any{
 		"nanosecond ":   time.Nanosecond,
 		"microsecond":   time.Microsecond,
 		"millisecond":   time.Millisecond,
@@ -43,5 +43,7 @@ func (*stdTime) RegisterGlobal(vm jsvm.Engineer) error {
 		"local":         time.Local,
 		"parseDuration": time.ParseDuration,
 	}
-	return vm.Runtime().Set("time", fns)
+	eng.RegisterModule("time", vals, true)
+
+	return nil
 }

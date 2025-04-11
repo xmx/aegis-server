@@ -8,29 +8,30 @@ import (
 	"github.com/xmx/aegis-server/library/cronv3"
 )
 
-func NewCrontab(crond *cronv3.Crontab) jsvm.GlobalRegister {
+func NewCrontab(crond *cronv3.Crontab) jsvm.ModuleRegister {
 	return &extCrontab{crond: crond}
 }
 
 type extCrontab struct {
-	rt    jsvm.Engineer
+	eng   jsvm.Engineer
 	crond *cronv3.Crontab
 }
 
-func (ext *extCrontab) RegisterGlobal(rt jsvm.Engineer) error {
-	ext.rt = rt
-	fns := map[string]any{
+func (ext *extCrontab) RegisterModule(eng jsvm.Engineer) error {
+	ext.eng = eng
+	vals := map[string]any{
 		"addJob": ext.addJob,
 	}
+	eng.RegisterModule("crontab", vals, true)
 
-	return rt.Runtime().Set("crontab", fns)
+	return nil
 }
 
 func (ext *extCrontab) addJob(spec string, cmd func()) error {
 	buf := make([]byte, 30)
 	_, _ = rand.Read(buf)
 	name := hex.EncodeToString(buf)
-	ext.rt.AddFinalizer(ext.remove(name))
+	ext.eng.AddFinalizer(ext.remove(name))
 
 	return ext.crond.AddJob(name, spec, ext.safeCall(cmd))
 }

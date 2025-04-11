@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/robfig/cron/v3"
 	"github.com/xmx/aegis-server/business/jsext"
-
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
@@ -89,7 +89,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	defer disconnectDB(cli)
 
 	cronLog := slog.New(logger.Skip(logHandler, 5))
-	crontab := cronv3.New(cronLog)
+	crontab := cronv3.New(cronLog, cron.WithSeconds())
 	crontab.Start()
 	defer crontab.Stop()
 
@@ -119,14 +119,12 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	termSvc := service.NewTerm(log)
 
 	const basePath = "/api"
-	modules := []jsvm.GlobalRegister{
-		logSvc,
+	modules := []jsvm.ModuleRegister{
 		jsmod.NewConsole(io.Discard, io.Discard),
 		jsmod.NewContext(),
 		jsmod.NewExec(),
 		jsmod.NewIO(),
 		jsmod.NewOS(),
-		jsmod.NewNet(),
 		jsmod.NewRuntime(),
 		jsmod.NewTime(),
 		jsext.NewCrontab(crontab),

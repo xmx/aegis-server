@@ -6,17 +6,19 @@ import (
 	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
-func NewIO() jsvm.GlobalRegister {
+func NewIO() jsvm.ModuleRegister {
 	return new(stdIO)
 }
 
 type stdIO struct{}
 
-func (std *stdIO) RegisterGlobal(vm jsvm.Engineer) error {
-	hm := map[string]any{
-		"copy":  io.Copy,
-		"copyN": io.CopyN,
+func (std *stdIO) RegisterModule(eng jsvm.Engineer) error {
+	vals := map[string]any{
+		"copy":    io.Copy,
+		"copyN":   io.CopyN,
+		"discard": io.Discard,
 	}
+	eng.RegisterModule("io", vals, true)
 
-	return vm.Runtime().Set("io", hm)
+	return nil
 }

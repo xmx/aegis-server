@@ -14,14 +14,23 @@ func New() Engineer {
 	vm := goja.New()
 	vm.SetFieldNameMapper(newFieldNameMapper("json"))
 	vm.SetMaxCallStackSize(64)
+	rqu := &require{
+		vm:      vm,
+		modules: make(map[string]any, 32),
+	}
+	_ = vm.Set("require", rqu.load)
 
-	return &jsEngine{vm: vm}
+	return &jsEngine{
+		vm:      vm,
+		require: rqu,
+	}
 }
 
 type jsEngine struct {
-	vm     *goja.Runtime
-	mutex  sync.Mutex
-	finals []func() error
+	vm      *goja.Runtime
+	require *require
+	mutex   sync.Mutex
+	finals  []func() error
 }
 
 func (jse *jsEngine) Runtime() *goja.Runtime {
@@ -34,6 +43,10 @@ func (jse *jsEngine) RunString(code string) (goja.Value, error) {
 
 func (jse *jsEngine) RunProgram(pgm *goja.Program) (goja.Value, error) {
 	return jse.vm.RunProgram(pgm)
+}
+
+func (jse *jsEngine) RegisterModule(name string, module any, override bool) bool {
+	return jse.require.register(name, module, override)
 }
 
 func (jse *jsEngine) AddFinalizer(finals ...func() error) {

@@ -6,14 +6,14 @@ import (
 	"github.com/xmx/aegis-server/jsrun/jsvm"
 )
 
-func NewContext() jsvm.GlobalRegister {
+func NewContext() jsvm.ModuleRegister {
 	return new(stdContext)
 }
 
 type stdContext struct{}
 
-func (*stdContext) RegisterGlobal(vm jsvm.Engineer) error {
-	fns := map[string]any{
+func (*stdContext) RegisterModule(eng jsvm.Engineer) error {
+	vals := map[string]any{
 		"background":   context.Background,
 		"todo":         context.TODO,
 		"withCancel":   context.WithCancel,
@@ -21,6 +21,7 @@ func (*stdContext) RegisterGlobal(vm jsvm.Engineer) error {
 		"withValue":    context.WithValue,
 		"withDeadline": context.WithDeadline,
 	}
+	eng.RegisterModule("context", vals, true)
 
-	return vm.Runtime().Set("context", fns)
+	return nil
 }
