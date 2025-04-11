@@ -17,6 +17,7 @@ func (s *stdRuntime) RegisterModule(eng jsvm.Engineer) error {
 		"memStats": s.memStats,
 		"goos":     runtime.GOOS,
 		"goarch":   runtime.GOARCH,
+		"gc":       runtime.GC,
 	}
 	eng.RegisterModule("runtime", vals, true)
 

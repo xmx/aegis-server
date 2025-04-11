@@ -32,17 +32,30 @@
 
     let code = localStorage.getItem("code");
     if (!code) {
-        code = `// 每隔两秒打印一下内存占用
-crontab.addJob("*/2 * * * * *", () => {
-    const stats = runtime.memStats()
-    console.log("------------------------> 内存占用：", stats.alloc, " bytes")
-})
+        code = `// 样例程序
+const runtime = require("runtime")
+const crontab = require("crontab")
 
-// 调用系统命令一直ping
-const cmd = exec.command("ping", "baidu.com")
-cmd.stderr = os.stderr
-cmd.stdout = os.stdout
-cmd.run()
+// 每秒采集程序内存
+let num = 0
+crontab.addJob("* * * * * *", () => {
+    num++
+    const stats = runtime.memStats()
+    const limit = 10000000
+    const alloc = stats.alloc
+    if (alloc <= limit) {
+        console.log("内存占用正常：", alloc)
+    } else {
+        console.error("[" + new Date().toJSON() + "] 内存占用 " + alloc + "超过 " + limit + " 限制，请处理")
+    }
+    if (num === 3) {
+        console.log("开始申请大内存")
+        new ArrayBuffer(10240000) // 模拟申请大内存
+    } else if (num === 7) {
+        console.log("回收内存")
+        runtime.gc() // 回收内存
+    }
+})
 `
     }
     require.config({paths: {'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.41.0/min/vs'}});
