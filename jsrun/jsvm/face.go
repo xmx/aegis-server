@@ -1,9 +1,14 @@
 package jsvm
 
-import "github.com/dop251/goja"
+import (
+	"archive/zip"
+
+	"github.com/dop251/goja"
+)
 
 type Engineer interface {
 	Runtime() *goja.Runtime
+	RunZip(zrd *zip.ReadCloser) (goja.Value, error)
 	RunString(code string) (goja.Value, error)
 	RunProgram(pgm *goja.Program) (goja.Value, error)
 	RegisterModule(name string, module any, override bool) bool
@@ -12,7 +17,11 @@ type Engineer interface {
 	ClearInterrupt()
 }
 
-func RegisterGlobals(eng Engineer, mods []ModuleRegister) error {
+type ModuleRegister interface {
+	RegisterModule(eng Engineer) error
+}
+
+func RegisterModules(eng Engineer, mods []ModuleRegister) error {
 	for _, mod := range mods {
 		if mod == nil {
 			continue
@@ -23,8 +32,4 @@ func RegisterGlobals(eng Engineer, mods []ModuleRegister) error {
 	}
 
 	return nil
-}
-
-type ModuleRegister interface {
-	RegisterModule(eng Engineer) error
 }

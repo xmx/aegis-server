@@ -52,7 +52,10 @@ func (ply *Play) run(c *ship.Context) error {
 		case "kill":
 			sig.kill()
 		case "exec":
-			vm := jsvm.New()
+			vm, err := jsvm.New(ply.mods)
+			if err != nil {
+				break
+			}
 			sig.set(vm)
 			go ply.newInstanceExec(vm, ws, data.Data)
 		}
@@ -64,7 +67,7 @@ func (ply *Play) run(c *ship.Context) error {
 func (ply *Play) newInstanceExec(vm jsvm.Engineer, ws *websocket.Conn, code string) error {
 	stdout, stderr := ply.stdout(ws), ply.stderr(ws)
 	mods := append(ply.mods, jsmod.NewConsole(stdout, stderr))
-	if err := jsvm.RegisterGlobals(vm, mods); err != nil {
+	if err := jsvm.RegisterModules(vm, mods); err != nil {
 		return err
 	}
 
