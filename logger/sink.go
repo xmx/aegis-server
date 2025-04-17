@@ -16,7 +16,7 @@ type Sink struct {
 	log *slog.Logger
 }
 
-func (sk Sink) Info(level int, message string, keysAndValues ...interface{}) {
+func (sk Sink) Info(level int, message string, keysAndValues ...any) {
 	lvl := slog.LevelError
 	if level == 1 {
 		lvl = slog.LevelInfo

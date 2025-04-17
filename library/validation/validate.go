@@ -141,7 +141,7 @@ func (v *Validate) RegisterCustomValidation(custom CustomValidatorFunc) error {
 	return nil
 }
 
-func (v *Validate) RegisterStructValidationCtx(fn validator.StructLevelFuncCtx, types ...interface{}) {
+func (v *Validate) RegisterStructValidationCtx(fn validator.StructLevelFuncCtx, types ...any) {
 	v.valid.RegisterStructValidationCtx(fn, types...)
 }
 

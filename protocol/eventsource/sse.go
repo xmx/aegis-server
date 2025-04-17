@@ -20,7 +20,7 @@ func Accept(w http.ResponseWriter, r *http.Request) EventSource {
 
 	var gzw *gzip.Writer
 	encodings := r.Header.Get("Accept-Encoding")
-	for _, str := range strings.Split(encodings, ",") {
+	for str := range strings.SplitSeq(encodings, ",") {
 		if strings.TrimSpace(str) == "gzip" {
 			w.Header().Set("Content-Encoding", "gzip")
 			gzw = gzip.NewWriter(w)

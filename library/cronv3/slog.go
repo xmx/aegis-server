@@ -14,10 +14,10 @@ type cronLog struct {
 	l *slog.Logger
 }
 
-func (c *cronLog) Info(msg string, keysAndValues ...interface{}) {
+func (c *cronLog) Info(msg string, keysAndValues ...any) {
 	c.l.Info(msg, keysAndValues...)
 }
 
-func (c *cronLog) Error(err error, msg string, keysAndValues ...interface{}) {
+func (c *cronLog) Error(err error, msg string, keysAndValues ...any) {
 	c.l.Error(msg, append([]any{"error", err}, keysAndValues...)...)
 }

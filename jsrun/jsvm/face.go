@@ -1,14 +1,11 @@
 package jsvm
 
 import (
-	"archive/zip"
-
 	"github.com/dop251/goja"
 )
 
 type Engineer interface {
 	Runtime() *goja.Runtime
-	RunZip(zrd *zip.ReadCloser) (goja.Value, error)
 	RunString(code string) (goja.Value, error)
 	RunProgram(pgm *goja.Program) (goja.Value, error)
 	RegisterModule(name string, module any, override bool) bool

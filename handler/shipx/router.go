@@ -14,11 +14,3 @@ func RegisterRoutes(r *ship.RouteGroupBuilder, rts []RouteRegister) error {
 	}
 	return nil
 }
-
-type RouteRestricter interface {
-	OnlyAllowAdmin() bool
-}
-
-type Firewaller interface{}
-
-// IP 白名单

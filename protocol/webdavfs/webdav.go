@@ -126,9 +126,9 @@ type fileInfo struct {
 	Mode       string    `json:"mode,omitempty"`
 	Directory  bool      `json:"directory,omitempty"`
 	Symlink    string    `json:"symlink,omitempty"`
-	UpdatedAt  time.Time `json:"updated_at,omitempty"`
-	CreatedAt  time.Time `json:"created_at,omitempty"`
-	AccessedAt time.Time `json:"accessed_at,omitempty"`
+	UpdatedAt  time.Time `json:"updated_at,omitzero"`
+	CreatedAt  time.Time `json:"created_at,omitzero"`
+	AccessedAt time.Time `json:"accessed_at,omitzero"`
 	User       string    `json:"user,omitempty"`
 	Group      string    `json:"group,omitempty"`
 }

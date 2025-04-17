@@ -1,57 +1,26 @@
 package jsvm
 
 import (
-	"archive/zip"
-	"io"
 	"sync"
 
 	"github.com/dop251/goja"
 )
 
 func New(mods []ModuleRegister) (Engineer, error) {
-	prog, err := onceCompileBabel()
-	if err != nil {
-		return nil, err
-	}
-
 	vm := goja.New()
-	// babel need
-	logFunc := func(goja.FunctionCall) goja.Value { return nil }
-	_ = vm.Set("console", map[string]func(goja.FunctionCall) goja.Value{
-		"log":   logFunc,
-		"error": logFunc,
-		"warn":  logFunc,
-	})
+	vm.SetFieldNameMapper(newFieldNameMapper("json"))
 
-	if _, err = vm.RunProgram(prog); err != nil {
-		return nil, err
-	}
-	var transformFunc goja.Callable
-	babel := vm.Get("Babel")
-	if err = vm.ExportTo(babel.ToObject(vm).Get("transform"), &transformFunc); err != nil {
-		return nil, err
-	}
-
-	transform := func(code string, opts map[string]any) (string, error) {
-		if value, exx := transformFunc(babel, vm.ToValue(code), vm.ToValue(opts)); exx != nil {
-			return "", exx
-		} else {
-			return value.ToObject(vm).Get("code").String(), nil
-		}
-	}
-	eng := &jsEngine{
-		vm:        vm,
-		transform: transform,
-	}
 	rqu := &require{
-		eng:     eng,
 		modules: make(map[string]goja.Value, 16),
 		sources: make(map[string]goja.Value, 16),
 	}
-	eng.require = rqu
+	eng := &jsEngine{
+		vm:      vm,
+		require: rqu,
+	}
+	rqu.eng = eng
 	_ = vm.Set("require", rqu.load)
-
-	if err = RegisterModules(eng, mods); err != nil {
+	if err := RegisterModules(eng, mods); err != nil {
 		return nil, err
 	}
 
@@ -59,29 +28,10 @@ func New(mods []ModuleRegister) (Engineer, error) {
 }
 
 type jsEngine struct {
-	vm *goja.Runtime
-	// transform Babel.transform()
-	transform func(code string, opts map[string]any) (string, error)
-
+	vm      *goja.Runtime
 	require *require
-
-	mutex  sync.Mutex
-	finals []func() error
-}
-
-func (jse *jsEngine) RunZip(zrd *zip.ReadCloser) (goja.Value, error) {
-	file, err := zrd.Open("main.js")
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-	jse.require.source = zrd
-
-	return jse.RunString(string(data))
+	mutex   sync.Mutex
+	finals  []func() error
 }
 
 func (jse *jsEngine) Runtime() *goja.Runtime {
@@ -89,12 +39,11 @@ func (jse *jsEngine) Runtime() *goja.Runtime {
 }
 
 func (jse *jsEngine) RunString(code string) (goja.Value, error) {
-	commonJS, err := jse.transform(code, map[string]any{"plugins": []string{"transform-modules-commonjs"}})
+	cjs, err := Transform(code, map[string]any{"plugins": []string{"transform-modules-commonjs"}})
 	if err != nil {
 		return nil, err
 	}
-
-	return jse.vm.RunString(commonJS)
+	return jse.vm.RunString(cjs)
 }
 
 func (jse *jsEngine) RunProgram(pgm *goja.Program) (goja.Value, error) {
