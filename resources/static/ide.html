@@ -83,7 +83,7 @@
         "import * as net from 'net';\n" +
         "import * as url from 'url';\n" +
         "import * as http from 'http';\n" +
-        "import * as httputil from 'httputil';\n" +
+        "import * as httputil from 'http/httputil';\n" +
         "\n" +
         "const dest = url.parse('https://mirrors.zju.edu.cn/');\n" +
         "const proxy = new httputil.Proxy();\n" +
@@ -91,7 +91,7 @@
         "\n" +
         "const indexFunc = (w, r) => {\n" +
         "    const [addr] = net.splitHostPort(r.remoteAddr);\n" +
-        "    console.log(`${addr} >>> ${r.method} ${r.requestURI}`);\n" +
+        "    console.log(`访问记录：${addr} -> ${r.method} ${r.requestURI}`);\n" +
         "    proxy.serveHTTP(w, r)\n" +
         "}\n" +
         "\n" +

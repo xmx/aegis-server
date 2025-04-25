@@ -124,12 +124,14 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		jsmod.NewContext(),
 		jsmod.NewExec(),
 		jsmod.NewHTTP(),
+		jsmod.NewHTTPUtil(),
 		jsmod.NewIO(),
 		jsmod.NewNet(),
 		jsmod.NewOS(),
 		jsmod.NewRuntime(),
 		jsmod.NewSQL(),
 		jsmod.NewTime(),
+		jsmod.NewURL(),
 	}
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),
