@@ -15,6 +15,7 @@
             height: 100%;
             margin: 0;
         }
+
         .context-menu {
             position: absolute;
             background: #2d3748;
@@ -23,18 +24,22 @@
             z-index: 1000;
             display: none;
         }
+
         .context-menu ul {
             list-style: none;
             padding: 0;
             margin: 0;
         }
+
         .context-menu li {
             padding: 0.5rem 1rem;
             cursor: pointer;
         }
+
         .context-menu li:hover {
             background-color: #4a5568;
         }
+
         #console {
             font-family: Consolas, NSimSun, monospace;
         }
@@ -83,7 +88,17 @@
         "import * as net from 'net';\n" +
         "import * as url from 'url';\n" +
         "import * as http from 'http';\n" +
+        "import * as crontab from 'crontab';\n" +
         "import * as httputil from 'http/httputil';\n" +
+        "\n" +
+        "import * as foo from 'foo';\n" +
+        "\n" +
+        "// 同一个包内调用。\n" +
+        "foo.bar();\n" +
+        "\n" +
+        "crontab.addJob(\"*/5 * * * * *\", function() {\n" +
+        "    console.log(\"定时任务每 5 秒打印：\", new Date().toJSON());\n" +
+        "});\n" +
         "\n" +
         "const dest = url.parse('https://mirrors.zju.edu.cn/');\n" +
         "const proxy = new httputil.Proxy();\n" +
@@ -103,7 +118,8 @@
     let editor, currentFile = 'main.js', targetFile = null, explorerRightClick = false;
     const fileStore = {
         'main.js': mainContent,
-        'manifest.json': '{\n  "application": {\n    "id": "demo",\n    "name": "我的程序",\n    "version": "1.0.0",\n    "main": "main"\n  }\n}'
+        'manifest.json': '{\n  "application": {\n    "id": "demo",\n    "name": "我的程序",\n    "version": "1.0.0",\n    "main": "main"\n  }\n}',
+        'foo.js': 'export function bar() {\n    console.log("测试同模块调用成功")\n    console.error("这是错误输出")\n}',
     };
     let ws = null, isRunning = false;
 
@@ -241,7 +257,8 @@
                 const appName = manifest.application?.name || 'app';
                 const version = manifest.application?.version || '1.0.0';
                 name = `${appName}-${version}.zip`;
-            } catch {}
+            } catch {
+            }
             const blob = await zip.generateAsync({type: 'blob'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');

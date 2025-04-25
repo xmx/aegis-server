@@ -3,11 +3,14 @@ package restapi
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/xmx/jsos/jzip"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
@@ -63,7 +66,24 @@ func (ply *Play) upload(c *ship.Context) error {
 	if _, err = io.Copy(dest, file); err != nil {
 		return err
 	}
-	ret := &response.PlayUpload{ID: uid}
+
+	jz, err := jzip.OpenFile(fp)
+	if err != nil {
+		return err
+	}
+	//goland:noinspection GoUnhandledErrorResult
+	defer jz.Close()
+
+	app := jz.Manifest.Application
+	ret := &response.PlayUpload{ID: uid, Name: app.Name, Version: app.Version}
+	icon := app.Icon
+	if icon == "" {
+		icon = "icon.png"
+	}
+	if iconFile, _ := jz.Open(icon); iconFile != nil {
+		data, _ := io.ReadAll(iconFile)
+		ret.Icon = base64.StdEncoding.EncodeToString(data)
+	}
 
 	return c.JSON(http.StatusOK, ret)
 }

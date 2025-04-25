@@ -5,6 +5,7 @@ go 1.24.2
 require (
 	github.com/coder/websocket v1.8.13
 	github.com/creack/pty v1.1.24
+	github.com/dop251/goja v0.0.0-20250309171923-bcd7cc6bf64c
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.26.0
@@ -22,7 +23,6 @@ require (
 
 require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
-	github.com/dop251/goja v0.0.0-20250309171923-bcd7cc6bf64c // indirect
 	github.com/evanw/esbuild v0.25.3 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect

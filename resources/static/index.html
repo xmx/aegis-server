@@ -67,7 +67,7 @@
         formData.append('file', file);
 
         try {
-            const response = await fetch('/api/app/preread', {
+            const response = await fetch('/api/play/upload', {
                 method: 'PUT',
                 body: formData
             });
@@ -92,7 +92,7 @@
 
         if (!running) {
             try {
-                ws = new WebSocket(`/api/app/run?id=${appId}`);
+                ws = new WebSocket(`/api/ws/play/run?id=${appId}`);
             } catch (e) {
                 runButton.disabled = true;
                 runButton.textContent = '连接失败';

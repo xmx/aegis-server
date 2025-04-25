@@ -9,6 +9,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/xmx/aegis-server/jsext"
+
 	"github.com/robfig/cron/v3"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/repository"
@@ -132,6 +134,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		jsmod.NewSQL(),
 		jsmod.NewTime(),
 		jsmod.NewURL(),
+		jsext.NewCrontab(crontab),
 	}
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),
