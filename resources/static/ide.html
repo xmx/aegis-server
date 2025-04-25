@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh" class="dark">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Web IDE</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
+    <script>
+        require.config({paths: {vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs'}});
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+        }
+        .context-menu {
+            position: absolute;
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            color: white;
+            z-index: 1000;
+            display: none;
+        }
+        .context-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .context-menu li {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+        }
+        .context-menu li:hover {
+            background-color: #4a5568;
+        }
+        #console {
+            font-family: Consolas, NSimSun, monospace;
+        }
+    </style>
+</head>
+<body class="dark bg-gray-900 text-white">
+<div class="flex h-screen">
+    <div id="fileExplorer" class="w-1/5 bg-gray-800 p-2 flex flex-col justify-between"
+         oncontextmenu="handleExplorerRightClick(event)">
+        <div class="flex-1 overflow-y-auto">
+            <h2 class="text-lg font-bold mb-2">项目文件</h2>
+            <ul id="fileList" class="text-sm space-y-1"></ul>
+        </div>
+    </div>
+    <div class="flex-1 flex flex-col">
+        <div class="flex-1 relative">
+            <div id="editor" class="absolute inset-0"></div>
+        </div>
+        <div id="console" class="hidden bg-black text-sm p-2 h-64 overflow-auto"></div>
+    </div>
+</div>
+
+<div id="contextMenu" class="context-menu">
+    <ul>
+        <li onclick="createFile()">新建文件</li>
+        <li onclick="renameFile()">重命名</li>
+        <li onclick="deleteFile()">删除</li>
+        <li onclick="document.getElementById('fileInput').click()">上传文件</li>
+    </ul>
+</div>
+<input type="file" id="fileInput" class="hidden" multiple/>
+
+<div class="fixed bottom-4 left-4 flex gap-4 z-50">
+    <button id="zipBtn"
+            class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded shadow-xl">
+        打包
+    </button>
+    <button id="runBtn"
+            class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded shadow-xl">
+        运行
+    </button>
+</div>
+
+<script>
+    const mainContent = "// 样例程序\n" +
+        "import * as net from 'net';\n" +
+        "import * as url from 'url';\n" +
+        "import * as http from 'http';\n" +
+        "import * as httputil from 'httputil';\n" +
+        "\n" +
+        "const dest = url.parse('https://mirrors.zju.edu.cn/');\n" +
+        "const proxy = new httputil.Proxy();\n" +
+        "proxy.rewrite = (pr) => pr.setURL(dest)\n" +
+        "\n" +
+        "const indexFunc = (w, r) => {\n" +
+        "    const [addr] = net.splitHostPort(r.remoteAddr);\n" +
+        "    console.log(`${addr} >>> ${r.method} ${r.requestURI}`);\n" +
+        "    proxy.serveHTTP(w, r)\n" +
+        "}\n" +
+        "\n" +
+        "const mux = new http.ServeMux();\n" +
+        "mux.handleFunc('/', indexFunc);\n" +
+        "\n" +
+        "console.error('现在访问 http://[当前IP]:9099 试试吧');\n" +
+        "http.listenAndServe('0.0.0.0:9099', mux);";
+    let editor, currentFile = 'main.js', targetFile = null, explorerRightClick = false;
+    const fileStore = {
+        'main.js': mainContent,
+        'manifest.json': '{\n  "application": {\n    "id": "demo",\n    "name": "我的程序",\n    "version": "1.0.0",\n    "main": "main"\n  }\n}'
+    };
+    let ws = null, isRunning = false;
+
+    function getLanguageFromExtension(name) {
+        const ext = name.split('.').pop().toLowerCase();
+        return ext === 'json' ? 'json' : (ext === 'js' ? 'javascript' : 'plaintext');
+    }
+
+    function openFile(name) {
+        if (currentFile) fileStore[currentFile] = editor.getValue();
+        currentFile = name;
+        editor.setValue(typeof fileStore[name] === 'string' ? fileStore[name] : '[binary file]');
+        monaco.editor.setModelLanguage(editor.getModel(), getLanguageFromExtension(name));
+        if (editor._changeListener) editor._changeListener.dispose();
+        editor._changeListener = editor.onDidChangeModelContent(() => {
+            if (typeof fileStore[currentFile] === 'string') {
+                fileStore[currentFile] = editor.getValue();
+            }
+        });
+    }
+
+    function refreshFileList() {
+        const list = document.getElementById('fileList');
+        list.innerHTML = '';
+        Object.keys(fileStore).forEach(name => {
+            const li = document.createElement('li');
+            li.className = 'cursor-pointer hover:bg-gray-700 p-1 rounded';
+            li.dataset.filename = name;
+            li.textContent = name;
+            li.oncontextmenu = (e) => {
+                e.preventDefault();
+                targetFile = name;
+                showContextMenu(e.pageX, e.pageY);
+            };
+            list.appendChild(li);
+        });
+    }
+
+    document.getElementById('fileList').addEventListener('click', (e) => {
+        const li = e.target.closest('li');
+        if (li?.dataset.filename) openFile(li.dataset.filename);
+    });
+
+    function createFile() {
+        const name = prompt('输入新文件名:');
+        if (!name || fileStore[name]) return;
+        fileStore[name] = '';
+        currentFile = name;
+        refreshFileList();
+        editor.setValue('');
+        hideContextMenu();
+    }
+
+    function renameFile() {
+        if (!targetFile) return;
+        const newName = prompt('输入新名称:', targetFile);
+        if (!newName || newName === targetFile || fileStore[newName]) return;
+        fileStore[newName] = fileStore[targetFile];
+        delete fileStore[targetFile];
+        if (currentFile === targetFile) currentFile = newName;
+        refreshFileList();
+        editor.setValue(fileStore[currentFile]);
+        hideContextMenu();
+    }
+
+    function deleteFile() {
+        if (!targetFile) return;
+        if (confirm(`确认删除 '${targetFile}'?`)) {
+            delete fileStore[targetFile];
+            if (currentFile === targetFile) {
+                currentFile = Object.keys(fileStore)[0] || '';
+                editor.setValue(currentFile ? fileStore[currentFile] : '');
+            }
+            refreshFileList();
+            hideContextMenu();
+        }
+    }
+
+    function showContextMenu(x, y) {
+        const menu = document.getElementById('contextMenu');
+        menu.style.left = `${x}px`;
+        menu.style.top = `${y}px`;
+        menu.style.display = 'block';
+    }
+
+    function hideContextMenu() {
+        document.getElementById('contextMenu').style.display = 'none';
+    }
+
+    function handleExplorerRightClick(e) {
+        e.preventDefault();
+        explorerRightClick = true;
+        showContextMenu(e.pageX, e.pageY);
+    }
+
+    window.onclick = hideContextMenu;
+
+    function scrollConsoleToBottom() {
+        const output = document.getElementById('console');
+        output.scrollTop = output.scrollHeight;
+    }
+
+    function updateRunButton(running) {
+        const btn = document.getElementById('runBtn');
+        isRunning = running;
+        btn.textContent = running ? '停止' : '运行';
+        btn.classList.toggle('bg-green-600', !running);
+        btn.classList.toggle('hover:bg-green-700', !running);
+        btn.classList.toggle('bg-red-600', running);
+        btn.classList.toggle('hover:bg-red-700', running);
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function (event) {
+        for (let file of event.target.files) {
+            const reader = new FileReader();
+            const isText = /\.(js|json|txt|html|css|md)$/i.test(file.name);
+            reader.onload = function (e) {
+                fileStore[file.name] = isText ? e.target.result : new Uint8Array(e.target.result);
+                refreshFileList();
+            };
+            if (isText) reader.readAsText(file);
+            else reader.readAsArrayBuffer(file);
+        }
+    });
+
+    document.getElementById('zipBtn').addEventListener('click', async () => {
+        try {
+            const zip = new JSZip();
+            for (const [name, content] of Object.entries(fileStore)) {
+                zip.file(name, content);
+            }
+            let name = "project.zip";
+            try {
+                const manifest = JSON.parse(fileStore['manifest.json']);
+                const appName = manifest.application?.name || 'app';
+                const version = manifest.application?.version || '1.0.0';
+                name = `${appName}-${version}.zip`;
+            } catch {}
+            const blob = await zip.generateAsync({type: 'blob'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("打包失败:", err);
+        }
+    });
+
+    document.getElementById('runBtn').addEventListener('click', async () => {
+        if (isRunning && ws) {
+            ws.send(JSON.stringify({type: 'kill'}));
+        } else {
+            if (currentFile) {
+                fileStore[currentFile] = editor.getValue();
+            }
+            try {
+                const zip = new JSZip();
+                for (const [name, content] of Object.entries(fileStore)) {
+                    zip.file(name, content);
+                }
+                const blob = await zip.generateAsync({type: 'blob'});
+                const form = new FormData();
+                form.append('file', blob, 'project.zip');
+                const res = await fetch('/api/play/upload', {method: 'PUT', body: form});
+                const data = await res.json();
+                const id = data.id;
+                const output = document.getElementById('console');
+                output.innerHTML = '<div class="text-green-400">开始运行...</div>';
+                output.classList.remove('hidden');
+                ws = new WebSocket(`/api/ws/play/run?id=${id}`);
+                updateRunButton(true);
+                ws.onmessage = (event) => {
+                    const {type, data} = JSON.parse(event.data);
+                    const color = type === 'stderr' ? 'text-red-300' : 'text-gray-300';
+                    const line = document.createElement('div');
+                    line.className = color;
+                    line.textContent = data;
+                    output.appendChild(line);
+                    scrollConsoleToBottom();
+                };
+                ws.onclose = () => {
+                    updateRunButton(false);
+                    ws = null;
+                };
+            } catch (e) {
+                console.error('运行失败:', e);
+            }
+        }
+    });
+
+    require(['vs/editor/editor.main'], function () {
+        editor = monaco.editor.create(document.getElementById('editor'), {
+            value: fileStore[currentFile],
+            language: 'javascript',
+            theme: 'vs-dark',
+            automaticLayout: true,
+            fontFamily: 'Consolas, NSimSun, monospace'
+        });
+        refreshFileList();
+        openFile(currentFile);
+    });
+</script>
+</body>
+</html>

@@ -41,6 +41,7 @@ aegis-server-*
 
 resources/temp
 resources/test
+resources/app
 
 crash.txt
 *.crash.txt

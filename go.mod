@@ -1,18 +1,18 @@
 module github.com/xmx/aegis-server
 
-go 1.24.0
+go 1.24.2
 
 require (
 	github.com/coder/websocket v1.8.13
 	github.com/creack/pty v1.1.24
-	github.com/dop251/goja v0.0.0-20250309171923-bcd7cc6bf64c
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/quic-go/quic-go v0.50.1
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/xmx/jsos v0.0.0-20250423101452-2c5f1cbd39f5
 	github.com/xmx/ship v0.0.0-20250319010933-9bdf9a01fa3a
-	go.mongodb.org/mongo-driver/v2 v2.1.0
+	go.mongodb.org/mongo-driver/v2 v2.2.0
 	golang.org/x/crypto v0.37.0
 	golang.org/x/net v0.39.0
 	golang.org/x/sys v0.32.0
@@ -22,11 +22,13 @@ require (
 
 require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
-	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
+	github.com/dop251/goja v0.0.0-20250309171923-bcd7cc6bf64c // indirect
+	github.com/evanw/esbuild v0.25.3 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/pprof v0.0.0-20250403155104-27863c87afa6 // indirect
+	github.com/google/pprof v0.0.0-20250423184734-337e5dd93bb4 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect

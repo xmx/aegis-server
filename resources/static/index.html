@@ -1,17 +1,155 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <title>主页</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0f0f0f',
+                        darkpanel: '#1a1a1a',
+                    }
+                }
+            }
+        }
+    </script>
+    <title>运行应用</title>
 </head>
-<body>
-<a href="play/ssh.html"><h3>SSH</h3></a>
+<body class="bg-darkbg text-white min-h-screen flex items-center justify-center overflow-hidden">
+<div class="w-full max-w-2xl h-[90vh] flex flex-col">
+    <div id="upload-area" class="border-2 border-dashed border-gray-700 p-6 rounded-lg text-center bg-darkpanel">
+        <input id="file-input" type="file" accept=".zip" class="hidden">
+        <label for="file-input" class="cursor-pointer text-blue-500 underline">点击上传 .zip 文件</label>
+    </div>
 
-<a href="play/pty.html"><h3>PTY</h3></a>
+    <div id="app-info" class="hidden bg-darkpanel p-4 rounded-lg">
+        <div class="flex items-center space-x-4">
+            <img id="app-icon" src="" alt="App Icon" class="w-16 h-16 rounded">
+            <div>
+                <h2 id="app-name" class="text-2xl font-bold"></h2>
+                <p id="app-version" class="text-gray-400"></p>
+            </div>
+        </div>
+        <button id="run-button" class="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white">运行</button>
+    </div>
 
-<a href="play/log.html"><h3>LOG</h3></a>
+    <div class="mt-4">
+        <div id="output-area" class="hidden h-96 bg-black rounded p-4 overflow-y-auto text-sm font-mono whitespace-pre-wrap"></div>
+    </div>
+</div>
 
-<a href="oas3/index.html"><h3>API</h3></a>
+<script>
+    const fileInput = document.getElementById('file-input');
+    const uploadArea = document.getElementById('upload-area');
+    const appInfo = document.getElementById('app-info');
+    const appIcon = document.getElementById('app-icon');
+    const appName = document.getElementById('app-name');
+    const appVersion = document.getElementById('app-version');
+    const runButton = document.getElementById('run-button');
+    const outputArea = document.getElementById('output-area');
 
+    let appId = null;
+    let ws = null;
+    let running = false;
+
+    fileInput.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (!file || !file.name.endsWith('.zip')) {
+            alert('请选择一个 .zip 文件');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/app/preread', {
+                method: 'PUT',
+                body: formData
+            });
+
+            if (!response.ok) throw new Error('上传失败');
+
+            const result = await response.json();
+            appId = result.id;
+            appName.textContent = result.name;
+            appVersion.textContent = `版本: ${result.version}`;
+            appIcon.src = `data:image/*;base64,${result.icon}`;
+
+            uploadArea.classList.add('hidden');
+            appInfo.classList.remove('hidden');
+        } catch (err) {
+            alert('上传或解析失败：' + err.message);
+        }
+    });
+
+    runButton.addEventListener('click', () => {
+        if (!appId) return;
+
+        if (!running) {
+            try {
+                ws = new WebSocket(`/api/app/run?id=${appId}`);
+            } catch (e) {
+                runButton.disabled = true;
+                runButton.textContent = '连接失败';
+                runButton.className = 'mt-4 px-4 py-2 bg-gray-500 cursor-not-allowed rounded text-white';
+                return;
+            }
+
+            outputArea.innerHTML = '';
+            outputArea.classList.remove('hidden');
+
+            ws.onopen = () => {
+                running = true;
+                runButton.textContent = '停止';
+                runButton.className = 'mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-white';
+
+                const startMsg = document.createElement('div');
+                startMsg.textContent = '程序开始运行...';
+                startMsg.className = 'text-green-400';
+                outputArea.appendChild(startMsg);
+                outputArea.scrollTop = outputArea.scrollHeight;
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    const div = document.createElement('div');
+                    div.textContent = msg.data;
+                    div.className = msg.type === 'stderr' ? 'text-red-400' : 'text-white';
+                    outputArea.appendChild(div);
+                    outputArea.scrollTop = outputArea.scrollHeight;
+                } catch (err) {
+                    console.error('消息解析失败', err);
+                }
+            };
+
+            ws.onerror = () => {
+                const div = document.createElement('div');
+                div.textContent = 'WebSocket 连接错误';
+                div.className = 'text-red-500';
+                outputArea.appendChild(div);
+                outputArea.scrollTop = outputArea.scrollHeight;
+                runButton.disabled = true;
+                runButton.textContent = '连接失败';
+                runButton.className = 'mt-4 px-4 py-2 bg-gray-500 cursor-not-allowed rounded text-white';
+            };
+
+            ws.onclose = () => {
+                running = false;
+                runButton.textContent = '运行';
+                runButton.className = 'mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white';
+            };
+        } else {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'kill' }));
+            }
+        }
+    });
+</script>
 </body>
 </html>

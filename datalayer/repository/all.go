@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 type All interface {
@@ -11,6 +12,9 @@ type All interface {
 	Client() *mongo.Client
 	Certificate() Certificate
 	Oplog() Oplog
+
+	GridFSBucket(opts ...options.Lister[options.BucketOptions]) *mongo.GridFSBucket
+
 	CreateIndex(ctx context.Context) error
 }
 
@@ -32,6 +36,10 @@ func (ar allRepo) DB() *mongo.Database      { return ar.db }
 func (ar allRepo) Client() *mongo.Client    { return ar.db.Client() }
 func (ar allRepo) Certificate() Certificate { return ar.certificate }
 func (ar allRepo) Oplog() Oplog             { return ar.oplog }
+
+func (ar allRepo) GridFSBucket(opts ...options.Lister[options.BucketOptions]) *mongo.GridFSBucket {
+	return ar.db.GridFSBucket(opts...)
+}
 
 func (ar allRepo) CreateIndex(ctx context.Context) error {
 	indexes := []IndexCreator{

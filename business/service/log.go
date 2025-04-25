@@ -4,7 +4,6 @@ import (
 	"io"
 	"log/slog"
 
-	"github.com/xmx/aegis-server/jsrun/jsvm"
 	"github.com/xmx/aegis-server/library/dynwriter"
 )
 
@@ -20,14 +19,6 @@ type Log struct {
 	lvl    *slog.LevelVar
 	writer dynwriter.Writer
 	log    *slog.Logger
-}
-
-func (l *Log) RegisterGlobal(vm jsvm.Engineer) error {
-	fns := map[string]any{
-		"level":    l.Level,
-		"setLevel": l.SetLevel,
-	}
-	return vm.Runtime().Set("log", fns)
 }
 
 func (l *Log) Level() slog.Level {

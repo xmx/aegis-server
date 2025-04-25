@@ -3,7 +3,6 @@ package launch
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -11,20 +10,19 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
-	"github.com/xmx/aegis-server/business/jsext"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
-	"github.com/xmx/aegis-server/jsrun/jsmod"
-	"github.com/xmx/aegis-server/jsrun/jsvm"
 	"github.com/xmx/aegis-server/library/credential"
 	"github.com/xmx/aegis-server/library/cronv3"
 	"github.com/xmx/aegis-server/library/dynwriter"
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/profile"
+	"github.com/xmx/jsos/jsmod"
+	"github.com/xmx/jsos/jsvm"
 	"github.com/xmx/ship"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -95,6 +93,8 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	mongoDB := cli.Database(mongoURL.Database)
 	repoAll := repository.NewAll(mongoDB)
+	repoAll.DB().GridFSBucket()
+
 	if err = repoAll.CreateIndex(ctx); err != nil {
 		return err
 	}
@@ -120,14 +120,16 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	const basePath = "/api"
 	modules := []jsvm.ModuleRegister{
-		jsmod.NewConsole(io.Discard, io.Discard),
+		jsmod.NewConsole(),
 		jsmod.NewContext(),
 		jsmod.NewExec(),
+		jsmod.NewHTTP(),
 		jsmod.NewIO(),
+		jsmod.NewNet(),
 		jsmod.NewOS(),
 		jsmod.NewRuntime(),
+		jsmod.NewSQL(),
 		jsmod.NewTime(),
-		jsext.NewCrontab(crontab),
 	}
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),
