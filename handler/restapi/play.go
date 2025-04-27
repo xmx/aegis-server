@@ -10,17 +10,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/xmx/jsos/jzip"
-
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/argument/response"
 	"github.com/xmx/jsos/jsvm"
+	"github.com/xmx/jsos/jzip"
 	"github.com/xmx/ship"
 )
 
-func NewPlay(mods []jsvm.ModuleRegister) *Play {
+func NewPlay(mods []jsvm.ModuleLoader) *Play {
 	return &Play{
 		mods: mods,
 		dir:  filepath.Join("resources", "app"),
@@ -107,9 +106,9 @@ func (ply *Play) run(c *ship.Context) error {
 	//goland:noinspection GoUnhandledErrorResult
 	defer ws.CloseNow()
 
-	stderr := ply.stderr(ws)
-	eng.Device().Stdout().Attach(ply.stdout(ws))
-	eng.Device().Stderr().Attach(stderr)
+	stdout, stderr := ply.stdout(ws), ply.stderr(ws)
+	eng.Stdout().Attach(stdout)
+	eng.Stderr().Attach(stderr)
 
 	parent := r.Context()
 	ctx, cancel := context.WithCancel(parent)

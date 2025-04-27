@@ -121,17 +121,15 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	termSvc := service.NewTerm(log)
 
 	const basePath = "/api"
-	modules := []jsvm.ModuleRegister{
+	modules := []jsvm.ModuleLoader{
 		jsmod.NewConsole(),
 		jsmod.NewContext(),
-		jsmod.NewExec(),
 		jsmod.NewHTTP(),
 		jsmod.NewHTTPUtil(),
 		jsmod.NewIO(),
 		jsmod.NewNet(),
 		jsmod.NewOS(),
 		jsmod.NewRuntime(),
-		jsmod.NewSQL(),
 		jsmod.NewTime(),
 		jsmod.NewURL(),
 		jsext.NewCrontab(crontab),

@@ -11,7 +11,7 @@ require (
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/quic-go/quic-go v0.50.1
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/xmx/jsos v0.0.0-20250425110102-9902eddc2fc6
+	github.com/xmx/jsos v0.0.0-20250427065020-8ad2f932dfcf
 	github.com/xmx/ship v0.0.0-20250319010933-9bdf9a01fa3a
 	go.mongodb.org/mongo-driver/v2 v2.2.0
 	golang.org/x/crypto v0.37.0

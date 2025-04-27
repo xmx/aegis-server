@@ -88,21 +88,11 @@
         "import * as net from 'net';\n" +
         "import * as url from 'url';\n" +
         "import * as http from 'http';\n" +
-        "import * as crontab from 'crontab';\n" +
         "import * as httputil from 'http/httputil';\n" +
-        "\n" +
-        "import * as foo from 'foo';\n" +
-        "\n" +
-        "// 同一个包内调用。\n" +
-        "foo.bar();\n" +
-        "\n" +
-        "crontab.addJob(\"*/5 * * * * *\", function() {\n" +
-        "    console.log(\"定时任务每 5 秒打印：\", new Date().toJSON());\n" +
-        "});\n" +
         "\n" +
         "const dest = url.parse('https://mirrors.zju.edu.cn/');\n" +
         "const proxy = new httputil.Proxy();\n" +
-        "proxy.rewrite = (pr) => pr.setURL(dest)\n" +
+        "proxy.setRewrite((pr) => pr.setURL(dest))\n" +
         "\n" +
         "const indexFunc = (w, r) => {\n" +
         "    const [addr] = net.splitHostPort(r.remoteAddr);\n" +
@@ -115,9 +105,31 @@
         "\n" +
         "console.error('现在访问 http://[当前IP]:9099 试试吧');\n" +
         "http.listenAndServe('0.0.0.0:9099', mux);";
+    const mainContent2 = "// 样例程序\n" +
+        "import * as net from 'net';\n" +
+        "import * as url from 'url';\n" +
+        "import * as http from 'http';\n" +
+        "import * as httputil from 'http/httputil';\n" +
+        "\n" +
+        "const dest = url.parse('https://mirrors.zju.edu.cn/');\n" +
+        "const rewrite = (pr) => pr.setURL(dest);\n" +
+        "const proxy = new httputil.Proxy();\n" +
+        "proxy.setRewrite(rewrite);\n" +
+        "\n" +
+        "const indexFunc = (w, r) => {\n" +
+        "    const [addr] = net.splitHostPort(r.remoteAddr);\n" +
+        "    console.log(`访问记录：${addr} -> ${r.method} ${r.requestURI}`);\n" +
+        "    proxy.serveHTTP(w, r);\n" +
+        "}\n" +
+        "\n" +
+        "const mux = new http.ServeMux();\n" +
+        "mux.handleFunc('/', indexFunc);\n" +
+        "\n" +
+        "console.error('现在访问 http://[当前IP]:9099 试试吧');\n" +
+        "http.listenAndServe('0.0.0.0:9099', mux);"
     let editor, currentFile = 'main.js', targetFile = null, explorerRightClick = false;
     const fileStore = {
-        'main.js': mainContent,
+        'main.js': mainContent2,
         'manifest.json': '{\n  "application": {\n    "id": "demo",\n    "name": "我的程序",\n    "version": "1.0.0",\n    "main": "main"\n  }\n}',
         'foo.js': 'export function bar() {\n    console.log("测试同模块调用成功")\n    console.error("红色字是错误输出")\n}',
     };
