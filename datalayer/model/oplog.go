@@ -17,7 +17,7 @@ type Oplog struct {
 	Reason      string         `json:"reason,omitempty"   bson:"reason,omitempty"`   // 如果出错，错误原因
 	RequestedAt time.Time      `json:"requested_at"       bson:"requested_at"`       // 前端请求时间
 	FinishedAt  time.Time      `json:"finished_at"        bson:"finished_at"`        // 后端处理结束时间
-	Elapsed     Duration       `json:"elapsed"            bson:"elapsed"`            // 处理耗时
+	Elapsed     time.Duration  `json:"elapsed"            bson:"elapsed"`            // 处理耗时
 }
 
 type OplogRequest struct {
@@ -31,6 +31,7 @@ type OplogRequest struct {
 }
 
 type OplogResponse struct {
-	StatusCode int    `json:"status_code" bson:"status_code"`
-	Body       []byte `json:"body"        bson:"body"`
+	StatusCode int         `json:"status_code" bson:"status_code"`
+	Header     http.Header `json:"header"      bson:"header"`
+	Body       []byte      `json:"body"        bson:"body"`
 }

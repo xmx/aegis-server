@@ -10,24 +10,28 @@ import (
 )
 
 type Certificate interface {
-	Repository[model.Certificate]
+	Repository[bson.ObjectID, model.Certificate, []*model.Certificate]
 }
 
 func NewCertificate(db *mongo.Database, opts ...options.Lister[options.CollectionOptions]) Certificate {
-	base := newBaseRepository[model.Certificate](db, "certificate", opts...)
-	return &certificateRepo{baseRepository: base}
+	coll := db.Collection("certificate", opts...)
+	repo := NewRepository[bson.ObjectID, model.Certificate, []*model.Certificate](coll)
+
+	return &certificateRepo{
+		Repository: repo,
+	}
 }
 
 type certificateRepo struct {
-	*baseRepository[model.Certificate]
+	Repository[bson.ObjectID, model.Certificate, []*model.Certificate]
 }
 
-func (repo *certificateRepo) CreateIndex(ctx context.Context) error {
+func (r *certificateRepo) CreateIndex(ctx context.Context) error {
 	idx := mongo.IndexModel{
-		Keys:    bson.D{{Key: "certificate_sha256", Value: 1}}, // 按照 age 升序创建索引
-		Options: options.Index().SetUnique(true),               // 非唯一索引
+		Keys:    bson.D{{Key: "certificate_sha256", Value: 1}},
+		Options: options.Index().SetUnique(true),
 	}
-	_, err := repo.coll.Indexes().CreateOne(ctx, idx)
+	_, err := r.Indexes().CreateOne(ctx, idx)
 
 	return err
 }

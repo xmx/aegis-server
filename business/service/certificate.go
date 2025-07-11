@@ -34,7 +34,7 @@ type Certificate struct {
 	log  *slog.Logger
 }
 
-func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*repository.Pages[model.Certificate], error) {
+func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*repository.Pages[model.Certificate, []*model.Certificate], error) {
 	filter := make(bson.M, 4)
 	if arr := req.Regexps("common_name", "dns_names"); len(arr) != 0 {
 		filter["$or"] = arr
@@ -43,7 +43,7 @@ func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*r
 	projection := bson.M{"public_key": 0, "private_key": 0}
 	opt := options.Find().SetProjection(projection)
 
-	return crt.repo.Certificate().FindPage(ctx, filter, req.Page, req.Size, opt)
+	return crt.repo.Certificate().FindPagination(ctx, filter, req.Page, req.Size, opt)
 }
 
 func (crt *Certificate) Find(ctx context.Context, ids []bson.ObjectID) ([]*model.Certificate, error) {

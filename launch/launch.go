@@ -9,8 +9,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/xmx/aegis-server/jsext"
-
 	"github.com/robfig/cron/v3"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/datalayer/repository"
@@ -23,8 +21,6 @@ import (
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/profile"
-	"github.com/xmx/jsos/jsmod"
-	"github.com/xmx/jsos/jsvm"
 	"github.com/xmx/ship"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -88,8 +84,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	defer disconnectDB(cli)
 
-	cronLog := slog.New(logger.Skip(logHandler, 5))
-	crontab := cronv3.New(cronLog, cron.WithSeconds())
+	crontab := cronv3.New(cron.WithSeconds())
 	crontab.Start()
 	defer crontab.Stop()
 
@@ -120,33 +115,14 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	termSvc := service.NewTerm(log)
 
-	const basePath = "/api"
-	modules := []jsvm.ModuleLoader{
-		jsmod.NewConsole(),
-		jsmod.NewContext(),
-		jsmod.NewHTTP(),
-		jsmod.NewHTTPUtil(),
-		jsmod.NewIO(),
-		jsmod.NewNet(),
-		jsmod.NewOS(),
-		jsmod.NewRuntime(),
-		jsmod.NewTime(),
-		jsmod.NewURL(),
-		jsext.NewCrontab(crontab),
-	}
+	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logSvc),
-		restapi.NewDAV(basePath, "/"),
-		restapi.NewPlay(modules),
+		restapi.NewDAV(apiPath, "/"),
 		restapi.NewSystem(),
 		restapi.NewTerm(termSvc),
-		// restapi.NewFile(fileSvc),
-		// restapi.NewLog(logSvc),
-		// restapi.NewOplog(oplogSvc),
-		// restapi.NewTerm(termSvc),
-		// restapi.NewPlay(modules),
 	}
 
 	srvCfg := cfg.Server
@@ -155,12 +131,11 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
 	sh.Logger = logger.NewShip(logHandler, 6)
-	if static := srvCfg.Static; static != "" {
-		sh.Route("/").Static(static)
-	}
 
-	baseAPI := sh.Group(basePath).Use(middle.WAF(nil))
-	if err = shipx.RegisterRoutes(baseAPI, routes); err != nil { // 注册路由
+	rootRGB := sh.Group("/")
+	_ = restapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
+	apiRGB := rootRGB.Group(apiPath).Use(middle.WAF(nil))
+	if err = shipx.RegisterRoutes(apiRGB, routes); err != nil { // 注册路由
 		return err
 	}
 

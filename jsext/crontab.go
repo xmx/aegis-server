@@ -42,7 +42,7 @@ func (cs crontabSandbox) addJob(spec string, cmd func()) (*goja.Object, error) {
 	_, _ = rand.Read(buf[8:])
 	name := hex.EncodeToString(buf)
 
-	if err := cs.crond.AddJob(name, spec, cmd); err != nil {
+	if _, err := cs.crond.AddJob(name, spec, cmd); err != nil {
 		return nil, err
 	}
 

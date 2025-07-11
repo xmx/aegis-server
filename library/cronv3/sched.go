@@ -41,26 +41,24 @@ func (st *specificTimes) Next(now time.Time) time.Time {
 	return time.Time{}
 }
 
-// NewPeriodicallyTimes 根据时间间隔定期执行。
-//
-// 假设用户有这样的一个需求：
-// 有个定时任务要每小时执行一次。
-// 那 cron 表达式要写：0 0 * * * * 还是 0 * * * * 呢？
-// 这要取决于 cron/v3 在初始化时允许秒级任务还是分钟级任务。
-func NewPeriodicallyTimes(du time.Duration) cron.Schedule {
+// NewInterval 定期执行。
+// 不同于 cron 表达式的是：cron/v3 时间粒度（秒级/分钟级）是可配置的，
+// 不同的级别对应的 cron 表达式位数不一样。
+// 此方式可以自适应不同级别的 cron/v3，为了两者兼容，所以限制最小间隔为一分钟。
+func NewInterval(du time.Duration) cron.Schedule {
 	if du < time.Minute {
 		du = time.Minute
 	}
 
-	return &periodicallyTimes{
+	return &intervalTimes{
 		du: du,
 	}
 }
 
-type periodicallyTimes struct {
+type intervalTimes struct {
 	du time.Duration
 }
 
-func (pt *periodicallyTimes) Next(now time.Time) time.Time {
-	return now.Add(pt.du)
+func (it *intervalTimes) Next(now time.Time) time.Time {
+	return now.Add(it.du)
 }
