@@ -30,8 +30,10 @@ type DAV struct {
 
 func (d *DAV) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	methods := []string{
-		http.MethodOptions, http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodDelete,
-		"LOCK", "UNLOCK", "PROPFIND", "PROPPATCH", "MKCOL", "COPY", "MOVE",
+		http.MethodOptions, http.MethodGet, http.MethodHead,
+		http.MethodPost, http.MethodPut, http.MethodDelete,
+		"LOCK", "UNLOCK", "PROPFIND", "PROPPATCH", "MKCOL",
+		"COPY", "MOVE",
 	}
 	r.Route(d.subpath).Method(d.access, methods...)
 	r.Route(d.subpath+"/*wildcard").Method(d.access, methods...)

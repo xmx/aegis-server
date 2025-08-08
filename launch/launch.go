@@ -9,15 +9,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/lmittmann/tint"
 	"github.com/robfig/cron/v3"
 	"github.com/xmx/aegis-server/business/service"
+	"github.com/xmx/aegis-server/business/validext"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
-	"github.com/xmx/aegis-server/library/credential"
 	"github.com/xmx/aegis-server/library/cronv3"
-	"github.com/xmx/aegis-server/library/dynwriter"
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/profile"
@@ -42,28 +42,29 @@ func Run(ctx context.Context, path string) error {
 func Exec(ctx context.Context, cfg *profile.Config) error {
 	// 创建参数校验器，并校验配置文件。
 	valid := validation.New(validation.TagNameFunc([]string{"json"}))
+	valid.RegisterCustomValidations(validext.All())
 	if err := valid.Validate(ctx, cfg); err != nil {
 		return err
 	}
 
 	// 初始化日志组件。
 	logCfg := cfg.Logger
-	logWriter := dynwriter.New()
+	logLevel := logCfg.LevelVar()
+	logHandler := logger.NewHandler()
+	logOpts := &slog.HandlerOptions{AddSource: true, Level: logLevel}
 	if lumber := logCfg.Lumber(); lumber != nil {
 		defer lumber.Close()
-		logWriter.Attach(lumber)
+		logHandler.Attach(slog.NewJSONHandler(lumber, logOpts))
 	}
 	if logCfg.Console {
-		logWriter.Attach(os.Stdout)
+		logHandler.Attach(tint.NewHandler(os.Stdout, &tint.Options{
+			AddSource:  true,
+			Level:      logLevel,
+			TimeFormat: time.DateTime,
+		}))
 	}
-
-	logLevel := new(slog.LevelVar)
-	if err := logLevel.UnmarshalText([]byte(logCfg.Level)); err != nil {
-		logLevel.Set(slog.LevelInfo)
-	}
-	logOpt := &slog.HandlerOptions{AddSource: true, Level: logLevel}
-	logHandler := slog.NewJSONHandler(logWriter, logOpt)
 	log := slog.New(logHandler)
+	log.Info("日志初始化完毕")
 
 	// -----[ 初始化 mongodb ]-----
 	mongoURI := cfg.Database.URI
@@ -83,6 +84,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		return err
 	}
 	defer disconnectDB(cli)
+	log.Info("数据库连接成功")
 
 	crontab := cronv3.New(cron.WithSeconds())
 	crontab.Start()
@@ -90,36 +92,20 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	mongoDB := cli.Database(mongoURL.Database)
 	repoAll := repository.NewAll(mongoDB)
-	repoAll.DB().GridFSBucket()
 
 	if err = repoAll.CreateIndex(ctx); err != nil {
 		return err
 	}
-	registerValidator(valid, repoAll, log)
+	log.Info("数据库索引建立完毕")
 
-	var useTLS bool
-	baseTLS := &tls.Config{NextProtos: []string{"h2", "h3", "aegis"}}
-	poolTLS := credential.NewPool(baseTLS)
-
-	certificateSvc, err := service.NewCertificate(repoAll, poolTLS, log)
-	if err != nil {
-		return err
-	}
-	logSvc := service.NewLog(logLevel, logWriter, log)
-
-	if num, exx := certificateSvc.Refresh(ctx); exx != nil { // 初始化刷新证书池。
-		log.Error("初始化证书错误", slog.Any("error", exx))
-		return exx
-	} else {
-		useTLS = num > 0
-	}
+	certificateSvc := service.NewCertificate(repoAll, log)
 	termSvc := service.NewTerm(log)
 
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),
 		restapi.NewCertificate(certificateSvc),
-		restapi.NewLog(logSvc),
+		restapi.NewLog(logHandler),
 		restapi.NewDAV(apiPath, "/"),
 		restapi.NewSystem(),
 		restapi.NewTerm(termSvc),
@@ -138,20 +124,17 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	if err = shipx.RegisterRoutes(apiRGB, routes); err != nil { // 注册路由
 		return err
 	}
+	log.Info("HTTP 路由注册完毕")
 
-	lc := new(net.ListenConfig)
-	lc.SetMultipathTCP(true)
-	lis, err := lc.Listen(ctx, "tcp", srvCfg.Addr)
-	if err != nil {
-		return err
+	srv := &http.Server{
+		Addr:    srvCfg.Addr,
+		Handler: sh,
+		TLSConfig: &tls.Config{
+			GetCertificate: certificateSvc.GetCertificate,
+		},
 	}
-	if addr := listenAddr(lis); addr != "" {
-		log.Warn("监听地址", slog.Any("listen", addr))
-	}
-	tlsCfg := &tls.Config{GetConfigForClient: poolTLS.Match}
-	srv := &http.Server{Handler: sh, TLSConfig: tlsCfg}
 	errs := make(chan error)
-	go serveHTTP(srv, lis, useTLS, errs)
+	go listenAndServe(srv, errs)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
@@ -166,28 +149,26 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	return err
 }
 
-func serveHTTP(srv *http.Server, lis net.Listener, useTLS bool, errs chan<- error) {
-	if useTLS {
-		errs <- srv.ServeTLS(lis, "", "")
-	} else {
-		errs <- srv.Serve(lis)
-	}
-}
-
-func listenAddr(l net.Listener) string {
-	switch v := l.(type) {
-	case *net.TCPListener:
-		return v.Addr().String()
-	case *net.UnixListener:
-		return v.Addr().String()
-	default:
-		return ""
-	}
-}
-
 func disconnectDB(cli *mongo.Client) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	_ = cli.Disconnect(ctx)
+}
+
+func listenAndServe(srv *http.Server, errs chan<- error) {
+	addr := srv.Addr
+	if addr == "" {
+		addr = ":https"
+	}
+
+	lc := new(net.ListenConfig)
+	lc.SetMultipathTCP(true)
+	ln, err := lc.Listen(context.Background(), "tcp", addr)
+	if err != nil {
+		errs <- err
+		return
+	}
+
+	errs <- srv.ServeTLS(ln, "", "")
 }

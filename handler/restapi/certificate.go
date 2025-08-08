@@ -4,10 +4,12 @@ import (
 	"archive/zip"
 	"mime"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
-	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/business/service"
+	"github.com/xmx/aegis-server/contract/request"
 	"github.com/xmx/ship"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
@@ -23,7 +25,8 @@ type Certificate struct {
 func (crt *Certificate) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/certificates").GET(crt.page)
 	r.Route("/certificate/download").GET(crt.download)
-	r.Route("/certificate/refresh").GET(crt.refresh)
+	r.Route("/certificate/forget").DELETE(crt.forget)
+	r.Route("/certificate/parse").POST(crt.parse)
 	r.Route("/certificate").
 		GET(crt.detail).
 		POST(crt.create).
@@ -55,6 +58,20 @@ func (crt *Certificate) create(c *ship.Context) error {
 	ctx := c.Request().Context()
 
 	return crt.svc.Create(ctx, req)
+}
+
+func (crt *Certificate) parse(c *ship.Context) error {
+	req := new(request.ConfigCertificateParse)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+
+	ret, err := crt.svc.Parse(req.PublicKey, req.PrivateKey)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
 }
 
 func (crt *Certificate) update(c *ship.Context) error {
@@ -100,20 +117,9 @@ func (crt *Certificate) download(c *ship.Context) error {
 	}
 	ctx := c.Request().Context()
 
-	dats, err := crt.svc.Find(ctx, req.OIDs())
-	if err != nil {
-		return err
-	}
-	if len(dats) == 0 {
-		return ship.ErrNotFound
-	}
-
-	size := len(dats)
-	name := "certificate"
+	now := time.Now()
+	name := "certificate-" + strconv.FormatInt(now.Unix(), 10)
 	extension := ".zip"
-	if size == 1 {
-		name = dats[0].CommonName
-	}
 	filename := name + extension
 	contentType := mime.TypeByExtension(extension)
 	if contentType == "" {
@@ -131,34 +137,41 @@ func (crt *Certificate) download(c *ship.Context) error {
 	// 这些字符不允许当作文件名。
 	replacer := strings.NewReplacer("\\", "_", "/", "_", ":", "_", "*", "_",
 		"?", "_", "\"", "_", "<", "_", ">", "_", "|", "_")
-	unique := make(map[string]struct{}, size)
-	for _, dat := range dats {
-		commonName := replacer.Replace(dat.CommonName)
-		if _, ok := unique[commonName]; ok {
-			sid := dat.ID.Hex()
-			commonName = commonName + "-" + sid
-		}
-		unique[commonName] = struct{}{}
 
-		cw, exx := zipfs.Create(commonName + ".crt")
+	names := make(map[string]struct{}, 16)
+	for dat, exx := range crt.svc.All(ctx, req.OIDs()) {
 		if exx != nil {
 			return exx
 		}
-		if _, err = cw.Write(dat.PublicKey); err != nil {
-			return err
+
+		cname := replacer.Replace(dat.Name)
+		if _, ok := names[cname]; ok {
+			sid := dat.ID.Hex()
+			cname = cname + "-" + sid
 		}
-		cw, err = zipfs.Create(commonName + ".key")
+		names[cname] = struct{}{}
+
+		cw, err := zipfs.Create(cname + ".crt")
 		if err != nil {
 			return err
 		}
-		_, err = cw.Write(dat.PrivateKey)
+
+		pubKey, priKey := []byte(dat.PublicKey), []byte(dat.PrivateKey)
+		if _, err = cw.Write(pubKey); err != nil {
+			return err
+		}
+		cw, err = zipfs.Create(cname + ".key")
+		if err != nil {
+			return err
+		}
+		_, err = cw.Write(priKey)
 	}
 
-	return err
+	return nil
 }
 
-func (crt *Certificate) refresh(c *ship.Context) error {
+func (crt *Certificate) forget(c *ship.Context) error {
 	ctx := c.Request().Context()
-	_, err := crt.svc.Refresh(ctx)
-	return err
+	crt.svc.Forget(ctx)
+	return nil
 }

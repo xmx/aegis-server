@@ -27,11 +27,16 @@ type certificateRepo struct {
 }
 
 func (r *certificateRepo) CreateIndex(ctx context.Context) error {
-	idx := mongo.IndexModel{
-		Keys:    bson.D{{Key: "certificate_sha256", Value: 1}},
-		Options: options.Index().SetUnique(true),
+	idx := []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "certificate_sha256", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+		{
+			Keys: bson.D{{Key: "name", Value: 1}},
+		},
 	}
-	_, err := r.Indexes().CreateOne(ctx, idx)
+	_, err := r.Indexes().CreateMany(ctx, idx)
 
 	return err
 }

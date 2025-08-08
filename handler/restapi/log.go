@@ -1,78 +1,142 @@
 package restapi
 
 import (
+	"context"
+	"io"
+	"log/slog"
 	"net/http"
-	"sync/atomic"
+	"time"
 
-	"github.com/xmx/aegis-server/argument/errcode"
-	"github.com/xmx/aegis-server/argument/request"
-	"github.com/xmx/aegis-server/argument/response"
-	"github.com/xmx/aegis-server/business/service"
+	"github.com/coder/websocket"
+	"github.com/lmittmann/tint"
+	"github.com/xmx/aegis-server/contract/request"
+	"github.com/xmx/aegis-server/library/useragent"
+	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/protocol/eventsource"
 	"github.com/xmx/ship"
 )
 
-func NewLog(svc *service.Log) *Log {
+func NewLog(handler logger.Handler) *Log {
 	return &Log{
-		svc:   svc,
-		limit: 5,
+		handler: handler,
 	}
 }
 
 type Log struct {
-	svc   *service.Log
-	limit int32        // tail 日志最大个数。
-	count atomic.Int32 // tail 连接计数器。
+	handler logger.Handler
 }
 
 func (l *Log) RegisterRoute(r *ship.RouteGroupBuilder) error {
-	r.Route("/log/level").
-		GET(l.level).
-		POST(l.setLevel)
-	r.Route("/sse/log/tail").GET(l.tail)
+	r.Route("/log/watch").GET(l.watch)
 
 	return nil
 }
 
-func (l *Log) level(c *ship.Context) error {
-	lvl := l.svc.Level()
-	ret := &response.LogLevel{Level: lvl}
-	return c.JSON(http.StatusOK, ret)
-}
-
-func (l *Log) setLevel(c *ship.Context) error {
-	req := new(request.LogLevel)
-	if err := c.Bind(req); err != nil {
+// watch 观测日志。
+//
+//goland:noinspection GoUnhandledErrorResult
+func (l *Log) watch(c *ship.Context) error {
+	req := new(request.LogWatch)
+	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 
-	return l.svc.SetLevel(req.Level)
-}
-
-func (l *Log) tail(c *ship.Context) error {
-	cnt := l.count.Add(1)
-	if lim := l.limit; cnt > lim {
-		l.count.Add(-1)
-		return errcode.ErrTooManyRequests
-	}
-
-	defer func() {
-		num := l.count.Add(-1)
-		c.Info("离开日志查看器，当前还有 %d 个查看窗口", num)
-	}()
-
+	parent := c.Request().Context()
+	var writer doneWriteCloser
 	w, r := c.ResponseWriter(), c.Request()
-	sse := eventsource.Accept(w, r)
-	if sse == nil {
-		c.Warn("不是 Server-Sent Events 连接")
-		return errcode.ErrServerSentEvents
+	if c.IsWebSocket() {
+		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
+		if err != nil {
+			return err
+		}
+		ctx, cancel := context.WithCancel(parent)
+		writer = &socketLog{conn: conn, ctx: ctx, cancel: cancel}
+	} else if sse := eventsource.Accept(w, r); sse != nil {
+		writer = sse
+	} else {
+		w.Header().Set(ship.HeaderTransferEncoding, "chunked")
+		w.Header().Set(ship.HeaderContentType, ship.MIMETextPlainCharsetUTF8)
+		w.WriteHeader(http.StatusOK)
+		ctx, cancel := context.WithCancel(parent)
+		writer = &streamableHTTP{wrt: w, ctx: ctx, cancel: cancel}
 	}
+	defer writer.Close()
 
-	l.svc.Attach(sse)
-	defer l.svc.Detach(sse)
+	level := req.LevelVar()
+	opts := &slog.HandlerOptions{AddSource: true, Level: level}
+	var handler slog.Handler
 
-	c.Warn("进入日志查看器，当前共有 %d 个查看窗口", cnt)
-	<-sse.Done()
+	userAgent := c.UserAgent()
+	if req.Format == "" && useragent.IsSupportedANSI(userAgent) {
+		handler = tint.NewHandler(writer, &tint.Options{
+			AddSource:   opts.AddSource,
+			Level:       opts.Level,
+			ReplaceAttr: opts.ReplaceAttr,
+			TimeFormat:  time.RFC3339,
+		})
+	} else if req.JSONFormat() {
+		handler = slog.NewJSONHandler(writer, opts)
+	} else {
+		handler = slog.NewTextHandler(writer, opts)
+	}
+	l.handler.Attach(handler)
+	defer l.handler.Detach(handler)
+	c.Info("HELLO")
+	<-writer.Done()
 
 	return nil
+}
+
+type streamableHTTP struct {
+	wrt    http.ResponseWriter
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+func (sh *streamableHTTP) Write(p []byte) (int, error) {
+	n, err := sh.wrt.Write(p)
+	if f, ok := sh.wrt.(http.Flusher); ok {
+		f.Flush()
+	}
+
+	return n, err
+}
+
+func (sh *streamableHTTP) Close() error {
+	sh.cancel()
+	return nil
+}
+
+func (sh *streamableHTTP) Done() <-chan struct{} {
+	return sh.ctx.Done()
+}
+
+type doneWriteCloser interface {
+	io.WriteCloser
+	Done() <-chan struct{}
+}
+
+type socketLog struct {
+	conn   *websocket.Conn
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+func (sl *socketLog) Write(p []byte) (int, error) {
+	n := len(p)
+	err := sl.conn.Write(context.Background(), websocket.MessageText, p)
+	if err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+func (sl *socketLog) Close() error {
+	sl.cancel()
+	return sl.conn.CloseNow()
+}
+
+func (sl *socketLog) Done() <-chan struct{} {
+	return sl.ctx.Done()
 }

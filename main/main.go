@@ -25,9 +25,12 @@ func main() {
 		return
 	}
 
-	if f, _ := os.Create(".crash.txt"); f != nil {
-		_ = debug.SetCrashOutput(f, debug.CrashOptions{})
-		_ = f.Close()
+	for _, str := range []string{"resources/.crash.txt", ".crash.txt"} {
+		if f, _ := os.Create(str); f != nil {
+			_ = debug.SetCrashOutput(f, debug.CrashOptions{})
+			_ = f.Close()
+			break
+		}
 	}
 
 	signals := []os.Signal{syscall.SIGTERM, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT}
