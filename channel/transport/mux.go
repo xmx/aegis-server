@@ -1,0 +1,109 @@
+package transport
+
+import (
+	"context"
+	"net"
+
+	"github.com/xtaci/smux"
+	"golang.org/x/net/quic"
+)
+
+type Server interface {
+	Serve(net.Listener) error
+}
+
+type Muxer interface {
+	// Open 打开一个子流。
+	Open(ctx context.Context) (net.Conn, error)
+
+	// Accept 一个子流（双向流）。
+	Accept() (net.Conn, error)
+
+	// Addr returns the listener's network address.
+	Addr() net.Addr
+
+	// Close 关闭多路复用，此操作会中断所有的子流。
+	Close() error
+}
+
+type tcpMux struct {
+	sess *smux.Session
+}
+
+func (tm *tcpMux) Open(_ context.Context) (net.Conn, error) {
+	stm, err := tm.sess.OpenStream()
+	if err != nil {
+		return nil, err
+	}
+
+	return stm, nil
+}
+
+func (tm *tcpMux) Accept() (net.Conn, error) {
+	stm, err := tm.sess.AcceptStream()
+	if err != nil {
+		return nil, err
+	}
+
+	return stm, nil
+}
+
+func (tm *tcpMux) Addr() net.Addr {
+	return tm.sess.LocalAddr()
+}
+
+func (tm *tcpMux) Close() error {
+	return tm.sess.Close()
+}
+
+type udpMux struct {
+	qc    *quic.Conn
+	laddr net.Addr
+	raddr net.Addr
+}
+
+func (um *udpMux) Open(ctx context.Context) (net.Conn, error) {
+	stm, err := um.qc.NewStream(ctx)
+	if err != nil {
+		return nil, err
+	}
+	conn := um.newConn(stm)
+
+	return conn, nil
+}
+
+func (um *udpMux) Accept() (net.Conn, error) {
+	stm, err := um.qc.AcceptStream(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	conn := um.newConn(stm)
+
+	return conn, nil
+}
+
+func (um *udpMux) Addr() net.Addr {
+	return um.laddr
+}
+
+func (um *udpMux) Close() error {
+	return um.qc.Close()
+}
+
+func (um *udpMux) newConn(stm *quic.Stream) *quicConn {
+	return &quicConn{
+		stm:   stm,
+		laddr: um.laddr,
+		raddr: um.raddr,
+	}
+}
+
+func NewTCP(c net.Conn) (Muxer, error) {
+	srv, err := smux.Server(c, nil)
+	if err != nil {
+		return nil, err
+	}
+	tm := &tcpMux{sess: srv}
+
+	return tm, nil
+}

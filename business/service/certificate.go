@@ -15,6 +15,7 @@ import (
 	"iter"
 	"log/slog"
 	"math/big"
+	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -314,6 +315,11 @@ func (crt *Certificate) loadManager() *certificateManager {
 }
 
 func (*Certificate) generate() (*tls.Certificate, error) {
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, err
+	}
+
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
@@ -321,17 +327,18 @@ func (*Certificate) generate() (*tls.Certificate, error) {
 
 	now := time.Now()
 	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
+		SerialNumber: serialNumber,
 		Subject: pkix.Name{
-			CommonName:   "测试证书",
-			Organization: []string{"aegis-server"},
+			CommonName:   "aegis",
+			Organization: []string{"aegis"},
 		},
 		NotBefore:             now.Add(-time.Hour),
-		NotAfter:              now.Add(30 * 24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		NotAfter:              now.AddDate(1, 0, 0),
+		KeyUsage:              x509.KeyUsageDigitalSignature,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
-		// DNSNames:              nil,
+		DNSNames:              []string{"server.aegis.internal"},
+		IPAddresses:           []net.IP{{127, 0, 0, 1}},
 	}
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &priv.PublicKey, priv)
@@ -339,11 +346,11 @@ func (*Certificate) generate() (*tls.Certificate, error) {
 		return nil, err
 	}
 	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	privBytes, err := x509.MarshalECPrivateKey(priv)
 	if err != nil {
 		return nil, err
 	}
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privBytes})
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
 
 	tlsCert, err := tls.X509KeyPair(certPEM, keyPEM)
 	if err != nil {
