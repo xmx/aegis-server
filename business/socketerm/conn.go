@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/coder/websocket"
-	"github.com/coder/websocket/wsjson"
+	"github.com/gorilla/websocket"
 )
 
 func New(ws *websocket.Conn, timeout time.Duration) *Conn {
@@ -21,11 +20,8 @@ type Conn struct {
 }
 
 func (c *Conn) Write(p []byte) (int, error) {
-	ctx, cancel := c.getContext()
-	defer cancel()
-
 	lines := []any{"o", string(p)}
-	if err := wsjson.Write(ctx, c.ws, lines); err != nil {
+	if err := c.ws.WriteJSON(lines); err != nil {
 		return 0, err
 	}
 
@@ -33,11 +29,8 @@ func (c *Conn) Write(p []byte) (int, error) {
 }
 
 func (c *Conn) Recv() (kind, data string, err error) {
-	ctx, cancel := c.getContext()
-	defer cancel()
-
-	lines := make([]string, 0, 2)
-	if err = wsjson.Read(ctx, c.ws, &lines); err != nil {
+	var lines []string
+	if err = c.ws.ReadJSON(&lines); err != nil {
 		return
 	}
 	for i, line := range lines {

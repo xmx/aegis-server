@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/coder/websocket"
+	"github.com/gorilla/websocket"
 	"github.com/lmittmann/tint"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/contract/request"
@@ -19,11 +19,17 @@ import (
 func NewLog(handler logger.Handler) *Log {
 	return &Log{
 		handler: handler,
+		upg: &websocket.Upgrader{
+			HandshakeTimeout:  30 * time.Second,
+			CheckOrigin:       func(*http.Request) bool { return true },
+			EnableCompression: true,
+		},
 	}
 }
 
 type Log struct {
 	handler logger.Handler
+	upg     *websocket.Upgrader
 }
 
 func (l *Log) RegisterRoute(r *ship.RouteGroupBuilder) error {
@@ -45,7 +51,7 @@ func (l *Log) watch(c *ship.Context) error {
 	var writer doneWriteCloser
 	w, r := c.ResponseWriter(), c.Request()
 	if c.IsWebSocket() {
-		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
+		conn, err := l.upg.Upgrade(w, r, nil)
 		if err != nil {
 			return err
 		}
@@ -124,7 +130,7 @@ type socketLog struct {
 
 func (sl *socketLog) Write(p []byte) (int, error) {
 	n := len(p)
-	err := sl.conn.Write(context.Background(), websocket.MessageText, p)
+	err := sl.conn.WriteMessage(websocket.TextMessage, p)
 	if err != nil {
 		return 0, err
 	}
@@ -134,7 +140,7 @@ func (sl *socketLog) Write(p []byte) (int, error) {
 
 func (sl *socketLog) Close() error {
 	sl.cancel()
-	return sl.conn.CloseNow()
+	return sl.conn.Close()
 }
 
 func (sl *socketLog) Done() <-chan struct{} {

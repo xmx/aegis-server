@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coder/websocket"
+	"github.com/gorilla/websocket"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/business/socketerm"
 	"github.com/xmx/aegis-server/protocol/asciicast"
@@ -122,7 +122,7 @@ func (svc *Term) serveTerminal(ws *websocket.Conn, tty vterminal.Typewriter, cas
 			read = io.TeeReader(read, cast)
 		}
 		_, _ = io.Copy(conn, read)
-		_ = ws.CloseNow()
+		_ = ws.Close()
 		close(ch)
 	}()
 

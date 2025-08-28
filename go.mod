@@ -3,7 +3,6 @@ module github.com/xmx/aegis-server
 go 1.25
 
 require (
-	github.com/coder/websocket v1.8.13
 	github.com/creack/pty v1.1.24
 	github.com/dop251/goja v0.0.0-20250630131328-58d95d85e994
 	github.com/go-playground/locales v0.14.1
