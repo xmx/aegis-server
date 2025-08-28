@@ -2,39 +2,51 @@ package restapi
 
 import (
 	"log/slog"
+	"net/http"
+	"time"
 
-	"github.com/xmx/aegis-server/business/service"
-	"github.com/xmx/aegis-server/contract/request"
-	"github.com/xmx/ship"
+	"github.com/gorilla/websocket"
+	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/channel/transport"
 )
 
-func NewChannel(svc *service.Channel) *Channel {
+func NewChannel(next transport.Handler) *Channel {
 	return &Channel{
-		svc: svc,
+		next: next,
+		upg: &websocket.Upgrader{
+			HandshakeTimeout: 10 * time.Second,
+			CheckOrigin:      func(*http.Request) bool { return true },
+		},
 	}
 }
 
 type Channel struct {
-	svc *service.Channel
+	next transport.Handler
+	upg  *websocket.Upgrader
 }
 
 func (chn *Channel) RegisterRoute(r *ship.RouteGroupBuilder) error {
-	r.Route("/channel").POST(chn.open)
+	r.Route("/channel").GET(chn.open)
 
 	return nil
 }
 
 func (chn *Channel) open(c *ship.Context) error {
-	req := new(request.ChannelOpen)
-	if err := c.Bind(req); err != nil {
+	w, r := c.ResponseWriter(), c.Request()
+	ws, err := chn.upg.Upgrade(w, r, nil)
+	if err != nil {
+		return err
+	}
+	conn := ws.NetConn()
+	mux, err := transport.NewSMUX(conn, true)
+	if err != nil {
+		_ = conn.Close()
 		return err
 	}
 
-	w, r := c.Response(), c.Request()
-	err := chn.svc.Open(w, r, req)
-	if err != nil {
-		c.Warn("通道建立失败", slog.Any("error", err))
+	if err = chn.next.Handle(mux); err != nil {
+		c.Infof("处理发生错误", slog.Any("error", err))
 	}
 
-	return err
+	return nil
 }

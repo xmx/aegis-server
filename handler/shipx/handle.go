@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/contract/problem"
 	"github.com/xmx/aegis-server/library/validation"
-	"github.com/xmx/ship"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 

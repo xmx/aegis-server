@@ -3,7 +3,8 @@ package errcode
 import (
 	"net/http"
 
-	"github.com/xmx/ship"
+	""
+github.com/xgfone/ship/v5""
 )
 
 var (

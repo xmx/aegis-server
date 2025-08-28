@@ -9,11 +9,11 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/lmittmann/tint"
+	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/contract/request"
 	"github.com/xmx/aegis-server/library/useragent"
 	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/protocol/eventsource"
-	"github.com/xmx/ship"
 )
 
 func NewLog(handler logger.Handler) *Log {
@@ -81,7 +81,7 @@ func (l *Log) watch(c *ship.Context) error {
 	}
 	l.handler.Attach(handler)
 	defer l.handler.Detach(handler)
-	c.Info("HELLO")
+	c.Infof("HELLO")
 	<-writer.Done()
 
 	return nil

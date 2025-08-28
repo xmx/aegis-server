@@ -1,8 +1,6 @@
-package linkhub
+package transport
 
-import (
-	"sync"
-)
+import "sync"
 
 func NewHub() Huber {
 	return &mapHub{

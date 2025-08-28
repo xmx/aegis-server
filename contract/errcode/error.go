@@ -1,6 +1,6 @@
 package errcode
 
-import "github.com/xmx/ship"
+import "github.com/xgfone/ship/v5"
 
 var (
 	ErrDataNotExists          = ship.ErrNotFound.Newf("数据不存在")

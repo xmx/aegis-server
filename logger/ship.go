@@ -1,10 +1,10 @@
 package logger
 
 import (
-	"fmt"
+	"context"
 	"log/slog"
 
-	"github.com/xmx/ship"
+	"github.com/xgfone/ship/v5"
 )
 
 func NewShip(h slog.Handler, skip int) ship.Logger {
@@ -18,47 +18,31 @@ type shipLog struct {
 	log *slog.Logger
 }
 
-func (s *shipLog) Debug(format string, args ...any) {
-	s.logf(slog.LevelDebug, format, args...)
+func (s *shipLog) Tracef(msg string, args ...any) {
+	s.logf(slog.LevelDebug, msg, args...)
 }
 
-func (s *shipLog) Info(format string, args ...any) {
-	s.logf(slog.LevelInfo, format, args...)
+func (s *shipLog) Debugf(msg string, args ...any) {
+	s.logf(slog.LevelDebug, msg, args...)
 }
 
-func (s *shipLog) Warn(format string, args ...any) {
-	s.logf(slog.LevelWarn, format, args...)
+func (s *shipLog) Infof(msg string, args ...any) {
+	s.logf(slog.LevelInfo, msg, args...)
 }
 
-func (s *shipLog) Error(format string, args ...any) {
-	s.logf(slog.LevelError, format, args...)
+func (s *shipLog) Warnf(msg string, args ...any) {
+	s.logf(slog.LevelWarn, msg, args...)
 }
 
-func (s *shipLog) logf(level slog.Level, format string, args ...any) {
-	if !s.log.Enabled(nil, level) {
+func (s *shipLog) Errorf(msg string, args ...any) {
+	s.logf(slog.LevelError, msg, args...)
+}
+
+func (s *shipLog) logf(level slog.Level, msg string, args ...any) {
+	ctx := context.Background()
+	if !s.log.Enabled(ctx, level) {
 		return
 	}
 
-	size := len(args)
-	if size == 0 {
-		s.log.Log(nil, level, format)
-		return
-	}
-
-	var not bool
-	attrs := make([]slog.Attr, 0, size)
-	for _, arg := range args {
-		if attr, ok := arg.(slog.Attr); ok {
-			attrs = append(attrs, attr)
-		} else {
-			not = true
-			break
-		}
-	}
-	if not {
-		msg := fmt.Sprintf(format, args...)
-		s.log.Log(nil, level, msg)
-	} else {
-		s.log.LogAttrs(nil, level, format, attrs...)
-	}
+	s.log.Log(ctx, level, msg, args...)
 }

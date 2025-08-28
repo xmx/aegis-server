@@ -1,96 +1,64 @@
 package transport
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
-	"fmt"
-	"net"
-	"net/http"
 	"net/netip"
 	"net/url"
 	"time"
 
-	"github.com/xtaci/smux"
+	"github.com/gorilla/websocket"
 	"golang.org/x/net/quic"
 )
 
-type Dialer interface {
-	DialContext(ctx context.Context, addr string, data, reply any) (Muxer, error)
+type DualDialer struct {
+	WebSocketDialer *websocket.Dialer
+	WebSocketPath   string
+	QUICEndpoint    *quic.Endpoint
+	QUICConfig      *quic.Config
 }
 
-func NewDialer(quicCfg *quic.Config) (Dialer, error) {
-	udp, err := quic.Listen("udp", "", quicCfg)
-	if err != nil {
-		return nil, err
-	}
-
-	ndl := &net.Dialer{
-		Timeout:         10 * time.Second,
-		KeepAliveConfig: net.KeepAliveConfig{Enable: true},
-	}
-	ndl.SetMultipathTCP(true)
-	tlsCfg := quicCfg.TLSConfig
-	tcp := &tls.Dialer{NetDialer: ndl, Config: tlsCfg}
-	dd := &dualDialer{
-		cfg: quicCfg,
-		tcp: tcp,
-		udp: udp,
-	}
-
-	return dd, nil
-}
-
-// dualDialer 支持 udp 和 tcp。
-type dualDialer struct {
-	cfg *quic.Config
-	tcp *tls.Dialer
-	udp *quic.Endpoint
-}
-
-func (dd *dualDialer) DialContext(ctx context.Context, addr string, data, reply any) (Muxer, error) {
-	if mux, _ := dd.dialUDP(ctx, addr, data, reply); mux != nil {
+func (d *DualDialer) DialContext(ctx context.Context, addr string) (Muxer, error) {
+	if mux, _ := d.dialQUIC(ctx, addr); mux != nil {
 		return mux, nil
 	}
 
-	return dd.dialTCP(ctx, addr, data, reply)
+	return d.dialWebSocket(ctx, addr)
 }
 
-func (dd *dualDialer) dialUDP(parent context.Context, addr string, data, reply any) (Muxer, error) {
-	mst, err := dd.udp.Dial(parent, "udp", addr, dd.cfg)
+func (d *DualDialer) dialQUIC(ctx context.Context, addr string) (Muxer, error) {
+	quicCfg := d.QUICConfig
+	if quicCfg == nil {
+		quicCfg = new(quic.Config)
+	}
+	if quicCfg.TLSConfig == nil {
+		quicCfg.TLSConfig = d.tlsConfig()
+	}
+
+	endpoint := d.QUICEndpoint
+	var tmpEndpoint *quic.Endpoint
+	if endpoint == nil {
+		end, err := quic.Listen("ucp", "", quicCfg)
+		if err != nil {
+			return nil, err
+		}
+		endpoint = end
+		tmpEndpoint = end
+	}
+
+	sess, err := endpoint.Dial(ctx, "udp", addr, quicCfg)
 	if err != nil {
+		if tmpEndpoint != nil {
+			_ = tmpEndpoint.Close(context.Background())
+		}
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(parent, time.Minute)
-	defer cancel()
-
-	stm, err := mst.NewStream(ctx)
-	if err != nil {
-		_ = mst.Close()
-		return nil, err
-	}
-	//goland:noinspection GoUnhandledErrorResult
-	defer stm.Close()
-
-	stm.SetReadContext(ctx)
-	stm.SetWriteContext(ctx)
-
-	if err = json.NewEncoder(stm).Encode(data); err != nil {
-		_ = mst.Close()
-		return nil, err
-	}
-	if err = json.NewDecoder(stm).Decode(reply); err != nil {
-		_ = mst.Close()
-		return nil, err
-	}
-
-	laddr := mst.LocalAddr()
-	raddr := mst.RemoteAddr()
+	laddr := sess.LocalAddr()
+	raddr := sess.RemoteAddr()
 	mux := &udpMux{
-		qc:    mst,
+		qc:    sess,
+		end:   endpoint,
 		laddr: &udpAddr{addr: laddr},
 		raddr: &udpAddr{addr: raddr},
 	}
@@ -98,75 +66,52 @@ func (dd *dualDialer) dialUDP(parent context.Context, addr string, data, reply a
 	return mux, nil
 }
 
-func (dd *dualDialer) dialTCP(ctx context.Context, addr string, data, reply any) (Muxer, error) {
-	body := new(bytes.Buffer)
-	if err := json.NewEncoder(body).Encode(data); err != nil {
-		return nil, err
+func (d *DualDialer) dialWebSocket(ctx context.Context, addr string) (Muxer, error) {
+	dial := d.WebSocketDialer
+	if dial == nil {
+		tlsCfg := d.tlsConfig()
+		dial = &websocket.Dialer{
+			TLSClientConfig:  tlsCfg,
+			HandshakeTimeout: 30 * time.Second,
+		}
 	}
 
-	conn, err := dd.tcp.DialContext(ctx, "tcp", addr)
-	if err != nil {
-		return nil, err
+	reqPath := d.WebSocketPath
+	if reqPath == "" {
+		reqPath = "/api/channel"
 	}
-
-	reqURL := &url.URL{
-		Scheme: "https",
+	rawURL := &url.URL{
+		Scheme: "wss",
 		Host:   addr,
-		Path:   "/api/channel",
+		Path:   reqPath,
 	}
-	strURL := reqURL.String()
-	req, err := http.NewRequest(http.MethodPost, strURL, body)
+	strURL := rawURL.String()
+
+	ws, _, err := dial.DialContext(ctx, strURL, nil)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
-
-	now := time.Now()
-	deadline := now.Add(time.Minute)
-	_ = conn.SetDeadline(deadline)
-	if err = req.Write(conn); err != nil {
-		_ = conn.Close()
-		return nil, err
-	}
-
-	resp, err := http.ReadResponse(bufio.NewReader(conn), req)
+	conn := ws.NetConn()
+	mux, err := NewSMUX(conn, false)
 	if err != nil {
 		_ = conn.Close()
 		return nil, err
 	}
-	//goland:noinspection GoUnhandledErrorResult
-	defer resp.Body.Close()
-
-	if err = json.NewDecoder(resp.Body).Decode(reply); err != nil {
-		_ = conn.Close()
-		return nil, err
-	}
-
-	code := resp.StatusCode
-	if code/100 != 2 {
-		_ = conn.Close()
-		return nil, fmt.Errorf(resp.Status)
-	}
-
-	cfg := smux.DefaultConfig()
-	sess, err := smux.Client(conn, cfg)
-	if err != nil {
-		_ = conn.Close()
-		return nil, err
-	}
-	mux := &tcpMux{sess: sess}
 
 	return mux, nil
 }
 
-type udpAddr struct {
-	addr netip.AddrPort
+func (d *DualDialer) tlsConfig() *tls.Config {
+	if qc := d.QUICConfig; qc != nil {
+		if cfg := qc.TLSConfig; cfg != nil {
+			return cfg
+		}
+	}
+
+	return &tls.Config{}
 }
 
-func (u udpAddr) Network() string {
-	return "udp"
-}
+type udpAddr struct{ addr netip.AddrPort }
 
-func (u udpAddr) String() string {
-	return u.addr.String()
-}
+func (u udpAddr) Network() string { return "udp" }
+func (u udpAddr) String() string  { return u.addr.String() }

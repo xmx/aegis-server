@@ -1,6 +1,6 @@
 package restapi
 
-import "github.com/xmx/ship"
+import "github.com/xgfone/ship/v5"
 
 func NewStatic(sites map[string]string) *Static {
 	return &Static{sites: sites}

@@ -2,9 +2,9 @@ package restapi
 
 import (
 	"github.com/coder/websocket"
+	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/argument/request"
 	"github.com/xmx/aegis-server/business/service"
-	"github.com/xmx/ship"
 )
 
 func NewTerm(svc *service.Term) *Term {

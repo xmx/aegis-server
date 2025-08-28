@@ -5,8 +5,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/protocol/webdavfs"
-	"github.com/xmx/ship"
 )
 
 func NewDAV(basepath, dir string) *DAV {

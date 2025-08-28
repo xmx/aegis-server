@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/contract/request"
-	"github.com/xmx/ship"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 

@@ -2,11 +2,16 @@ package transport
 
 import (
 	"context"
+	"io"
 	"net"
 
 	"github.com/xtaci/smux"
 	"golang.org/x/net/quic"
 )
+
+type Handler interface {
+	Handle(Muxer) error
+}
 
 type Server interface {
 	Serve(net.Listener) error
@@ -24,6 +29,8 @@ type Muxer interface {
 
 	// Close 关闭多路复用，此操作会中断所有的子流。
 	Close() error
+
+	Network() string
 }
 
 type tcpMux struct {
@@ -56,8 +63,13 @@ func (tm *tcpMux) Close() error {
 	return tm.sess.Close()
 }
 
+func (tm *tcpMux) Network() string {
+	return "tcp"
+}
+
 type udpMux struct {
 	qc    *quic.Conn
+	end   *quic.Endpoint
 	laddr net.Addr
 	raddr net.Addr
 }
@@ -90,6 +102,10 @@ func (um *udpMux) Close() error {
 	return um.qc.Close()
 }
 
+func (um *udpMux) Network() string {
+	return "udp"
+}
+
 func (um *udpMux) newConn(stm *quic.Stream) *quicConn {
 	return &quicConn{
 		stm:   stm,
@@ -104,6 +120,22 @@ func NewTCP(c net.Conn) (Muxer, error) {
 		return nil, err
 	}
 	tm := &tcpMux{sess: srv}
+
+	return tm, nil
+}
+
+func NewSMUX(rwc io.ReadWriteCloser, server bool) (Muxer, error) {
+	var err error
+	var sess *smux.Session
+	if server {
+		sess, err = smux.Server(rwc, nil)
+	} else {
+		sess, err = smux.Client(rwc, nil)
+	}
+	if err != nil {
+		return nil, err
+	}
+	tm := &tcpMux{sess: sess}
 
 	return tm, nil
 }

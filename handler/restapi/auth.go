@@ -3,7 +3,7 @@ package restapi
 import (
 	"fmt"
 
-	"github.com/xmx/ship"
+	"github.com/xgfone/ship/v5"
 )
 
 func NewAuth() *Auth {

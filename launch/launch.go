@@ -11,9 +11,11 @@ import (
 
 	"github.com/lmittmann/tint"
 	"github.com/robfig/cron/v3"
+	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/business/validext"
-	"github.com/xmx/aegis-server/channel/linkhub"
+	"github.com/xmx/aegis-server/channel/quicend"
+	"github.com/xmx/aegis-server/channel/transport"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
@@ -22,7 +24,6 @@ import (
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/profile"
-	"github.com/xmx/ship"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
@@ -45,7 +46,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	// 创建参数校验器，并校验配置文件。
 	valid := validation.New(validation.TagNameFunc([]string{"json"}))
 	valid.RegisterCustomValidations(validext.All())
-	if err := valid.Validate(ctx, cfg); err != nil {
+	if err := valid.Validate(cfg); err != nil {
 		return err
 	}
 
@@ -100,27 +101,29 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	log.Info("数据库索引建立完毕")
 
-	nextHand := http.NewServeMux()
-	nextHand.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
+	internalNext := http.NewServeMux()
+	internalNext.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
+		rctx := r.Context()
+		peer := transport.FromContext(rctx)
+		log.Info("---->>>", "id", peer.ID())
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("内部通信成功了"))
+		msg := time.Now().Format(time.RFC3339)
+		w.Write([]byte("内部通信成功了: " + msg))
 	})
-	next := &http.Server{
-		Handler: nextHand,
-	}
 
-	peerHub := linkhub.NewHub()
+	peerHub := transport.NewHub()
 	certificateSvc := service.NewCertificate(repoAll, log)
 	termSvc := service.NewTerm(log)
-	channelSvc := service.NewChannel(repoAll, peerHub, next, log)
+	internalEnd := quicend.New(repoAll, peerHub, internalNext, log)
 
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logHandler),
-		restapi.NewChannel(channelSvc),
+		restapi.NewChannel(internalEnd),
 		restapi.NewDAV(apiPath, "/"),
 		restapi.NewSystem(),
 		restapi.NewTerm(termSvc),

@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"net"
 
+	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/datalayer/model"
-	"github.com/xmx/ship"
 )
 
 func WAF(writeLog func(context.Context, *model.Oplog) error) ship.Middleware {
@@ -41,9 +41,9 @@ func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
 		err := h(c)
 		if err != nil {
 			attrs = append(attrs, slog.String("error", err.Error()))
-			c.Warn("访问接口出错", attrs...)
+			c.Warnf("访问接口出错", attrs...)
 		} else {
-			c.Info("访问接口", attrs...)
+			c.Infof("访问接口", attrs...)
 		}
 
 		return err
