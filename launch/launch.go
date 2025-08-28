@@ -126,7 +126,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 
 	brokerSvc := service.NewBroker(repoAll, log)
-	if err = brokerSvc.Reset(ctx); err != nil {
+	if err = brokerReset(brokerSvc); err != nil {
 		return err
 	}
 
@@ -181,6 +181,8 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	case <-ctx.Done():
 	}
 	_ = srv.Close()
+	_ = brokerReset(brokerSvc)
+
 	if err != nil {
 		log.Error("程序运行错误", slog.Any("error", err))
 	} else {
@@ -195,6 +197,13 @@ func disconnectDB(cli *mongo.Client) {
 	defer cancel()
 
 	_ = cli.Disconnect(ctx)
+}
+
+func brokerReset(brk *service.Broker) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	return brk.Reset(ctx)
 }
 
 func listenAndServe(errs chan<- error, srv *http.Server, log *slog.Logger) {
