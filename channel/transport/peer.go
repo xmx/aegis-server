@@ -8,6 +8,10 @@ type Peer interface {
 
 	// Muxer 底层多路通道。
 	Muxer() Muxer
+
+	Goos() string
+
+	Goarch() string
 }
 
 func WithValue(ctx context.Context, p Peer) context.Context {

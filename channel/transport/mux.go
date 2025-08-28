@@ -31,6 +31,8 @@ type Muxer interface {
 	Close() error
 
 	Network() string
+
+	RemoteAddr() net.Addr
 }
 
 type tcpMux struct {
@@ -65,6 +67,10 @@ func (tm *tcpMux) Close() error {
 
 func (tm *tcpMux) Network() string {
 	return "tcp"
+}
+
+func (tm *tcpMux) RemoteAddr() net.Addr {
+	return tm.sess.RemoteAddr()
 }
 
 type udpMux struct {
@@ -104,6 +110,10 @@ func (um *udpMux) Close() error {
 
 func (um *udpMux) Network() string {
 	return "udp"
+}
+
+func (um *udpMux) RemoteAddr() net.Addr {
+	return um.raddr
 }
 
 func (um *udpMux) newConn(stm *quic.Stream) *quicConn {

@@ -12,11 +12,13 @@ import (
 	"github.com/lmittmann/tint"
 	"github.com/robfig/cron/v3"
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/business/bservice"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/business/validext"
-	"github.com/xmx/aegis-server/channel/quicend"
+	"github.com/xmx/aegis-server/channel/gateway"
 	"github.com/xmx/aegis-server/channel/transport"
 	"github.com/xmx/aegis-server/datalayer/repository"
+	"github.com/xmx/aegis-server/handler/brkapi"
 	"github.com/xmx/aegis-server/handler/middle"
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
@@ -101,42 +103,55 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	log.Info("数据库索引建立完毕")
 
-	internalNext := http.NewServeMux()
-	internalNext.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
-		rctx := r.Context()
-		peer := transport.FromContext(rctx)
-		log.Info("---->>>", "id", peer.ID())
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		msg := time.Now().Format(time.RFC3339)
-		w.Write([]byte("内部通信成功了: " + msg))
-	})
-
 	peerHub := transport.NewHub()
 	certificateSvc := service.NewCertificate(repoAll, log)
 	termSvc := service.NewTerm(log)
-	internalEnd := quicend.New(repoAll, peerHub, internalNext, log)
+
+	inSH := ship.Default()
+	inSH.Name = "server.internal"
+	inSH.Validator = valid
+	inSH.NotFound = shipx.NotFound
+	inSH.HandleError = shipx.HandleError
+	inSH.Logger = logger.NewShip(logHandler, 6)
+
+	{
+		aliveSvc := bservice.NewAlive(repoAll, log)
+		routes := []shipx.RouteRegister{
+			brkapi.NewAlive(aliveSvc),
+		}
+		inRGB := inSH.Group("/api")
+		if err = shipx.RegisterRoutes(inRGB, routes); err != nil {
+			return err
+		}
+	}
+
+	brokerSvc := service.NewBroker(repoAll, log)
+	if err = brokerSvc.Reset(ctx); err != nil {
+		return err
+	}
+
+	brokerGate := gateway.NewServer(repoAll, peerHub, inSH, log)
 
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logHandler),
-		restapi.NewChannel(internalEnd),
+		restapi.NewChannel(brokerGate),
 		restapi.NewDAV(apiPath, "/"),
 		restapi.NewSystem(),
 		restapi.NewTerm(termSvc),
 	}
 
 	srvCfg := cfg.Server
-	sh := ship.Default()
-	sh.Validator = valid
-	sh.NotFound = shipx.NotFound
-	sh.HandleError = shipx.HandleError
-	sh.Logger = logger.NewShip(logHandler, 6)
+	outSH := ship.Default()
+	outSH.Name = "server-expose"
+	outSH.Validator = valid
+	outSH.NotFound = shipx.NotFound
+	outSH.HandleError = shipx.HandleError
+	outSH.Logger = logger.NewShip(logHandler, 6)
 
-	rootRGB := sh.Group("/")
+	rootRGB := outSH.Group("/")
 	_ = restapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
 	apiRGB := rootRGB.Group(apiPath).Use(middle.WAF(nil))
 	if err = shipx.RegisterRoutes(apiRGB, routes); err != nil { // 注册路由
@@ -155,7 +170,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	httpLog := logger.NewV1(slog.New(logger.Skip(logHandler, 8)))
 	srv := &http.Server{
 		Addr:      listenAddr,
-		Handler:   sh,
+		Handler:   outSH,
 		TLSConfig: tlsCfg,
 		ErrorLog:  httpLog,
 	}

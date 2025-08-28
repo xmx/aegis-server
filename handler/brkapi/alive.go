@@ -1,0 +1,34 @@
+package brkapi
+
+import (
+	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/business/bservice"
+	"github.com/xmx/aegis-server/channel/transport"
+	"go.mongodb.org/mongo-driver/v2/bson"
+)
+
+func NewAlive(svc *bservice.Alive) *Alive {
+	return &Alive{
+		svc: svc,
+	}
+}
+
+type Alive struct {
+	svc *bservice.Alive
+}
+
+func (alv *Alive) RegisterRoute(r *ship.RouteGroupBuilder) error {
+	r.Route("/alive/ping").GET(alv.ping)
+	return nil
+}
+
+func (alv *Alive) ping(c *ship.Context) error {
+	ctx := c.Request().Context()
+	peer := transport.FromContext(ctx)
+	id, err := bson.ObjectIDFromHex(peer.ID())
+	if err != nil {
+		return err
+	}
+
+	return alv.svc.Ping(ctx, id)
+}
