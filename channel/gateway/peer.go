@@ -6,13 +6,11 @@ import (
 )
 
 type brokerPeer struct {
-	id     bson.ObjectID
-	mux    transport.Muxer
-	goos   string
-	goarch string
+	id   bson.ObjectID
+	name string
+	mux  transport.Muxer
 }
 
 func (bp *brokerPeer) ID() string             { return bp.id.Hex() }
+func (bp *brokerPeer) Name() string           { return bp.name }
 func (bp *brokerPeer) Muxer() transport.Muxer { return bp.mux }
-func (bp *brokerPeer) Goos() string           { return bp.goos }
-func (bp *brokerPeer) Goarch() string         { return bp.goarch }

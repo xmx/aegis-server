@@ -20,6 +20,22 @@ func NotFound(_ *ship.Context) error {
 	return ship.ErrNotFound.Newf("资源不存在")
 }
 
+func HandleErrorWithHost(host string) func(*ship.Context, error) {
+	return func(c *ship.Context, e error) {
+		statusCode, title, detail := UnpackError(c, e)
+		pd := &problem.Details{
+			Host:     host,
+			Title:    title,
+			Status:   statusCode,
+			Detail:   detail,
+			Instance: c.Path(),
+			Method:   c.Method(),
+			Datetime: time.Now().UTC(),
+		}
+		_ = c.JSON(statusCode, pd)
+	}
+}
+
 func HandleError(c *ship.Context, e error) {
 	statusCode, title, detail := UnpackError(c, e)
 	pd := &problem.Details{

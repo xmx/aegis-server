@@ -113,10 +113,9 @@ func (bg *brokerGateway) precheck(mux transport.Muxer, timeout time.Duration) (*
 
 	goos, goarch := req.Goos, req.Goarch
 	peer := &brokerPeer{
-		id:     oid,
-		mux:    mux,
-		goos:   goos,
-		goarch: goarch,
+		id:   oid,
+		name: brk.Name,
+		mux:  mux,
 	}
 	if !bg.hub.PutIfAbsent(peer) {
 		res := &transport.AuthResponse{Message: "节点重复上线"}
@@ -136,7 +135,7 @@ func (bg *brokerGateway) precheck(mux transport.Muxer, timeout time.Duration) (*
 		"status":       true,
 		"goos":         goos,
 		"goarch":       goarch,
-		"network":      mux.Network(),
+		"protocol":     mux.Protocol(),
 		"remote_addr":  mux.RemoteAddr().String(),
 		"alive_at":     now,
 		"connected_at": now,

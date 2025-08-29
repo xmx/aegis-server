@@ -111,13 +111,15 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	inSH.Name = "server.internal"
 	inSH.Validator = valid
 	inSH.NotFound = shipx.NotFound
-	inSH.HandleError = shipx.HandleError
+	inSH.HandleError = shipx.HandleErrorWithHost("server.internal")
 	inSH.Logger = logger.NewShip(logHandler, 6)
 
 	{
 		aliveSvc := bservice.NewAlive(repoAll, log)
+		systemSvc := bservice.NewSystem(repoAll, log)
 		routes := []shipx.RouteRegister{
 			brkapi.NewAlive(aliveSvc),
+			brkapi.NewSystem(systemSvc),
 		}
 		inRGB := inSH.Group("/api")
 		if err = shipx.RegisterRoutes(inRGB, routes); err != nil {
@@ -125,7 +127,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		}
 	}
 
-	brokerSvc := service.NewBroker(repoAll, log)
+	brokerSvc := service.NewBroker(repoAll, peerHub, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
 	}
@@ -135,6 +137,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
 		restapi.NewAuth(),
+		restapi.NewBroker(brokerSvc),
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logHandler),
 		restapi.NewChannel(brokerGate),

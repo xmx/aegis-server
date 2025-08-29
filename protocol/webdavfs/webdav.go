@@ -35,23 +35,23 @@ type davFS struct {
 }
 
 func (f *davFS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if !f.serveJSON(w, r, r.URL.Path) {
+		//f.han.ServeHTTP(w, r)
 		f.dav.ServeHTTP(w, r)
-		return
-	}
-
-	if !f.tryServeJSONDir(w, r, r.URL.Path) {
-		f.han.ServeHTTP(w, r)
 	}
 }
 
-func (f *davFS) tryServeJSONDir(w http.ResponseWriter, r *http.Request, reqPath string) bool {
+func (f *davFS) serveJSON(w http.ResponseWriter, r *http.Request, reqPath string) bool {
+	if r.Method != http.MethodGet {
+		return false
+	}
+
 	accept := r.Header.Get("Accept")
 	accepts := strings.Split(accept, ",")
 	var allowed bool
 	for _, str := range accepts {
 		ct, _, _ := strings.Cut(str, ";")
-		if allowed = ct == "application/json" || ct == "*/*"; allowed {
+		if allowed = ct == "application/json"; allowed {
 			break
 		}
 	}

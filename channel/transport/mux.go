@@ -30,7 +30,7 @@ type Muxer interface {
 	// Close 关闭多路复用，此操作会中断所有的子流。
 	Close() error
 
-	Network() string
+	Protocol() string
 
 	RemoteAddr() net.Addr
 }
@@ -65,7 +65,7 @@ func (tm *tcpMux) Close() error {
 	return tm.sess.Close()
 }
 
-func (tm *tcpMux) Network() string {
+func (tm *tcpMux) Protocol() string {
 	return "tcp"
 }
 
@@ -108,7 +108,7 @@ func (um *udpMux) Close() error {
 	return um.qc.Close()
 }
 
-func (um *udpMux) Network() string {
+func (um *udpMux) Protocol() string {
 	return "udp"
 }
 

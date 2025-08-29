@@ -1,6 +1,8 @@
 package brkapi
 
 import (
+	"net/http"
+
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/bservice"
 	"github.com/xmx/aegis-server/channel/transport"
@@ -29,6 +31,7 @@ func (alv *Alive) ping(c *ship.Context) error {
 	if err != nil {
 		return err
 	}
+	_ = alv.svc.Ping(ctx, id)
 
-	return alv.svc.Ping(ctx, id)
+	return c.NoContent(http.StatusNoContent)
 }

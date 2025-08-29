@@ -7,6 +7,7 @@ import (
 
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func NewAlive(repo repository.All, log *slog.Logger) *Alive {
@@ -27,7 +28,13 @@ func (alv *Alive) Ping(ctx context.Context, id bson.ObjectID) error {
 	update := bson.M{"$set": bson.M{"alive_at": now}}
 
 	repo := alv.repo.Broker()
-	_, err := repo.UpdateOne(ctx, filter, update)
+	opt := options.FindOneAndUpdate().SetProjection(bson.M{"name": 1})
+	dat, err := repo.FindOneAndUpdate(ctx, filter, update, opt)
+	if err != nil {
+		return err
+	}
+	attrs := []any{slog.Any("id", id), slog.String("name", dat.Name)}
+	alv.log.Debug("broker 发来了心跳", attrs...)
 
 	return err
 }
