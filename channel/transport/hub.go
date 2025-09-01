@@ -2,65 +2,74 @@ package transport
 
 import "sync"
 
-func NewHub() Huber {
-	return &mapHub{
-		peers: make(map[string]Peer, 32),
-	}
-}
-
-type Huber interface {
+type Huber[K comparable] interface {
 	// Get 通过 ID 获取 peer。
-	Get(id string) Peer
+	Get(id K) Peer[K]
 
 	// Del 通过删除节点，并返回删除的数据，nil 代表之前无数据。
-	Del(id string) Peer
+	Del(id K) Peer[K]
 
 	// Put 存放节点并返回原来的数据（如果存在的话）。
-	Put(p Peer) Peer
+	Put(p Peer[K]) (old Peer[K])
 
 	// PutIfAbsent 当此 ID 没有时才存放节点，并返回是否放入成功。
-	PutIfAbsent(p Peer) bool
+	PutIfAbsent(p Peer[K]) bool
 }
 
-type mapHub struct {
-	mutex sync.RWMutex
-	peers map[string]Peer
-}
-
-func (mh *mapHub) Get(id string) Peer {
-	return mh.peers[id]
-}
-
-func (mh *mapHub) Del(id string) Peer {
-	mh.mutex.Lock()
-	peer := mh.peers[id]
-	delete(mh.peers, id)
-	mh.mutex.Unlock()
-
-	return peer
-}
-
-func (mh *mapHub) Put(p Peer) Peer {
-	id := p.ID()
-
-	mh.mutex.Lock()
-	last := mh.peers[id]
-	mh.peers[id] = p
-	mh.mutex.Unlock()
-
-	return last
-}
-
-func (mh *mapHub) PutIfAbsent(p Peer) bool {
-	id := p.ID()
-
-	mh.mutex.Lock()
-	last := mh.peers[id]
-	absent := last == nil
-	if absent {
-		mh.peers[id] = p
+func NewHub[K comparable](capacity int) Huber[K] {
+	if capacity < 0 {
+		capacity = 0
 	}
-	mh.mutex.Unlock()
 
-	return absent
+	return &simpleHub[K]{
+		peers: make(map[K]Peer[K], capacity),
+	}
+}
+
+type simpleHub[K comparable] struct {
+	mutex sync.RWMutex
+	peers map[K]Peer[K]
+}
+
+func (sh *simpleHub[K]) Get(id K) Peer[K] {
+	sh.mutex.RLock()
+	defer sh.mutex.RUnlock()
+
+	return sh.peers[id]
+}
+
+func (sh *simpleHub[K]) Del(id K) Peer[K] {
+	sh.mutex.Lock()
+	defer sh.mutex.Unlock()
+
+	old := sh.peers[id]
+	delete(sh.peers, id)
+
+	return old
+}
+
+func (sh *simpleHub[K]) Put(p Peer[K]) Peer[K] {
+	id := p.ID()
+
+	sh.mutex.Lock()
+	defer sh.mutex.Unlock()
+
+	old := sh.peers[id]
+	sh.peers[id] = p
+
+	return old
+}
+
+func (sh *simpleHub[K]) PutIfAbsent(p Peer[K]) bool {
+	id := p.ID()
+
+	sh.mutex.Lock()
+	defer sh.mutex.Unlock()
+
+	_, exists := sh.peers[id]
+	if !exists {
+		sh.peers[id] = p
+	}
+
+	return !exists
 }

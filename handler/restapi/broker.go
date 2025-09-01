@@ -46,6 +46,10 @@ func (bk *Broker) list(c *ship.Context) error {
 }
 
 func (bk *Broker) kickout(c *ship.Context) error {
-	id := c.Query("id")
-	return bk.svc.Kickout(id)
+	req := new(request.ObjectID)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+
+	return bk.svc.Kickout(req.OID())
 }

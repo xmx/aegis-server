@@ -13,7 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func NewBroker(repo repository.All, hub transport.Huber, log *slog.Logger) *Broker {
+func NewBroker(repo repository.All, hub transport.Huber[bson.ObjectID], log *slog.Logger) *Broker {
 	return &Broker{
 		repo: repo,
 		hub:  hub,
@@ -23,7 +23,7 @@ func NewBroker(repo repository.All, hub transport.Huber, log *slog.Logger) *Brok
 
 type Broker struct {
 	repo repository.All
-	hub  transport.Huber
+	hub  transport.Huber[bson.ObjectID]
 	log  *slog.Logger
 }
 
@@ -62,12 +62,13 @@ func (b *Broker) List(ctx context.Context) ([]*model.Broker, error) {
 	return repo.Find(ctx, bson.M{})
 }
 
-func (b *Broker) Kickout(id string) error {
+func (b *Broker) Kickout(id bson.ObjectID) error {
 	peer := b.hub.Get(id)
 	if peer == nil {
 		return nil
 	}
-	peer.Muxer().Close()
+	mux := peer.Mux()
+	_ = mux.Close()
 
 	return nil
 }

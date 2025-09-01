@@ -26,12 +26,8 @@ func (alv *Alive) RegisterRoute(r *ship.RouteGroupBuilder) error {
 
 func (alv *Alive) ping(c *ship.Context) error {
 	ctx := c.Request().Context()
-	peer := transport.FromContext(ctx)
-	id, err := bson.ObjectIDFromHex(peer.ID())
-	if err != nil {
-		return err
-	}
-	_ = alv.svc.Ping(ctx, id)
+	peer := transport.FromContext[bson.ObjectID](ctx)
+	_ = alv.svc.Ping(ctx, peer)
 
 	return c.NoContent(http.StatusNoContent)
 }

@@ -15,8 +15,7 @@ import (
 	"github.com/xmx/aegis-server/business/bservice"
 	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/business/validext"
-	"github.com/xmx/aegis-server/channel/gateway"
-	"github.com/xmx/aegis-server/channel/transport"
+	"github.com/xmx/aegis-server/channel/broker"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"github.com/xmx/aegis-server/handler/brkapi"
 	"github.com/xmx/aegis-server/handler/middle"
@@ -103,7 +102,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	}
 	log.Info("数据库索引建立完毕")
 
-	peerHub := transport.NewHub()
+	brokHub := broker.NewHub()
 	certificateSvc := service.NewCertificate(repoAll, log)
 	termSvc := service.NewTerm(log)
 
@@ -127,12 +126,12 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		}
 	}
 
-	brokerSvc := service.NewBroker(repoAll, peerHub, log)
+	brokerSvc := service.NewBroker(repoAll, brokHub, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
 	}
 
-	brokerGate := gateway.NewServer(repoAll, peerHub, inSH, log)
+	brokGate := broker.NewGate(repoAll, brokHub, inSH, log)
 
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
@@ -140,7 +139,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		restapi.NewBroker(brokerSvc),
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logHandler),
-		restapi.NewChannel(brokerGate),
+		restapi.NewChannel(brokGate),
 		restapi.NewDAV(apiPath, "/"),
 		restapi.NewSystem(),
 		restapi.NewTerm(termSvc),

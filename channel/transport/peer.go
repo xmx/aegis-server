@@ -2,17 +2,12 @@ package transport
 
 import "context"
 
-type Peer interface {
-	// ID 节点全局唯一 ID。
-	ID() string
-
-	Name() string
-
-	// Muxer 底层多路通道。
-	Muxer() Muxer
+type Peer[K comparable] interface {
+	ID() K
+	Mux() Muxer
 }
 
-func WithValue(ctx context.Context, p Peer) context.Context {
+func WithValue[K comparable](ctx context.Context, p Peer[K]) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -23,12 +18,12 @@ func WithValue(ctx context.Context, p Peer) context.Context {
 	return context.WithValue(ctx, defaultContextKey, p)
 }
 
-func FromContext(ctx context.Context) Peer {
+func FromContext[K comparable](ctx context.Context) Peer[K] {
 	if ctx == nil {
 		return nil
 	}
 
-	if p, ok := ctx.Value(defaultContextKey).(Peer); ok {
+	if p, ok := ctx.Value(defaultContextKey).(Peer[K]); ok {
 		return p
 	}
 

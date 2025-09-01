@@ -5,6 +5,7 @@ import (
 	"github.com/xmx/aegis-server/business/bservice"
 	"github.com/xmx/aegis-server/channel/transport"
 	"github.com/xmx/aegis-server/contract/brequest"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func NewSystem(svc *bservice.System) *System {
@@ -29,7 +30,7 @@ func (stm *System) networkCard(c *ship.Context) error {
 	}
 
 	ctx := c.Request().Context()
-	peer := transport.FromContext(ctx)
+	peer := transport.FromContext[bson.ObjectID](ctx)
 
 	return stm.svc.NetworkCard(ctx, req, peer)
 }
