@@ -22,6 +22,7 @@ import (
 	"github.com/xmx/aegis-server/handler/restapi"
 	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/library/cronv3"
+	"github.com/xmx/aegis-server/library/httpx"
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/profile"
@@ -103,8 +104,13 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	log.Info("数据库索引建立完毕")
 
 	brokHub := broker.NewHub()
+	brokDial := broker.NewHubDialer(repoAll, brokHub)
+	httpTran := &http.Transport{DialContext: brokDial.DialContext}
+	httpCli := httpx.Client{Client: &http.Client{Transport: httpTran}}
 	certificateSvc := service.NewCertificate(repoAll, log)
 	termSvc := service.NewTerm(log)
+
+	_ = httpCli
 
 	inSH := ship.Default()
 	inSH.Name = "server.internal"
@@ -135,8 +141,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
-		restapi.NewAuth(),
-		restapi.NewBroker(brokerSvc),
+		restapi.NewBroker(brokerSvc, httpTran),
 		restapi.NewCertificate(certificateSvc),
 		restapi.NewLog(logHandler),
 		restapi.NewChannel(brokGate),

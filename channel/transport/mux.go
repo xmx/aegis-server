@@ -124,16 +124,6 @@ func (um *udpMux) newConn(stm *quic.Stream) *quicConn {
 	}
 }
 
-func NewTCP(c net.Conn) (Muxer, error) {
-	srv, err := smux.Server(c, nil)
-	if err != nil {
-		return nil, err
-	}
-	tm := &tcpMux{sess: srv}
-
-	return tm, nil
-}
-
 func NewSMUX(rwc io.ReadWriteCloser, server bool) (Muxer, error) {
 	var err error
 	var sess *smux.Session

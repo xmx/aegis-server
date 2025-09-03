@@ -1,27 +1,58 @@
 package restapi
 
 import (
+	"net"
 	"net/http"
+	"net/http/httputil"
+	"time"
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-server/business/service"
+	"github.com/xmx/aegis-server/channel/broker"
+	"github.com/xmx/aegis-server/contract/problem"
 	"github.com/xmx/aegis-server/contract/request"
 )
 
-func NewBroker(svc *service.Broker) *Broker {
+func NewBroker(svc *service.Broker, trp http.RoundTripper) *Broker {
+	prx := &httputil.ReverseProxy{
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetXForwarded()
+		},
+		Transport: trp,
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			code := http.StatusBadGateway
+			pb := &problem.Details{
+				Host:     r.Host,
+				Type:     r.URL.Host,
+				Status:   code,
+				Detail:   err.Error(),
+				Instance: r.URL.Path,
+				Method:   r.Method,
+				Datetime: time.Now().UTC(),
+			}
+			if ae, ok := err.(*net.AddrError); ok {
+				pb.Detail = ae.Err
+			}
+			_ = pb.JSON(w)
+		},
+	}
+
 	return &Broker{
 		svc: svc,
+		prx: prx,
 	}
 }
 
 type Broker struct {
 	svc *service.Broker
+	prx *httputil.ReverseProxy
 }
 
 func (bk *Broker) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/brokers").GET(bk.list)
 	r.Route("/broker").POST(bk.create)
 	r.Route("/broker/kickout").GET(bk.kickout)
+	r.Route("/broker/reverse/:id/*path").Any(bk.reverse)
 	return nil
 }
 
@@ -52,4 +83,15 @@ func (bk *Broker) kickout(c *ship.Context) error {
 	}
 
 	return bk.svc.Kickout(req.OID())
+}
+
+func (bk *Broker) reverse(c *ship.Context) error {
+	id, path := c.Param("id"), "/"+c.Param("path")
+	w, r := c.Response(), c.Request()
+	reqURL := broker.MakesBrokerURL(id, path)
+	r.URL = reqURL
+
+	bk.prx.ServeHTTP(w, r)
+
+	return nil
 }

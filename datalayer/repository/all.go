@@ -10,8 +10,11 @@ import (
 type All interface {
 	DB() *mongo.Database
 	Client() *mongo.Client
+
+	Agent() Agent
 	Broker() Broker
 	Certificate() Certificate
+
 	GridFSBucket(opts ...options.Lister[options.BucketOptions]) *mongo.GridFSBucket
 	CreateIndex(ctx context.Context) error
 }
@@ -19,13 +22,15 @@ type All interface {
 func NewAll(db *mongo.Database) All {
 	return allRepo{
 		db:          db,
-		certificate: NewCertificate(db),
+		agent:       NewAgent(db),
 		broker:      NewBroker(db),
+		certificate: NewCertificate(db),
 	}
 }
 
 type allRepo struct {
 	db          *mongo.Database
+	agent       Agent
 	broker      Broker
 	certificate Certificate
 }
@@ -33,6 +38,7 @@ type allRepo struct {
 func (ar allRepo) DB() *mongo.Database   { return ar.db }
 func (ar allRepo) Client() *mongo.Client { return ar.db.Client() }
 
+func (ar allRepo) Agent() Agent             { return ar.agent }
 func (ar allRepo) Broker() Broker           { return ar.broker }
 func (ar allRepo) Certificate() Certificate { return ar.certificate }
 
@@ -42,8 +48,9 @@ func (ar allRepo) GridFSBucket(opts ...options.Lister[options.BucketOptions]) *m
 
 func (ar allRepo) CreateIndex(ctx context.Context) error {
 	fields := []any{
-		ar.certificate,
+		ar.agent,
 		ar.broker,
+		ar.certificate,
 	}
 	for _, f := range fields {
 		idx, ok := f.(CreateIndexer)
