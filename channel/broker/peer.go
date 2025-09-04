@@ -1,7 +1,7 @@
 package broker
 
 import (
-	"github.com/xmx/aegis-server/channel/transport"
+	"github.com/xmx/aegis-common/transport"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 

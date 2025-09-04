@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
-	"github.com/xmx/aegis-server/library/cronv3"
+	"github.com/xmx/aegis-common/library/cronv3"
 	"github.com/xmx/jsos/jsvm"
 )
 

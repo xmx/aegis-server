@@ -2,8 +2,8 @@ package brkapi
 
 import (
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-common/transport"
 	"github.com/xmx/aegis-server/business/bservice"
-	"github.com/xmx/aegis-server/channel/transport"
 	"github.com/xmx/aegis-server/contract/brequest"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )

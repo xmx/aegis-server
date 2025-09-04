@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"mime/multipart"
 
-	"github.com/xmx/aegis-server/datalayer/repository"
+	"github.com/xmx/aegis-control/datalayer/repository"
 )
 
 func NewProgram(repo repository.All, log *slog.Logger) *Program {

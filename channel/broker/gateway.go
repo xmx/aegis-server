@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/xmx/aegis-server/channel/transport"
-	"github.com/xmx/aegis-server/datalayer/model"
-	"github.com/xmx/aegis-server/datalayer/repository"
+	"github.com/xmx/aegis-common/transport"
+	"github.com/xmx/aegis-control/datalayer/model"
+	"github.com/xmx/aegis-control/datalayer/repository"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )

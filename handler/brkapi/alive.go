@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-common/transport"
 	"github.com/xmx/aegis-server/business/bservice"
-	"github.com/xmx/aegis-server/channel/transport"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-server/channel/transport"
+	"github.com/xmx/aegis-common/transport"
 )
 
 func NewChannel(next transport.Handler) *Channel {
