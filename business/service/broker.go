@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/xmx/aegis-server/channel/transport"
+	"github.com/xmx/aegis-server/contract/errcode"
 	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/datalayer/repository"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -65,9 +66,10 @@ func (b *Broker) List(ctx context.Context) ([]*model.Broker, error) {
 func (b *Broker) Kickout(id bson.ObjectID) error {
 	peer := b.hub.Get(id)
 	if peer == nil {
-		return nil
+		return errcode.ErrBrokerInactive
 	}
 	mux := peer.Mux()
+
 	_ = mux.Close()
 
 	return nil

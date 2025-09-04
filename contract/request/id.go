@@ -3,7 +3,7 @@ package request
 import "go.mongodb.org/mongo-driver/v2/bson"
 
 type ObjectID struct {
-	ID string `json:"id" form:"id" query:"id" validate:"mongodb"`
+	ID string `json:"id" form:"id" query:"id" validate:"required,mongodb"`
 }
 
 func (o ObjectID) OID() bson.ObjectID {
@@ -12,7 +12,7 @@ func (o ObjectID) OID() bson.ObjectID {
 }
 
 type ObjectIDs struct {
-	ID []string `json:"id" form:"id" query:"id" validate:"dive,mongodb"`
+	ID []string `json:"id" form:"id" query:"id" validate:"gte=1,lte=1000,dive,required,mongodb"`
 }
 
 func (o ObjectIDs) OIDs() []bson.ObjectID {

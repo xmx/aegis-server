@@ -52,6 +52,7 @@ func (bk *Broker) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/brokers").GET(bk.list)
 	r.Route("/broker").POST(bk.create)
 	r.Route("/broker/kickout").GET(bk.kickout)
+	r.Route("/broker/reverse/:id/").Any(bk.reverse)
 	r.Route("/broker/reverse/:id/*path").Any(bk.reverse)
 	return nil
 }

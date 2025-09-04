@@ -15,7 +15,7 @@ func All() []validation.CustomValidatorFunc {
 func mongoDB() (string, validator.FuncCtx, validator.RegisterTranslationsFunc, validator.TranslationFunc) {
 	const tag = "mongodb"
 	regFunc := func(utt ut.Translator) error {
-		return utt.Add(tag, "{0}不符合 ID 格式要求", true)
+		return utt.Add(tag, "{0}不符合格式要求", true)
 	}
 
 	return tag, nil, regFunc, nil
