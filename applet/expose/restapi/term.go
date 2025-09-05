@@ -1,29 +1,25 @@
 package restapi
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-common/library/wsocket"
+	"github.com/xmx/aegis-server/applet/expose/service"
 	"github.com/xmx/aegis-server/argument/request"
-	"github.com/xmx/aegis-server/business/service"
 )
 
 func NewTerm(svc *service.Term) *Term {
 	return &Term{
-		svc: svc,
-		upg: &websocket.Upgrader{
-			HandshakeTimeout:  30 * time.Second,
-			CheckOrigin:       func(*http.Request) bool { return true },
-			EnableCompression: true,
-		},
+		svc:  svc,
+		wsup: wsocket.NewUpgrade(),
 	}
 }
 
 type Term struct {
-	svc *service.Term
-	upg *websocket.Upgrader
+	svc  *service.Term
+	wsup *websocket.Upgrader
 }
 
 func (tm *Term) RegisterRoute(r *ship.RouteGroupBuilder) error {
@@ -38,7 +34,7 @@ func (tm *Term) pty(c *ship.Context) error {
 	}
 
 	w, r := c.ResponseWriter(), c.Request()
-	ws, err := tm.upg.Upgrade(w, r, nil)
+	ws, err := tm.wsup.Upgrade(w, r, nil)
 	if err != nil {
 		return err
 	}

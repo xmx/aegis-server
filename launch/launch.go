@@ -14,15 +14,15 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/library/cronv3"
 	"github.com/xmx/aegis-common/library/httpx"
+	"github.com/xmx/aegis-common/shipx"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	brkrestapi "github.com/xmx/aegis-server/applet/broker/restapi"
+	expmiddle "github.com/xmx/aegis-server/applet/expose/middle"
+	exprestapi "github.com/xmx/aegis-server/applet/expose/restapi"
+	expservice "github.com/xmx/aegis-server/applet/expose/service"
 	"github.com/xmx/aegis-server/business/bservice"
-	"github.com/xmx/aegis-server/business/service"
 	"github.com/xmx/aegis-server/business/validext"
 	"github.com/xmx/aegis-server/channel/broker"
-	"github.com/xmx/aegis-server/handler/brkapi"
-	"github.com/xmx/aegis-server/handler/middle"
-	"github.com/xmx/aegis-server/handler/restapi"
-	"github.com/xmx/aegis-server/handler/shipx"
 	"github.com/xmx/aegis-server/library/validation"
 	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/profile"
@@ -107,60 +107,58 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 	brokDial := broker.NewHubDialer(repoAll, brokHub)
 	httpTran := &http.Transport{DialContext: brokDial.DialContext}
 	httpCli := httpx.Client{Client: &http.Client{Transport: httpTran}}
-	certificateSvc := service.NewCertificate(repoAll, log)
-	termSvc := service.NewTerm(log)
+	certificateSvc := expservice.NewCertificate(repoAll, log)
+	termSvc := expservice.NewTerm(log)
 
 	_ = httpCli
 
-	inSH := ship.Default()
-	inSH.Name = "server.internal"
-	inSH.Validator = valid
-	inSH.NotFound = shipx.NotFound
-	inSH.HandleError = shipx.HandleErrorWithHost("server.internal")
-	inSH.Logger = logger.NewShip(logHandler, 6)
+	brokSH := ship.Default()
+	brokSH.Validator = valid
+	brokSH.NotFound = shipx.NotFound
+	brokSH.HandleError = shipx.HandleErrorWithHost("server.internal")
+	brokSH.Logger = logger.NewShip(logHandler, 6)
 
 	{
 		aliveSvc := bservice.NewAlive(repoAll, log)
-		systemSvc := bservice.NewSystem(repoAll, log)
+		// systemSvc := bservice.NewSystem(repoAll, log)
 		routes := []shipx.RouteRegister{
-			brkapi.NewAlive(aliveSvc),
-			brkapi.NewSystem(systemSvc),
+			brkrestapi.NewAlive(aliveSvc),
+			brkrestapi.NewConfig(cfg),
 		}
-		inRGB := inSH.Group("/api")
-		if err = shipx.RegisterRoutes(inRGB, routes); err != nil {
+		brokRGB := brokSH.Group("/api")
+		if err = shipx.RegisterRoutes(brokRGB, routes); err != nil {
 			return err
 		}
 	}
 
-	brokerSvc := service.NewBroker(repoAll, brokHub, log)
+	brokerSvc := expservice.NewBroker(repoAll, brokHub, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
 	}
 
-	brokGate := broker.NewGate(repoAll, brokHub, inSH, log)
+	brokGate := broker.NewGate(repoAll, brokHub, brokSH, log)
 
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
-		restapi.NewBroker(brokerSvc, httpTran),
-		restapi.NewCertificate(certificateSvc),
-		restapi.NewLog(logHandler),
-		restapi.NewChannel(brokGate),
-		restapi.NewDAV(apiPath, "/"),
-		restapi.NewSystem(),
-		restapi.NewTerm(termSvc),
+		exprestapi.NewBroker(brokerSvc, httpTran),
+		exprestapi.NewCertificate(certificateSvc),
+		exprestapi.NewLog(logHandler),
+		exprestapi.NewTunnel(brokGate),
+		exprestapi.NewDAV(apiPath, "/"),
+		exprestapi.NewSystem(),
+		exprestapi.NewTerm(termSvc),
 	}
 
 	srvCfg := cfg.Server
 	outSH := ship.Default()
-	outSH.Name = "server-expose"
 	outSH.Validator = valid
 	outSH.NotFound = shipx.NotFound
 	outSH.HandleError = shipx.HandleError
 	outSH.Logger = logger.NewShip(logHandler, 6)
 
 	rootRGB := outSH.Group("/")
-	_ = restapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
-	apiRGB := rootRGB.Group(apiPath).Use(middle.WAF(nil))
+	_ = exprestapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
+	apiRGB := rootRGB.Group(apiPath).Use(expmiddle.WAF(nil))
 	if err = shipx.RegisterRoutes(apiRGB, routes); err != nil { // 注册路由
 		return err
 	}
@@ -206,7 +204,7 @@ func disconnectDB(cli *mongo.Client) {
 	_ = cli.Disconnect(ctx)
 }
 
-func brokerReset(brk *service.Broker) error {
+func brokerReset(brk *expservice.Broker) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

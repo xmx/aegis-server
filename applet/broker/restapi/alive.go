@@ -1,4 +1,4 @@
-package brkapi
+package restapi
 
 import (
 	"net/http"
