@@ -1,42 +1,18 @@
 package restapi
 
 import (
-	"net"
 	"net/http"
 	"net/http/httputil"
-	"time"
 
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-common/contract/problem"
+	"github.com/xmx/aegis-control/library/httpnet"
 	"github.com/xmx/aegis-server/applet/expose/service"
 	"github.com/xmx/aegis-server/channel/broker"
 	"github.com/xmx/aegis-server/contract/request"
 )
 
-func NewBroker(svc *service.Broker, trp http.RoundTripper) *Broker {
-	prx := &httputil.ReverseProxy{
-		Rewrite: func(pr *httputil.ProxyRequest) {
-			pr.SetXForwarded()
-		},
-		Transport: trp,
-		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
-			code := http.StatusBadGateway
-			pb := &problem.Details{
-				Host:     r.Host,
-				Type:     r.URL.Host,
-				Status:   code,
-				Detail:   err.Error(),
-				Instance: r.URL.Path,
-				Method:   r.Method,
-				Datetime: time.Now().UTC(),
-			}
-			if ae, ok := err.(*net.AddrError); ok {
-				pb.Detail = ae.Err
-			}
-			_ = pb.JSON(w)
-		},
-	}
-
+func NewBroker(svc *service.Broker, trip http.RoundTripper) *Broker {
+	prx := httpnet.NewReverse(trip)
 	return &Broker{
 		svc: svc,
 		prx: prx,

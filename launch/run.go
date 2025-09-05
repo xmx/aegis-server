@@ -15,8 +15,8 @@ import (
 	"github.com/xmx/aegis-common/library/cronv3"
 	"github.com/xmx/aegis-common/library/httpx"
 	"github.com/xmx/aegis-common/shipx"
-	"github.com/xmx/aegis-common/transport"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-control/quick"
 	brkrestapi "github.com/xmx/aegis-server/applet/broker/restapi"
 	expmiddle "github.com/xmx/aegis-server/applet/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/applet/expose/restapi"
@@ -181,23 +181,23 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		TLSConfig: tlsCfg,
 		ErrorLog:  httpLog,
 	}
-	qs := &QServer{
+	quicSrv := &quick.Server{
 		Addr:    listenAddr,
 		Handler: brokGate,
 		QUICConfig: &quic.Config{
 			TLSConfig: tlsCfg,
 		},
-		Log: log,
 	}
 
 	errs := make(chan error)
-	go listenQUIC(errs, qs)
+	go listenQUIC(ctx, errs, quicSrv, log)
 	go listenHTTP(errs, srv, log)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
 	}
 	_ = srv.Close()
+	_ = quicSrv.Close()
 	_ = brokerReset(brokerSvc)
 
 	if err != nil {
@@ -237,33 +237,21 @@ func listenHTTP(errs chan<- error, srv *http.Server, log *slog.Logger) {
 	errs <- srv.ServeTLS(ln, "", "")
 }
 
-func listenQUIC(errs chan<- error, qs *QServer) {
-	errs <- qs.ListenAndServe(context.Background())
-}
+func listenQUIC(ctx context.Context, errs chan<- error, srv *quick.Server, log *slog.Logger) {
+	addr := srv.Addr
+	if addr == "" {
+		addr = ":443"
+	}
 
-type QServer struct {
-	Addr       string
-	Handler    transport.Handler
-	QUICConfig *quic.Config
-	Log        *slog.Logger
-}
-
-func (qs *QServer) ListenAndServe(ctx context.Context) error {
-	end, err := quic.Listen("udp", qs.Addr, qs.QUICConfig)
+	endpoint, err := quic.Listen("udp", addr, srv.QUICConfig)
 	if err != nil {
-		return err
+		errs <- err
+		return
 	}
-	defer end.Close(context.Background())
+	defer endpoint.Close(context.Background())
 
-	qs.Log.Info("quic 服务监听成功", slog.Any("addr", end.LocalAddr().String()))
+	laddr := endpoint.LocalAddr()
+	log.Warn("quic 服务监听成功", "listen", laddr)
 
-	for {
-		conn, err := end.Accept(ctx)
-		if err != nil {
-			return err
-		}
-
-		mux := transport.NewQUIC(ctx, conn, nil)
-		go qs.Handler.Handle(mux)
-	}
+	errs <- srv.Serve(ctx, endpoint)
 }
