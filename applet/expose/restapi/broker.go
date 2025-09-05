@@ -91,6 +91,7 @@ func (bk *Broker) reverse(c *ship.Context) error {
 	w, r := c.Response(), c.Request()
 	reqURL := broker.MakesBrokerURL(id, path)
 	r.URL = reqURL
+	r.Host = reqURL.Host
 
 	bk.prx.ServeHTTP(w, r)
 
