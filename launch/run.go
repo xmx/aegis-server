@@ -15,6 +15,7 @@ import (
 	"github.com/xmx/aegis-common/library/cronv3"
 	"github.com/xmx/aegis-common/library/httpx"
 	"github.com/xmx/aegis-common/shipx"
+	"github.com/xmx/aegis-common/transport"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	brkrestapi "github.com/xmx/aegis-server/applet/broker/restapi"
 	expmiddle "github.com/xmx/aegis-server/applet/expose/middle"
@@ -166,11 +167,12 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	listenAddr := srvCfg.Addr
 	if listenAddr == "" {
-		listenAddr = ":https"
+		listenAddr = ":443"
 	}
 	tlsCfg := &tls.Config{
 		GetCertificate: certificateSvc.GetCertificate,
 		NextProtos:     []string{"h2", "http/1.1", "aegis"},
+		MinVersion:     tls.VersionTLS13,
 	}
 	httpLog := logger.NewV1(slog.New(logger.Skip(logHandler, 8)))
 	srv := &http.Server{
@@ -179,8 +181,18 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		TLSConfig: tlsCfg,
 		ErrorLog:  httpLog,
 	}
+	qs := &QServer{
+		Addr:    listenAddr,
+		Handler: brokGate,
+		QUICConfig: &quic.Config{
+			TLSConfig: tlsCfg,
+		},
+		Log: log,
+	}
+
 	errs := make(chan error)
-	go listenAndServe(errs, srv, log)
+	go listenQUIC(errs, qs)
+	go listenHTTP(errs, srv, log)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
@@ -211,7 +223,7 @@ func brokerReset(brk *expservice.Broker) error {
 	return brk.Reset(ctx)
 }
 
-func listenAndServe(errs chan<- error, srv *http.Server, log *slog.Logger) {
+func listenHTTP(errs chan<- error, srv *http.Server, log *slog.Logger) {
 	lc := new(net.ListenConfig)
 	lc.SetMultipathTCP(true)
 	ln, err := lc.Listen(context.Background(), "tcp", srv.Addr)
@@ -225,12 +237,33 @@ func listenAndServe(errs chan<- error, srv *http.Server, log *slog.Logger) {
 	errs <- srv.ServeTLS(ln, "", "")
 }
 
-func listenQUIC(errs chan<- error, addr string, quicCfg *quic.Config) {
-	end, err := quic.Listen("udp", addr, quicCfg)
-	if err != nil {
-		errs <- err
-		return
-	}
+func listenQUIC(errs chan<- error, qs *QServer) {
+	errs <- qs.ListenAndServe(context.Background())
+}
 
-	end.Accept(context.Background())
+type QServer struct {
+	Addr       string
+	Handler    transport.Handler
+	QUICConfig *quic.Config
+	Log        *slog.Logger
+}
+
+func (qs *QServer) ListenAndServe(ctx context.Context) error {
+	end, err := quic.Listen("udp", qs.Addr, qs.QUICConfig)
+	if err != nil {
+		return err
+	}
+	defer end.Close(context.Background())
+
+	qs.Log.Info("quic 服务监听成功", slog.Any("addr", end.LocalAddr().String()))
+
+	for {
+		conn, err := end.Accept(ctx)
+		if err != nil {
+			return err
+		}
+
+		mux := transport.NewQUIC(ctx, conn, nil)
+		go qs.Handler.Handle(mux)
+	}
 }

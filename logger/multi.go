@@ -10,12 +10,6 @@ import (
 
 type multiHandlers []slog.Handler
 
-// NewMultiHandler returns a Handler that handles each record with all the given
-// handlers.
-func NewMultiHandler(handlers ...slog.Handler) slog.Handler {
-	return multiHandlers(handlers)
-}
-
 func (mhs multiHandlers) Enabled(ctx context.Context, l slog.Level) bool {
 	for _, h := range mhs {
 		if h.Enabled(ctx, l) {
@@ -68,6 +62,7 @@ type Handler interface {
 	slog.Handler
 	Attach(hs ...slog.Handler)
 	Detach(hs ...slog.Handler)
+	Replace(hs ...slog.Handler)
 }
 
 type dynamicHandler struct {
@@ -115,6 +110,19 @@ func (dh *dynamicHandler) Detach(hs ...slog.Handler) {
 			continue
 		}
 		delete(dh.hds, h)
+	}
+	dh.reload()
+	dh.mtx.Unlock()
+}
+
+func (dh *dynamicHandler) Replace(hs ...slog.Handler) {
+	dh.mtx.Lock()
+	clear(dh.hds)
+	for _, h := range hs {
+		if h == nil {
+			continue
+		}
+		dh.hds[h] = struct{}{}
 	}
 	dh.reload()
 	dh.mtx.Unlock()
