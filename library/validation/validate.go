@@ -1,9 +1,6 @@
 package validation
 
 import (
-	"reflect"
-	"strings"
-
 	arlocale "github.com/go-playground/locales/ar"
 	enlocale "github.com/go-playground/locales/en"
 	eslocale "github.com/go-playground/locales/es"
@@ -26,11 +23,8 @@ import (
 	zhtwtrans "github.com/go-playground/validator/v10/translations/zh_tw"
 )
 
-func New(tagNameFunc validator.TagNameFunc) *Validate {
+func New() *Validate {
 	valid := validator.New()
-	if tagNameFunc != nil {
-		valid.RegisterTagNameFunc(tagNameFunc)
-	}
 
 	arloc := arlocale.New()
 	enloc := enlocale.New()
@@ -147,38 +141,4 @@ func (v *Validate) RegisterStructValidationCtx(fn validator.StructLevelFuncCtx, 
 func (v *Validate) defaultTranslation(utt ut.Translator, fe validator.FieldError) string {
 	str, _ := utt.T(fe.Tag(), fe.Field())
 	return str
-}
-
-func TagNameFunc(tagNames []string) validator.TagNameFunc {
-	size := len(tagNames)
-	tags := make([]string, 0, size)
-	unique := make(map[string]struct{}, len(tagNames))
-	for _, tag := range tagNames {
-		if tag == "" {
-			continue
-		}
-		if _, ok := unique[tag]; ok {
-			continue
-		}
-		unique[tag] = struct{}{}
-		tags = append(tags, tag)
-	}
-	if len(tags) == 0 {
-		return nil
-	}
-
-	return func(field reflect.StructField) string {
-		var value string
-		for _, tag := range tags {
-			if value = field.Tag.Get(tag); value == "" || value == "-" {
-				continue
-			}
-			if str := strings.SplitN(value, ",", 2)[0]; str != "" && str != "-" {
-				value = str
-				break
-			}
-		}
-
-		return value
-	}
 }

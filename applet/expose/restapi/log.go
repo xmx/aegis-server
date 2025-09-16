@@ -10,9 +10,9 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/lmittmann/tint"
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-common/library/useragent"
+	"github.com/xmx/aegis-common/logger"
 	"github.com/xmx/aegis-server/contract/request"
-	"github.com/xmx/aegis-server/library/useragent"
-	"github.com/xmx/aegis-server/logger"
 	"github.com/xmx/aegis-server/protocol/eventsource"
 )
 
@@ -60,7 +60,6 @@ func (l *Log) watch(c *ship.Context) error {
 	} else if sse := eventsource.Accept(w, r); sse != nil {
 		writer = sse
 	} else {
-		w.Header().Set(ship.HeaderTransferEncoding, "chunked")
 		w.Header().Set(ship.HeaderContentType, ship.MIMETextPlainCharsetUTF8)
 		w.WriteHeader(http.StatusOK)
 		ctx, cancel := context.WithCancel(parent)

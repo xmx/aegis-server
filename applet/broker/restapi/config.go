@@ -4,17 +4,17 @@ import (
 	"net/http"
 
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-server/profile"
+	"github.com/xmx/aegis-server/config"
 )
 
-func NewConfig(cfg *profile.Config) *Config {
+func NewConfig(cfg *config.Config) *Config {
 	return &Config{
 		cfg: cfg,
 	}
 }
 
 type Config struct {
-	cfg *profile.Config
+	cfg *config.Config
 }
 
 func (cf *Config) RegisterRoute(r *ship.RouteGroupBuilder) error {

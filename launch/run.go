@@ -16,6 +16,7 @@ import (
 	"github.com/xmx/aegis-common/library/httpx"
 	"github.com/xmx/aegis-common/shipx"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-control/logger"
 	"github.com/xmx/aegis-control/quick"
 	brkrestapi "github.com/xmx/aegis-server/applet/broker/restapi"
 	expmiddle "github.com/xmx/aegis-server/applet/expose/middle"
@@ -24,9 +25,8 @@ import (
 	"github.com/xmx/aegis-server/business/bservice"
 	"github.com/xmx/aegis-server/business/validext"
 	"github.com/xmx/aegis-server/channel/broker"
+	"github.com/xmx/aegis-server/config"
 	"github.com/xmx/aegis-server/library/validation"
-	"github.com/xmx/aegis-server/logger"
-	"github.com/xmx/aegis-server/profile"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
@@ -34,22 +34,24 @@ import (
 )
 
 func Run(ctx context.Context, path string) error {
-	cfg, err := profile.JSONC(path)
-	if err != nil {
-		return err
-	}
-
-	return Exec(ctx, cfg)
+	// 2<<22 = 8388608 (8 MiB)
+	ld := config.Ext(path, 2<<22)
+	return Exec(ctx, ld)
 }
 
 // Exec 运行服务。
 //
 //goland:noinspection GoUnhandledErrorResult
-func Exec(ctx context.Context, cfg *profile.Config) error {
+func Exec(ctx context.Context, ld config.Loader) error {
+	cfg, err := ld.Load(ctx)
+	if err != nil {
+		return err
+	}
+
 	// 创建参数校验器，并校验配置文件。
-	valid := validation.New(validation.TagNameFunc([]string{"json"}))
+	valid := validation.New()
 	valid.RegisterCustomValidations(validext.All())
-	if err := valid.Validate(cfg); err != nil {
+	if err = valid.Validate(cfg); err != nil {
 		return err
 	}
 
@@ -146,7 +148,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 		exprestapi.NewLog(logHandler),
 		exprestapi.NewTunnel(brokGate),
 		exprestapi.NewDAV(apiPath, "/"),
-		exprestapi.NewSystem(),
+		exprestapi.NewSystem(cfg),
 		exprestapi.NewTerm(termSvc),
 	}
 
@@ -167,7 +169,7 @@ func Exec(ctx context.Context, cfg *profile.Config) error {
 
 	listenAddr := srvCfg.Addr
 	if listenAddr == "" {
-		listenAddr = ":443"
+		listenAddr = ":https"
 	}
 	tlsCfg := &tls.Config{
 		GetCertificate: certificateSvc.GetCertificate,
@@ -239,10 +241,6 @@ func listenHTTP(errs chan<- error, srv *http.Server, log *slog.Logger) {
 
 func listenQUIC(ctx context.Context, errs chan<- error, srv *quick.Server, log *slog.Logger) {
 	addr := srv.Addr
-	if addr == "" {
-		addr = ":443"
-	}
-
 	endpoint, err := quic.Listen("udp", addr, srv.QUICConfig)
 	if err != nil {
 		errs <- err

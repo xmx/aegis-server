@@ -1,4 +1,4 @@
-module github.com/xmx/aegis-agent
+module github.com/xmx/aegis-server
 
 go 1.25.1
 
