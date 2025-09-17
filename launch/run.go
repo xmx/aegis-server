@@ -112,7 +112,6 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	httpTran := &http.Transport{DialContext: brokDial.DialContext}
 	httpCli := httpx.Client{Client: &http.Client{Transport: httpTran}}
 	certificateSvc := expservice.NewCertificate(repoAll, log)
-	termSvc := expservice.NewTerm(log)
 
 	_ = httpCli
 
@@ -150,7 +149,6 @@ func Exec(ctx context.Context, ld config.Loader) error {
 		exprestapi.NewTunnel(brokGate),
 		exprestapi.NewDAV(apiPath, "/"),
 		exprestapi.NewSystem(cfg),
-		exprestapi.NewTerm(termSvc),
 	}
 
 	srvCfg := cfg.Server
