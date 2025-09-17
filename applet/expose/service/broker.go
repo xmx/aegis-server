@@ -7,13 +7,13 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/xmx/aegis-common/transport"
+	"github.com/xmx/aegis-control/contract/linkhub"
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func NewBroker(repo repository.All, hub transport.Huber[bson.ObjectID], log *slog.Logger) *Broker {
+func NewBroker(repo repository.All, hub linkhub.Huber, log *slog.Logger) *Broker {
 	return &Broker{
 		repo: repo,
 		hub:  hub,
@@ -23,7 +23,7 @@ func NewBroker(repo repository.All, hub transport.Huber[bson.ObjectID], log *slo
 
 type Broker struct {
 	repo repository.All
-	hub  transport.Huber[bson.ObjectID]
+	hub  linkhub.Huber
 	log  *slog.Logger
 }
 
@@ -63,11 +63,11 @@ func (b *Broker) List(ctx context.Context) ([]*model.Broker, error) {
 }
 
 func (b *Broker) Kickout(id bson.ObjectID) error {
-	peer := b.hub.Get(id)
+	peer := b.hub.GetByObjectID(id)
 	if peer == nil {
 		return nil
 	}
-	mux := peer.Mux()
+	mux := peer.Muxer()
 	_ = mux.Close()
 
 	return nil

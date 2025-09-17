@@ -5,9 +5,9 @@ import (
 	"net/http/httputil"
 
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-common/transport"
 	"github.com/xmx/aegis-control/library/httpnet"
 	"github.com/xmx/aegis-server/applet/expose/service"
-	"github.com/xmx/aegis-server/channel/broker"
 	"github.com/xmx/aegis-server/contract/request"
 )
 
@@ -65,7 +65,7 @@ func (bk *Broker) kickout(c *ship.Context) error {
 func (bk *Broker) reverse(c *ship.Context) error {
 	id, path := c.Param("id"), "/"+c.Param("path")
 	w, r := c.Response(), c.Request()
-	reqURL := broker.MakesBrokerURL(id, path)
+	reqURL := transport.NewBrokerIDURL(id, path)
 	r.URL = reqURL
 	r.Host = reqURL.Host
 

@@ -4,9 +4,8 @@ import (
 	"net/http"
 
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-common/transport"
+	"github.com/xmx/aegis-control/contract/linkhub"
 	"github.com/xmx/aegis-server/business/bservice"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func NewAlive(svc *bservice.Alive) *Alive {
@@ -26,7 +25,7 @@ func (alv *Alive) RegisterRoute(r *ship.RouteGroupBuilder) error {
 
 func (alv *Alive) ping(c *ship.Context) error {
 	ctx := c.Request().Context()
-	peer := transport.FromContext[bson.ObjectID](ctx)
+	peer := linkhub.FromContext(ctx)
 	_ = alv.svc.Ping(ctx, peer)
 
 	return c.NoContent(http.StatusNoContent)

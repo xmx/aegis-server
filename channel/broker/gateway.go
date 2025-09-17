@@ -9,17 +9,15 @@ import (
 	"time"
 
 	"github.com/xmx/aegis-common/transport"
+	"github.com/xmx/aegis-control/contract/linkhub"
+	"github.com/xmx/aegis-control/contract/sbmesg"
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func NewHub() transport.Huber[bson.ObjectID] {
-	return transport.NewHub[bson.ObjectID](32)
-}
-
-func NewGate(repo repository.All, hub transport.Huber[bson.ObjectID], next http.Handler, log *slog.Logger) transport.Handler {
+func NewGate(repo repository.All, hub linkhub.Huber, next http.Handler, log *slog.Logger) transport.Handler {
 	return &gateway{
 		repo: repo,
 		hub:  hub,
@@ -30,7 +28,7 @@ func NewGate(repo repository.All, hub transport.Huber[bson.ObjectID], next http.
 
 type gateway struct {
 	repo repository.All
-	hub  transport.Huber[bson.ObjectID]
+	hub  linkhub.Huber
 	next http.Handler
 	log  *slog.Logger
 }
@@ -45,13 +43,17 @@ func (gw *gateway) Handle(mux transport.Muxer) error {
 		return err
 	}
 
+	proto := mux.Protocol()
+	remoteAddr := mux.RemoteAddr()
 	peer := info.peer
-	id := peer.ID()
+	id := peer.Host()
 	attrs := []any{
-		slog.String("id", id.Hex()),
+		slog.String("id", id),
 		slog.String("name", info.data.Name),
 		slog.String("goos", info.req.Goos),
 		slog.String("goarch", info.req.Goarch),
+		slog.String("protocol", proto),
+		slog.String("remote_addr", remoteAddr.String()),
 	}
 	defer func() {
 		if exx := gw.disconnect(peer); exx != nil {
@@ -74,12 +76,12 @@ func (gw *gateway) Handle(mux transport.Muxer) error {
 	return nil
 }
 
-func (gw *gateway) newServer(p *brokPeer) *http.Server {
+func (gw *gateway) newServer(p linkhub.Peer) *http.Server {
+	bg := context.Background()
 	return &http.Server{
 		Handler: gw.next,
 		BaseContext: func(net.Listener) context.Context {
-			base := context.Background()
-			return transport.WithValue(base, p)
+			return linkhub.WithValue(bg, p)
 		},
 	}
 }
@@ -102,7 +104,7 @@ func (gw *gateway) precheck(mux transport.Muxer, timeout time.Duration) (*authIn
 	deadline := now.Add(timeout)
 	_ = sig.SetDeadline(deadline)
 
-	var req transport.AuthRequest
+	var req sbmesg.BrokerRequest
 	if _, err = req.ReadFrom(sig); err != nil {
 		gw.log.Warn("读取握手报文错误", "error", err)
 		return nil, err
@@ -112,31 +114,31 @@ func (gw *gateway) precheck(mux transport.Muxer, timeout time.Duration) (*authIn
 	oid, _ := bson.ObjectIDFromHex(id)
 	brk := gw.lookupByID(oid)
 	if brk == nil {
-		res := &transport.AuthResponse{Message: "节点不存在"}
+		res := &sbmesg.BrokerResponse{Message: "节点不存在"}
 		_, _ = res.WriteTo(sig)
 		return nil, res
 	}
 	if secret == "" || secret != brk.Secret {
-		res := &transport.AuthResponse{Message: "密钥错误"}
+		res := &sbmesg.BrokerResponse{Message: "密钥错误"}
 		_, _ = res.WriteTo(sig)
 		return nil, res
 	}
 	if brk.Status {
-		res := &transport.AuthResponse{Message: "节点重复上线"}
+		res := &sbmesg.BrokerResponse{Message: "节点重复上线"}
 		_, _ = res.WriteTo(sig)
 		return nil, res
 	}
 
-	peer := &brokPeer{id: oid, mux: mux}
-	if !gw.hub.PutIfAbsent(peer) {
-		res := &transport.AuthResponse{Message: "节点重复上线"}
+	peer := linkhub.NewPeer(oid, mux)
+	if !gw.hub.Put(peer) {
+		res := &sbmesg.BrokerResponse{Message: "节点重复上线"}
 		_, _ = res.WriteTo(sig)
 		return nil, res
 	}
 	attrs := []any{slog.Any("request", req)}
-	succ := &transport.AuthResponse{Succeed: true}
+	succ := &sbmesg.BrokerResponse{Succeed: true}
 	if _, err = succ.WriteTo(sig); err != nil {
-		gw.hub.Del(oid)
+		gw.hub.Del(id)
 		attrs = append(attrs, slog.Any("error", err))
 		gw.log.Warn("成功报文写入错误", attrs...)
 		return nil, err
@@ -158,8 +160,8 @@ func (gw *gateway) precheck(mux transport.Muxer, timeout time.Duration) (*authIn
 
 	brkRepo := gw.repo.Broker()
 	if _, err = brkRepo.UpdateByID(ctx, oid, update); err != nil {
-		gw.hub.Del(oid)
-		res := &transport.AuthResponse{Message: "内部错误，节点上线失败"}
+		gw.hub.Del(id)
+		res := &sbmesg.BrokerResponse{Message: "内部错误，节点上线失败"}
 		_, _ = res.WriteTo(sig)
 		attrs = append(attrs, slog.Any("error", err))
 		gw.log.Error("修改数据库节点上线状态错误", attrs...)
@@ -192,23 +194,23 @@ func (gw *gateway) lookupByID(id bson.ObjectID) *model.Broker {
 	return nil
 }
 
-func (gw *gateway) disconnect(peer *brokPeer) error {
+func (gw *gateway) disconnect(p linkhub.Peer) error {
 	now := time.Now()
-	id := peer.ID()
+	host, oid := p.Host(), p.ObjectID()
 	update := bson.M{"$set": bson.M{"status": false, "disconnected_at": now}}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	brkRepo := gw.repo.Broker()
-	_, err := brkRepo.UpdateByID(ctx, id, update)
-	gw.hub.Del(id)
+	_, err := brkRepo.UpdateByID(ctx, oid, update)
+	gw.hub.Del(host)
 
 	return err
 }
 
 type authInfo struct {
-	peer *brokPeer
+	peer linkhub.Peer
 	data *model.Broker
-	req  transport.AuthRequest
+	req  sbmesg.BrokerRequest
 }

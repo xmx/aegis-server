@@ -3,7 +3,7 @@ package validext
 import (
 	ut "github.com/go-playground/universal-translator"
 	"github.com/go-playground/validator/v10"
-	"github.com/xmx/aegis-server/library/validation"
+	"github.com/xmx/aegis-common/validation"
 )
 
 func All() []validation.CustomValidatorFunc {

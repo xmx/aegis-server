@@ -15,6 +15,8 @@ import (
 	"github.com/xmx/aegis-common/library/cronv3"
 	"github.com/xmx/aegis-common/library/httpx"
 	"github.com/xmx/aegis-common/shipx"
+	"github.com/xmx/aegis-common/validation"
+	"github.com/xmx/aegis-control/contract/linkhub"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/logger"
 	"github.com/xmx/aegis-control/quick"
@@ -26,7 +28,6 @@ import (
 	"github.com/xmx/aegis-server/business/validext"
 	"github.com/xmx/aegis-server/channel/broker"
 	"github.com/xmx/aegis-server/config"
-	"github.com/xmx/aegis-server/library/validation"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
@@ -106,7 +107,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	}
 	log.Info("数据库索引建立完毕")
 
-	brokHub := broker.NewHub()
+	brokHub := linkhub.NewHub(32)
 	brokDial := broker.NewHubDialer(repoAll, brokHub)
 	httpTran := &http.Transport{DialContext: brokDial.DialContext}
 	httpCli := httpx.Client{Client: &http.Client{Transport: httpTran}}
