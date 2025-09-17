@@ -26,7 +26,7 @@ import (
 	expservice "github.com/xmx/aegis-server/applet/expose/service"
 	"github.com/xmx/aegis-server/business/bservice"
 	"github.com/xmx/aegis-server/business/validext"
-	"github.com/xmx/aegis-server/channel/broker"
+	"github.com/xmx/aegis-server/channel"
 	"github.com/xmx/aegis-server/config"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
