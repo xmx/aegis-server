@@ -48,11 +48,13 @@ func (md *multiDialer) matchTunnel(ctx context.Context, address string) (net.Con
 		return nil, false, err
 	}
 
-	if conn, match, exx := md.matchBroker(ctx, host); match {
-		return conn, true, exx
-	}
+	//if conn, match, exx := md.matchBroker(ctx, host); match {
+	//	return conn, true, exx
+	//}
+	//
+	//return md.matchAgent(ctx, host)
 
-	return md.matchAgent(ctx, host)
+	return md.matchBroker(ctx, host)
 }
 
 func (md *multiDialer) matchAgent(ctx context.Context, address string) (net.Conn, bool, error) {

@@ -147,7 +147,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 		exprestapi.NewBroker(brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
 		exprestapi.NewLog(logHandler),
-		exprestapi.NewReverse(httpTrip),
+		exprestapi.NewReverse(httpTrip, repoAll),
 		exprestapi.NewTunnel(brokGate),
 		exprestapi.NewDAV(apiPath, "/"),
 		exprestapi.NewSystem(cfg),
