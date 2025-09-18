@@ -4,7 +4,9 @@ import (
 	"context"
 	"net"
 	"strings"
+	"time"
 
+	"github.com/xmx/aegis-common/transport"
 	"github.com/xmx/aegis-control/contract/linkhub"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -15,107 +17,105 @@ type Dialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
 }
 
-const (
-	peerHostSuffix   = ".aegis.internal"
-	agentHostSuffix  = ".agent" + peerHostSuffix
-	brokerHostSuffix = ".broker" + peerHostSuffix
-)
-
-func NewHubDialer(repo repository.All, hub linkhub.Huber) Dialer {
-	return &hubDialer{
-		repo: repo,
-		hub:  hub,
+func NewDialer(repo repository.All, hub linkhub.Huber, dial ...*net.Dialer) Dialer {
+	md := &multiDialer{hub: hub, repo: repo}
+	if len(dial) != 0 && dial[0] != nil {
+		md.dia = dial[0]
+	} else {
+		md.dia = &net.Dialer{Timeout: 10 * time.Second}
 	}
+
+	return md
 }
 
-type hubDialer struct {
-	repo repository.All
+type multiDialer struct {
 	hub  linkhub.Huber
-	dial net.Dialer
+	dia  *net.Dialer
+	repo repository.All
 }
 
-func (hd *hubDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	if host, _, _ := net.SplitHostPort(address); strings.HasSuffix(host, peerHostSuffix) {
-		if id, found := strings.CutSuffix(host, brokerHostSuffix); found {
-			peer := hd.hub.Get(id)
-			if peer == nil {
-				return nil, &net.AddrError{
-					Err:  "broker 节点未上线",
-					Addr: address,
-				}
-			}
-			mux := peer.Muxer()
-
-			return mux.Open(ctx)
-		}
-
-		sid, found := strings.CutSuffix(host, agentHostSuffix)
-		if !found {
-			return nil, &net.AddrError{
-				Addr: address,
-				Err:  "内部地址输入错误",
-			}
-		}
-
-		id, err := bson.ObjectIDFromHex(sid)
-		if err != nil {
-			return nil, &net.AddrError{
-				Addr: address,
-				Err:  "agent 标识输入错误",
-			}
-		}
-
-		// 通过 agent ID 查询所在的 broker 节点
-		repo := hd.repo.Agent()
-		opt := options.FindOne().SetProjection(bson.M{"broker": 1, "status": 1})
-		agt, err := repo.FindByID(ctx, id, opt)
-		if err != nil {
-			return nil, &net.AddrError{
-				Addr: address,
-				Err:  "agent 节点不存在",
-			}
-		}
-		if !agt.Status.Online() ||
-			agt.Broker == nil ||
-			agt.Broker.ID.IsZero() {
-			return nil, &net.AddrError{
-				Addr: address,
-				Err:  "agent 节点未上线",
-			}
-		}
-
-		brokID := agt.Broker.ID
-		peer := hd.hub.Get(brokID.Hex())
-		if peer == nil {
-			return nil, &net.AddrError{
-				Err:  "agent 所在的 broker 节点未上线",
-				Addr: address,
-			}
-		}
-		mux := peer.Muxer()
-
-		return mux.Open(ctx)
+func (md *multiDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	if conn, match, err := md.matchTunnel(ctx, address); match {
+		return conn, err
 	}
 
-	return nil, &net.AddrError{
-		Addr: address,
-		Err:  "内部地址输入错误",
-	}
+	return md.dia.DialContext(ctx, network, address)
 }
 
-func (hd *hubDialer) isBrokerID(address string) (bson.ObjectID, bool) {
-	host, _, _ := net.SplitHostPort(address)
-	if host == "" {
-		return bson.NewObjectID(), false
-	}
-	sid, found := strings.CutSuffix(host, brokerHostSuffix)
-	if !found {
-		return bson.NewObjectID(), false
-	}
-	id, err := bson.ObjectIDFromHex(sid)
+func (md *multiDialer) matchTunnel(ctx context.Context, address string) (net.Conn, bool, error) {
+	host, _, err := net.SplitHostPort(address)
 	if err != nil {
-		return bson.NewObjectID(), false
+		return nil, false, err
 	}
 
-	return id, true
+	if conn, match, exx := md.matchBroker(ctx, host); match {
+		return conn, true, exx
+	}
+
+	return md.matchAgent(ctx, host)
+}
+
+func (md *multiDialer) matchAgent(ctx context.Context, address string) (net.Conn, bool, error) {
+	host, found := strings.CutSuffix(address, transport.AgentHostSuffix)
+	if !found {
+		return nil, false, nil
+	}
+
+	id, err := bson.ObjectIDFromHex(host)
+	if err != nil {
+		return nil, true, &net.AddrError{
+			Addr: address,
+			Err:  "no route to agent host",
+		}
+	}
+
+	repo := md.repo.Agent()
+	opt := options.FindOne().SetProjection(bson.M{"broker": 1, "status": 1})
+	agt, err := repo.FindByID(ctx, id, opt)
+	if err != nil {
+		return nil, true, &net.AddrError{
+			Addr: address,
+			Err:  err.Error(),
+		}
+	}
+	brk := agt.Broker
+	if brk == nil || agt.ID.IsZero() {
+		return nil, true, &net.AddrError{
+			Addr: address,
+			Err:  "no route to agent host",
+		}
+	}
+
+	peer := md.hub.GetByObjectID(brk.ID)
+	if peer == nil {
+		return nil, true, &net.AddrError{
+			Addr: address,
+			Err:  "no route to broker host",
+		}
+	}
+
+	mux := peer.Muxer()
+	conn, err := mux.Open(ctx)
+
+	return conn, true, err
+}
+
+func (md *multiDialer) matchBroker(ctx context.Context, address string) (net.Conn, bool, error) {
+	host, found := strings.CutSuffix(address, transport.BrokerHostSuffix)
+	if !found {
+		return nil, false, nil
+	}
+
+	peer := md.hub.Get(host)
+	if peer == nil {
+		return nil, true, &net.AddrError{
+			Addr: address,
+			Err:  "no route to broker host",
+		}
+	}
+
+	mux := peer.Muxer()
+	conn, err := mux.Open(ctx)
+
+	return conn, true, err
 }

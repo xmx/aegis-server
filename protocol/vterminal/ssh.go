@@ -38,11 +38,12 @@ func NewSSH(network, addr string, cfg *ssh.ClientConfig, cols, rows int) (Typewr
 		return nil, err
 	}
 
+	// 80×24
 	if cols <= 0 {
 		cols = 80
 	}
 	if rows <= 0 {
-		rows = 40
+		rows = 24
 	}
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,

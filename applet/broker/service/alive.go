@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/xmx/aegis-control/contract/linkhub"
 	"github.com/xmx/aegis-control/datalayer/repository"
-	"github.com/xmx/aegis-server/channel/broker"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -23,9 +23,9 @@ type Alive struct {
 	log  *slog.Logger
 }
 
-func (alv *Alive) Ping(ctx context.Context, peer broker.Peer) error {
+func (alv *Alive) Ping(ctx context.Context, p linkhub.Peer) error {
 	now := time.Now()
-	id := peer.ID()
+	id := p.ObjectID()
 	filter := bson.M{"_id": id, "status": true}
 	update := bson.M{"$set": bson.M{"alive_at": now}}
 

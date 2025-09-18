@@ -87,16 +87,13 @@ func (gw *gateway) newServer(p linkhub.Peer) *http.Server {
 }
 
 func (gw *gateway) precheck(mux transport.Muxer, timeout time.Duration) (*authInfo, error) {
-	timer := time.AfterFunc(timeout, func() {
-		_ = mux.Close()
-	})
-
+	timer := time.AfterFunc(timeout, func() { _ = mux.Close() })
 	sig, err := mux.Accept()
+	timer.Stop()
 	if err != nil {
 		gw.log.Warn("等待握手连接错误", "error", err)
 		return nil, err
 	}
-	timer.Stop()
 	//goland:noinspection GoUnhandledErrorResult
 	defer sig.Close()
 
