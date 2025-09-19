@@ -11,14 +11,13 @@ require (
 	github.com/lmittmann/tint v1.1.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20250919064942-1eb7d9c04a77
-	github.com/xmx/aegis-control v0.0.0-20250919065406-e4fd3856edae
+	github.com/xmx/aegis-common v0.0.0-20250919112606-9a86af6fea1d
+	github.com/xmx/aegis-control v0.0.0-20250919113311-faa1d9297e07
 	github.com/xmx/jsos v0.0.0-20250427065020-8ad2f932dfcf
 	go.mongodb.org/mongo-driver/v2 v2.3.0
 	golang.org/x/crypto v0.42.0
 	golang.org/x/net v0.44.0
 	golang.org/x/sys v0.36.0
-	golang.org/x/text v0.29.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
@@ -41,5 +40,6 @@ require (
 	go.uber.org/mock v0.6.0 // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
 )

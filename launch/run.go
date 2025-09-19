@@ -96,7 +96,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	defer disconnectDB(cli)
 	log.Info("数据库连接成功")
 
-	crontab := cronv3.New(cron.WithSeconds())
+	crontab := cronv3_bak.New(cron.WithSeconds())
 	crontab.Start()
 	defer crontab.Stop()
 
@@ -136,6 +136,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 		}
 	}
 
+	agentSvc := expservice.NewAgent(repoAll, log)
 	brokerSvc := expservice.NewBroker(repoAll, brokHub, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
@@ -145,6 +146,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
+		exprestapi.NewAgent(agentSvc),
 		exprestapi.NewBroker(brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
 		exprestapi.NewLog(logHandler),
