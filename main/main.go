@@ -10,7 +10,7 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/xmx/aegis-server/banner"
+	"github.com/xmx/aegis-common/banner"
 	"github.com/xmx/aegis-server/launch"
 )
 

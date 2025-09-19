@@ -25,13 +25,13 @@ jobs:
           check-latest: true
 
       - name: 编译 Linux 程序
-        run: sh build.sh
+        run: GOEXPERIMENT=jsonv2 sh build.sh
 
       - name: 编译 Windows 程序
         run: |
           go clean -cache
           go env -w GOOS=windows
-          sh build.sh
+          GOEXPERIMENT=jsonv2 sh build.sh
           go env -u GOOS
 
       - name: 下载程序

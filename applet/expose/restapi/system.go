@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-server/banner"
+	"github.com/xmx/aegis-common/banner"
 	"github.com/xmx/aegis-server/config"
 )
 

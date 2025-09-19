@@ -46,8 +46,9 @@ build() {
     
     # Build configuration
     export CGO_ENABLED=0
-    LD_FLAGS="-s -w -extldflags=-static -X '$(go list -m)/banner.compileTime=${COMPILE_TIME}'"
-    
+#     LD_FLAGS="-s -w -extldflags=-static -X '$(go list -m)/banner.compileTime=${COMPILE_TIME}'"
+    LD_FLAGS="-s -w -extldflags=-static -X 'github.com/xmx/aegis-common/banner.compileTime=${COMPILE_TIME}'"
+
     if ! go build -o "${TARGET_NAME}" -trimpath -v -ldflags "${LD_FLAGS}" ./main; then
         print_error "编译失败"
         exit 1
