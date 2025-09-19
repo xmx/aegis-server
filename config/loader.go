@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/xmx/aegis-server/library/jsonc"
+	"github.com/xmx/aegis-control/library/jsonc"
 )
 
 type Loader interface {
