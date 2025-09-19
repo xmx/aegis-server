@@ -1,10 +1,10 @@
 ## 编译
 
 ```shell
-sh build.sh
+GOEXPERIMENT=jsonv2 sh build.sh
 
 # 交叉编译
-GOOS=windows GOARCH=amd64 sh build.sh
+GOOS=windows GOARCH=amd64 GOEXPERIMENT=jsonv2 sh build.sh
 ```
 
 ## 开发
