@@ -9,7 +9,6 @@ import (
 	"github.com/xmx/aegis-common/transport"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/library/httpnet"
-	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func NewReverse(trip http.RoundTripper, repo repository.All) *Reverse {
@@ -36,17 +35,18 @@ func (rvs *Reverse) RegisterRoute(r *ship.RouteGroupBuilder) error {
 func (rvs *Reverse) agent(c *ship.Context) error {
 	id, pth := c.Param("id"), "/"+c.Param("path")
 	w, r := c.Response(), c.Request()
-	ctx := r.Context()
-	oid, _ := bson.ObjectIDFromHex(id)
-	repo := rvs.repo.Agent()
-	dat, err := repo.FindByID(ctx, oid)
-	if err != nil {
-		return err
-	}
-	brk := dat.Broker
-	if brk == nil || brk.ID.IsZero() {
-		return ship.ErrNotFound
-	}
+	//ctx := r.Context()
+	//oid, _ := bson.ObjectIDFromHex(id)
+	//repo := rvs.repo.Agent()
+	//dat, err := repo.FindByID(ctx, oid)
+	//if err != nil {
+	//	c.Warnf("查询 agent 所在 broker 错误", "id", id, "error", err)
+	//	return err
+	//}
+	//brk := dat.Broker
+	//if brk == nil || brk.ID.IsZero() {
+	//	return ship.ErrNotFound
+	//}
 
 	// slash
 	rawPath := r.URL.Path
@@ -54,7 +54,7 @@ func (rvs *Reverse) agent(c *ship.Context) error {
 		pth += "/"
 	}
 	pth = "/api/reverse/agent/" + id + pth
-	reqURL := transport.NewBrokerIDURL(brk.ID.Hex(), pth)
+	reqURL := transport.NewServerBrokerAgentURL(id, pth)
 	r.URL = reqURL
 	r.Host = reqURL.Host
 
@@ -71,7 +71,7 @@ func (rvs *Reverse) broker(c *ship.Context) error {
 		path += "/"
 	}
 
-	reqURL := transport.NewBrokerIDURL(id, path)
+	reqURL := transport.NewServerBrokerURL(id, path)
 	r.URL = reqURL
 	r.Host = reqURL.Host
 

@@ -51,7 +51,8 @@ func Exec(ctx context.Context, ld config.Loader) error {
 
 	// 创建参数校验器，并校验配置文件。
 	valid := validation.New()
-	valid.RegisterCustomValidations(validext.All())
+	valid.RegisterCustomValidations(validation.Customs())
+	valid.RegisterCustomValidations(validext.Customs())
 	if err = valid.Validate(cfg); err != nil {
 		return err
 	}
@@ -151,6 +152,8 @@ func Exec(ctx context.Context, ld config.Loader) error {
 		exprestapi.NewTunnel(brokGate),
 		exprestapi.NewDAV(apiPath, "/"),
 		exprestapi.NewSystem(cfg),
+		shipx.NewHealth(),
+		shipx.NewPprof(),
 	}
 
 	srvCfg := cfg.Server

@@ -9,7 +9,9 @@ import (
 	"github.com/xmx/aegis-common/transport"
 	"github.com/xmx/aegis-control/contract/linkhub"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-server/library/memoize"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
@@ -24,14 +26,16 @@ func NewDialer(repo repository.All, hub linkhub.Huber, dial ...*net.Dialer) Dial
 	} else {
 		md.dia = &net.Dialer{Timeout: 10 * time.Second}
 	}
+	md.agent = memoize.NewMap2(md.slowLoad)
 
 	return md
 }
 
 type multiDialer struct {
-	hub  linkhub.Huber
-	dia  *net.Dialer
-	repo repository.All
+	hub   linkhub.Huber
+	dia   *net.Dialer
+	repo  repository.All
+	agent memoize.Map2[string, string, error]
 }
 
 func (md *multiDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
@@ -47,14 +51,28 @@ func (md *multiDialer) matchTunnel(ctx context.Context, address string) (net.Con
 	if err != nil {
 		return nil, false, err
 	}
+	if !strings.HasSuffix(host, transport.BrokerHostSuffix) {
+		return nil, false, nil
+	}
 
-	//if conn, match, exx := md.matchBroker(ctx, host); match {
-	//	return conn, true, exx
-	//}
-	//
-	//return md.matchAgent(ctx, host)
+	if agentID, found := strings.CutSuffix(host, transport.AgentBrokerHostSuffix); found {
+		if conn, exx := md.lookupAgentBroker(ctx, agentID); exx != nil {
+			return nil, true, exx
+		} else if conn == nil {
+			return nil, true, &net.AddrError{Err: "(server) no route to broker host", Addr: address}
+		} else {
+			return conn, true, nil
+		}
+	}
 
-	return md.matchBroker(ctx, host)
+	brokerID, _ := strings.CutSuffix(host, transport.BrokerHostSuffix)
+	if conn, exx := md.open(ctx, brokerID); exx != nil {
+		return nil, true, exx
+	} else if conn == nil {
+		return nil, true, &net.AddrError{Err: "(server) no route to broker host", Addr: address}
+	} else {
+		return conn, true, nil
+	}
 }
 
 func (md *multiDialer) matchAgent(ctx context.Context, address string) (net.Conn, bool, error) {
@@ -67,7 +85,7 @@ func (md *multiDialer) matchAgent(ctx context.Context, address string) (net.Conn
 	if err != nil {
 		return nil, true, &net.AddrError{
 			Addr: address,
-			Err:  "no route to agent host",
+			Err:  "(server) no route to agent host",
 		}
 	}
 
@@ -84,7 +102,7 @@ func (md *multiDialer) matchAgent(ctx context.Context, address string) (net.Conn
 	if brk == nil || agt.ID.IsZero() {
 		return nil, true, &net.AddrError{
 			Addr: address,
-			Err:  "no route to agent host",
+			Err:  "(server) no route to agent host",
 		}
 	}
 
@@ -92,7 +110,7 @@ func (md *multiDialer) matchAgent(ctx context.Context, address string) (net.Conn
 	if peer == nil {
 		return nil, true, &net.AddrError{
 			Addr: address,
-			Err:  "no route to broker host",
+			Err:  "(server) no route to broker host",
 		}
 	}
 
@@ -112,7 +130,7 @@ func (md *multiDialer) matchBroker(ctx context.Context, address string) (net.Con
 	if peer == nil {
 		return nil, true, &net.AddrError{
 			Addr: address,
-			Err:  "no route to broker host",
+			Err:  "(server) no route to broker host",
 		}
 	}
 
@@ -120,4 +138,53 @@ func (md *multiDialer) matchBroker(ctx context.Context, address string) (net.Con
 	conn, err := mux.Open(ctx)
 
 	return conn, true, err
+}
+
+func (md *multiDialer) slowLoad(ctx context.Context, address string) (string, error) {
+	oid, err := bson.ObjectIDFromHex(address)
+	if err != nil {
+		return "", err
+	}
+
+	opt := options.FindOne().SetProjection(bson.M{"broker": 1, "status": 1})
+	repo := md.repo.Agent()
+	agt, err := repo.FindByID(ctx, oid, opt)
+	if err != nil {
+		return "", err
+	}
+	brk := agt.Broker
+	if brk == nil || agt.ID.IsZero() {
+		return "", mongo.ErrNoDocuments
+	}
+
+	return brk.ID.Hex(), nil
+}
+
+func (md *multiDialer) lookupAgentBroker(ctx context.Context, agentID string) (net.Conn, error) {
+	oid, err := bson.ObjectIDFromHex(agentID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := options.FindOne().SetProjection(bson.M{"broker": 1, "status": 1})
+	repo := md.repo.Agent()
+	agt, err := repo.FindByID(ctx, oid, opt)
+	if err != nil {
+		return nil, err
+	}
+	brk := agt.Broker
+	if brk == nil || agt.ID.IsZero() {
+		return nil, mongo.ErrNoDocuments
+	}
+
+	return md.open(ctx, brk.ID.Hex())
+}
+
+func (md *multiDialer) open(ctx context.Context, brokerID string) (net.Conn, error) {
+	peer := md.hub.Get(brokerID)
+	if peer == nil {
+		return nil, nil
+	}
+
+	return peer.Muxer().Open(ctx)
 }
