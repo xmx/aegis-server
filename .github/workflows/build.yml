@@ -34,7 +34,7 @@ jobs:
           GOEXPERIMENT=jsonv2 sh build.sh
           go env -u GOOS
 
-      - name: 下载程序
+      - name: 上传产物
         uses: actions/upload-artifact@v4
         with:
           name: aegis-server
