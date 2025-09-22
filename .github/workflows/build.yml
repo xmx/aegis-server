@@ -14,6 +14,8 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    env:
+      GOEXPERIMENT: jsonv2
     steps:
       - name: 拉取代码
         uses: actions/checkout@v5
@@ -24,19 +26,26 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: 编译 Linux 程序
-        env:
-          GOEXPERIMENT: jsonv2
+      - name: 编译 linux 程序
         run: sh build.sh
 
-      - name: 编译 Windows 程序
+      - name: 编译 windows 程序
         env:
-          GOEXPERIMENT: jsonv2
-        run: |
-          go clean -cache
-          go env -w GOOS=windows
-          GOEXPERIMENT=jsonv2 sh build.sh
-          go env -u GOOS
+          GOOS: windows
+          GOARCH: amd64
+        run: sh build.sh
+
+      - name: 编译 darwin-amd64 程序
+        env:
+          GOOS: darwin
+          GOARCH: amd64
+        run: sh build.sh
+
+      - name: 编译 darwin-arm64 程序
+        env:
+          GOOS: darwin
+          GOARCH: arm64
+        run: sh build.sh
 
       - name: 上传产物
         uses: actions/upload-artifact@v4
