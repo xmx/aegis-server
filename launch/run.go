@@ -96,7 +96,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	defer disconnectDB(cli)
 	log.Info("数据库连接成功")
 
-	crontab := cronv3_bak.New(cron.WithSeconds())
+	crontab := cronv3.New(ctx, log, cron.WithSeconds())
 	crontab.Start()
 	defer crontab.Stop()
 
