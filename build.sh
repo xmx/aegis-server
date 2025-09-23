@@ -4,9 +4,9 @@
 set -e
 
 BASE_NAME=$(basename $(pwd))
-declare TARGET_NAME
-declare TARGET_VERSION
-declare COMPILE_TIME
+TARGET_NAME=""
+TARGET_VERSION=""
+COMPILE_TIME=""
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
