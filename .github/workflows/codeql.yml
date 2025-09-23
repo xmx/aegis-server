@@ -1,4 +1,4 @@
-name: "CodeQL"
+name: CodeQL
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   analyze:
-    name: Analyze
+    name: 代码分析
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -21,10 +21,10 @@ jobs:
         language: [ 'go' ]     # 语言可选: 'go', 'javascript', 'python', 'java', 等
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: 检出代码
+        uses: actions/checkout@v5
 
-      - name: Initialize CodeQL
+      - name: 初始化 CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
@@ -32,5 +32,5 @@ jobs:
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
 
-      - name: Perform CodeQL Analysis
+      - name: 执行 CodeQL 代码分析
         uses: github/codeql-action/analyze@v3
