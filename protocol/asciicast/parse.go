@@ -11,8 +11,8 @@ func ParseResize(str string) (cols, rows int) {
 	if len(sn) != 2 {
 		return
 	}
-	colsInt, _ := strconv.ParseInt(sn[0], 10, 64)
-	rowsInt, _ := strconv.ParseInt(sn[1], 10, 64)
+	cols, _ = strconv.Atoi(sn[0])
+	rows, _ = strconv.Atoi(sn[1])
 
-	return int(colsInt), int(rowsInt)
+	return
 }
