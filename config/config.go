@@ -1,11 +1,16 @@
 package config
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )
+
+type Loader interface {
+	Load(context.Context) (*Config, error)
+}
 
 type Config struct {
 	Active   string   `json:"active"`

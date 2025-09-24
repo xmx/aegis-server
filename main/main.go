@@ -19,7 +19,7 @@ func main() {
 	name := filepath.Base(args[0])
 	set := flag.NewFlagSet(name, flag.ExitOnError)
 	ver := set.Bool("v", false, "打印版本")
-	cfg := set.String("c", "resources/config/application.jsonc", "配置目录")
+	cfg := set.String("c", "resources/config/application.js", "配置目录")
 	_ = set.Parse(args[1:])
 	if _, _ = banner.ANSI(os.Stdout); *ver {
 		return

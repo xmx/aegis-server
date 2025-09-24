@@ -15,11 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-type Dialer interface {
-	DialContext(ctx context.Context, network, address string) (net.Conn, error)
-}
-
-func NewDialer(repo repository.All, hub linkhub.Huber, dial ...*net.Dialer) Dialer {
+func NewDialer(repo repository.All, hub linkhub.Huber, dial ...*net.Dialer) transport.Dialer {
 	md := &multiDialer{hub: hub, repo: repo}
 	if len(dial) != 0 && dial[0] != nil {
 		md.dia = dial[0]

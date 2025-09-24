@@ -50,7 +50,7 @@
   // 数据库配置相关。
   "database": {
     // MongoDB 数据库连接。
-    "uri": "mongodb+srv://<username>:<password>@mongo.example.com/<dbname>?retryWrites=true&w=majority&appName=dev"
+    "uri": "mongodb+srv://username:password@mongo.example.com/dbname?retryWrites=true&w=majority&appName=dev"
   },
   // 日志配置。
   "logger": {

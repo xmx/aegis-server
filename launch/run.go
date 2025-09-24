@@ -109,7 +109,6 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	log.Info("数据库索引建立完毕")
 
 	brokHub := linkhub.NewHub(32)
-	//brokDial := broker.NewHubDialer(repoAll, brokHub)
 	brokDial := broker.NewDialer(repoAll, brokHub)
 	httpTrip := &http.Transport{DialContext: brokDial.DialContext}
 	httpCli := httpx.Client{Client: &http.Client{Transport: httpTrip}}
@@ -150,7 +149,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 		exprestapi.NewBroker(brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
 		exprestapi.NewLog(logHandler),
-		exprestapi.NewReverse(httpTrip, repoAll),
+		exprestapi.NewReverse(brokDial, repoAll),
 		exprestapi.NewTunnel(brokGate),
 		exprestapi.NewDAV(apiPath, "/"),
 		exprestapi.NewSystem(cfg),
