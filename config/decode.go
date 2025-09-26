@@ -5,9 +5,9 @@ import (
 	"encoding/json/v2"
 	"os"
 
-	"github.com/xmx/aegis-common/jsmod"
+	"github.com/xmx/aegis-common/jsos/jsmod"
+	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-control/library/jsonc"
-	"github.com/xmx/jsos/jsvm"
 )
 
 type decoder interface {
@@ -51,7 +51,7 @@ func (j *jsdecoder) engine(ctx context.Context) jsvm.Engineer {
 
 	eng := jsvm.New(ctx)
 	require := eng.Require()
-	require.Register(jsmod.Modules()...)
+	require.Registers(jsmod.Modules())
 	stdout, _ := eng.Output()
 	stdout.Attach(os.Stdout)
 	j.eng = eng

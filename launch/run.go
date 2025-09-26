@@ -12,6 +12,8 @@ import (
 	"github.com/lmittmann/tint"
 	"github.com/robfig/cron/v3"
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-common/jsos/jsmod"
+	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/cronv3"
 	"github.com/xmx/aegis-common/library/httpx"
 	"github.com/xmx/aegis-common/logger"
@@ -96,9 +98,9 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	defer disconnectDB(cli)
 	log.Info("数据库连接成功")
 
-	crontab := cronv3.New(ctx, log, cron.WithSeconds())
-	crontab.Start()
-	defer crontab.Stop()
+	crond := cronv3.New(ctx, log, cron.WithSeconds())
+	crond.Start()
+	defer crond.Stop()
 
 	mongoDB := cli.Database(mongoURL.Database)
 	repoAll := repository.NewAll(mongoDB)
@@ -143,12 +145,16 @@ func Exec(ctx context.Context, ld config.Loader) error {
 
 	brokGate := broker.NewGate(repoAll, brokHub, brokSH, log)
 
+	jsmodules := []jsvm.Module{
+		jsmod.NewCrontab(crond),
+	}
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
 		exprestapi.NewAgent(agentSvc),
 		exprestapi.NewBroker(brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
 		exprestapi.NewLog(logHandler),
+		exprestapi.NewPlay(jsmodules),
 		exprestapi.NewReverse(brokDial, repoAll),
 		exprestapi.NewTunnel(brokGate),
 		exprestapi.NewDAV(apiPath, "/"),
