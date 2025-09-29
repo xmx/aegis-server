@@ -1,0 +1,129 @@
+package restapi
+
+import (
+	"mime"
+	"net/http"
+	"path"
+	"strconv"
+	"strings"
+
+	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-control/datalayer/model"
+	"github.com/xmx/aegis-server/applet/expose/data/request"
+	"github.com/xmx/aegis-server/applet/expose/service"
+)
+
+func NewFS(svc *service.FS) *FS {
+	return &FS{
+		svc: svc,
+	}
+}
+
+type FS struct {
+	svc *service.FS
+}
+
+func (fs *FS) RegisterRoute(r *ship.RouteGroupBuilder) error {
+	r.Route("/fs/http").GET(fs.http)
+	r.Route("/fs/http/*path").GET(fs.http)
+	r.Route("/fs/browse").GET(fs.browse)
+	r.Route("/fs/browse/*path").GET(fs.browse)
+	r.Route("/fs/download").GET(fs.download)
+	r.Route("/fs/download/*path").GET(fs.download)
+	r.Route("/fs/upload").PUT(fs.upload)
+	r.Route("/fs/upload/*path").PUT(fs.upload)
+	r.Route("/fs/mkdir").POST(fs.mkdir)
+	r.Route("/fs/mkdir/*path").POST(fs.mkdir)
+	r.Route("/fs/remove").DELETE(fs.remove)
+	r.Route("/fs/remove/*path").DELETE(fs.remove)
+
+	return nil
+}
+
+func (fs *FS) upload(c *ship.Context) error {
+	req := new(request.FSUpload)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+	dir := c.Param("path")
+	ctx := c.Request().Context()
+
+	ret, err := fs.svc.Upload(ctx, dir, req.File)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
+}
+
+func (fs *FS) mkdir(c *ship.Context) error {
+	dir := c.Param("path")
+	ctx := c.Request().Context()
+	err := fs.svc.Mkdir(ctx, dir)
+
+	return err
+}
+
+func (fs *FS) browse(c *ship.Context) error {
+	dir := c.Param("path")
+	ctx := c.Request().Context()
+	ret, err := fs.svc.Entries(ctx, dir)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
+}
+
+func (fs *FS) download(c *ship.Context) error {
+	dir := c.Param("path")
+	ctx := c.Request().Context()
+	f, err := fs.svc.Open(ctx, dir)
+	if err != nil {
+		return err
+	}
+	//goland:noinspection GoUnhandledErrorResult
+	defer f.Close()
+
+	var contentType string
+	if stat, _ := f.Stat(); stat != nil {
+		name := stat.Name()
+		ext := strings.ToLower(path.Ext(name))
+		contentType = mime.TypeByExtension(ext)
+
+		size := strconv.FormatInt(stat.Size(), 10)
+		c.SetRespHeader(ship.HeaderContentLength, size)
+
+		param := map[string]string{"filename": name}
+		if mfs, _ := stat.Sys().(*model.FS); mfs != nil {
+			chk := mfs.Checksum
+			param["md5"] = chk.MD5
+			param["sha1"] = chk.SHA1
+			param["sha256"] = chk.SHA256
+			param["sha512"] = chk.SHA512
+			param["sha3256"] = chk.SHA3256
+		}
+		disposition := mime.FormatMediaType("attachment", param)
+		c.SetRespHeader(ship.HeaderContentDisposition, disposition)
+	}
+	if contentType == "" {
+		contentType = ship.MIMEOctetStream
+	}
+
+	return c.Stream(http.StatusOK, contentType, f)
+}
+
+func (fs *FS) remove(c *ship.Context) error {
+	dir := c.Param("path")
+	ctx := c.Request().Context()
+
+	return fs.svc.Remove(ctx, dir)
+}
+
+func (fs *FS) http(c *ship.Context) error {
+	dir := "/" + c.Param("path")
+	w, r := c.Response(), c.Request()
+	r.URL.Path = dir
+	fs.svc.Handler().ServeHTTP(w, r)
+	return nil
+}

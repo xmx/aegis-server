@@ -115,7 +115,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	httpTrip := &http.Transport{DialContext: brokDial.DialContext}
 	httpCli := httpx.Client{Client: &http.Client{Transport: httpTrip}}
 	certificateSvc := expservice.NewCertificate(repoAll, log)
-
+	fsSvc := expservice.NewFS(repoAll, log)
 	_ = httpCli
 
 	brokSH := ship.Default()
@@ -153,6 +153,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 		exprestapi.NewAgent(agentSvc),
 		exprestapi.NewBroker(brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
+		exprestapi.NewFS(fsSvc),
 		exprestapi.NewLog(logHandler),
 		exprestapi.NewPlay(jsmodules),
 		exprestapi.NewReverse(brokDial, repoAll),

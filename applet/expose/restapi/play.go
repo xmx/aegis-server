@@ -82,7 +82,7 @@ func (p *Play) js(c *ship.Context) error {
 		val, exx := vm.RunScript(ch, msg)
 		if exx != nil {
 			_, _ = wsout.Write([]byte(exx.Error()))
-		} else if val != nil && val != sobek.Undefined() {
+		} else if val != nil && sobek.IsUndefined(val) {
 			_, _ = wserr.Write([]byte(val.String()))
 		}
 	}()
