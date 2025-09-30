@@ -26,12 +26,14 @@ type FS struct {
 func (fs *FS) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/fs/http").GET(fs.http)
 	r.Route("/fs/http/*path").GET(fs.http)
-	r.Route("/fs/browse").GET(fs.browse)
-	r.Route("/fs/browse/*path").GET(fs.browse)
+	r.Route("/fs/list").GET(fs.list)
+	r.Route("/fs/list/*path").GET(fs.list)
 	r.Route("/fs/download").GET(fs.download)
 	r.Route("/fs/download/*path").GET(fs.download)
-	r.Route("/fs/upload").PUT(fs.upload)
-	r.Route("/fs/upload/*path").PUT(fs.upload)
+	r.Route("/fs/create").PUT(fs.create)
+	r.Route("/fs/create/*path").PUT(fs.create)
+	r.Route("/fs/update").PUT(fs.update)
+	r.Route("/fs/update/*path").PUT(fs.update)
 	r.Route("/fs/mkdir").POST(fs.mkdir)
 	r.Route("/fs/mkdir/*path").POST(fs.mkdir)
 	r.Route("/fs/remove").DELETE(fs.remove)
@@ -40,7 +42,7 @@ func (fs *FS) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	return nil
 }
 
-func (fs *FS) upload(c *ship.Context) error {
+func (fs *FS) create(c *ship.Context) error {
 	req := new(request.FSUpload)
 	if err := c.Bind(req); err != nil {
 		return err
@@ -48,7 +50,23 @@ func (fs *FS) upload(c *ship.Context) error {
 	dir := c.Param("path")
 	ctx := c.Request().Context()
 
-	ret, err := fs.svc.Upload(ctx, dir, req.File)
+	ret, err := fs.svc.Create(ctx, dir, req.File)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
+}
+
+func (fs *FS) update(c *ship.Context) error {
+	req := new(request.FSUpload)
+	if err := c.Bind(req); err != nil {
+		return err
+	}
+	dir := c.Param("path")
+	ctx := c.Request().Context()
+
+	ret, err := fs.svc.Update(ctx, dir, req.File)
 	if err != nil {
 		return err
 	}
@@ -64,10 +82,10 @@ func (fs *FS) mkdir(c *ship.Context) error {
 	return err
 }
 
-func (fs *FS) browse(c *ship.Context) error {
+func (fs *FS) list(c *ship.Context) error {
 	dir := c.Param("path")
 	ctx := c.Request().Context()
-	ret, err := fs.svc.Entries(ctx, dir)
+	ret, err := fs.svc.List(ctx, dir)
 	if err != nil {
 		return err
 	}
