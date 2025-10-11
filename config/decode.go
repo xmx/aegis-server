@@ -34,7 +34,7 @@ type jsdecoder struct {
 }
 
 func (j *jsdecoder) decode(ctx context.Context, data []byte, cfg *Config, name string) (*Config, error) {
-	vari := jsmod.NewVariable[*Config]("aegis/server/config")
+	vari := jsmod.NewVariable[Config]("aegis/server/config")
 	vari.Set(cfg)
 
 	eng := j.engine(ctx)
