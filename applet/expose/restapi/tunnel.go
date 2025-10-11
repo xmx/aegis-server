@@ -1,15 +1,14 @@
 package restapi
 
 import (
-	"log/slog"
-
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/library/wsocket"
-	"github.com/xmx/aegis-common/transport"
+	"github.com/xmx/aegis-common/tunnel/tundial"
+	"github.com/xmx/aegis-common/tunnel/tunutil"
 )
 
-func NewTunnel(next transport.Handler) *Tunnel {
+func NewTunnel(next tunutil.Handler) *Tunnel {
 	return &Tunnel{
 		next: next,
 		wsup: wsocket.NewUpgrade(),
@@ -17,7 +16,7 @@ func NewTunnel(next transport.Handler) *Tunnel {
 }
 
 type Tunnel struct {
-	next transport.Handler
+	next tunutil.Handler
 	wsup *websocket.Upgrader
 }
 
@@ -35,15 +34,13 @@ func (tnl *Tunnel) open(c *ship.Context) error {
 		return nil // 无需再次返回 err 信息
 	}
 	conn := ws.NetConn()
-	mux, err := transport.NewSMUX(conn, true)
+	//mux, err := transport.NewSMUX(conn, true)
+	mux, err := tundial.NewSMUX(conn, nil, true)
 	if err != nil {
 		_ = conn.Close()
 		return err
 	}
-
-	if err = tnl.next.Handle(mux); err != nil {
-		c.Infof("处理发生错误", slog.Any("error", err))
-	}
+	tnl.next.Handle(mux)
 
 	return nil
 }

@@ -15,12 +15,11 @@ import (
 	"github.com/xmx/aegis-common/jsos/jsmod"
 	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/cronv3"
-	"github.com/xmx/aegis-common/library/httpx"
 	"github.com/xmx/aegis-common/logger"
 	"github.com/xmx/aegis-common/shipx"
 	"github.com/xmx/aegis-common/validation"
-	"github.com/xmx/aegis-control/contract/linkhub"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-control/linkhub"
 	"github.com/xmx/aegis-control/quick"
 	brkrestapi "github.com/xmx/aegis-server/applet/broker/restapi"
 	expmiddle "github.com/xmx/aegis-server/applet/expose/middle"
@@ -28,12 +27,11 @@ import (
 	expservice "github.com/xmx/aegis-server/applet/expose/service"
 	"github.com/xmx/aegis-server/business/bservice"
 	"github.com/xmx/aegis-server/business/validext"
-	"github.com/xmx/aegis-server/channel"
+	"github.com/xmx/aegis-server/channel/serverd"
 	"github.com/xmx/aegis-server/config"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
-	"golang.org/x/net/quic"
 )
 
 func Run(ctx context.Context, path string) error {
@@ -110,13 +108,14 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	}
 	log.Info("数据库索引建立完毕")
 
-	brokHub := linkhub.NewHub(32)
-	brokDial := broker.NewDialer(repoAll, brokHub)
-	httpTrip := &http.Transport{DialContext: brokDial.DialContext}
-	httpCli := httpx.Client{Client: &http.Client{Transport: httpTrip}}
+	brokerHub := linkhub.NewHub(32)
+	//brokHub := linkhub.NewHub(32)
+	//brokDial := broker.NewDialer(repoAll, brokHub)
+	//httpTrip := &http.Transport{DialContext: brokDial.DialContext}
+	//httpCli := httpx.NewClient(&http.Client{Transport: httpTrip})
 	certificateSvc := expservice.NewCertificate(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
-	_ = httpCli
+	//_ = httpCli
 
 	brokSH := ship.Default()
 	brokSH.Validator = valid
@@ -138,12 +137,13 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	}
 
 	agentSvc := expservice.NewAgent(repoAll, log)
-	brokerSvc := expservice.NewBroker(repoAll, brokHub, log)
+	brokerSvc := expservice.NewBroker(repoAll, brokerHub, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
 	}
 
-	brokGate := broker.NewGate(repoAll, brokHub, brokSH, log)
+	serverdOpt := serverd.NewOption().Handler(brokSH).Logger(log).Huber(brokerHub)
+	brokerTunnelHandler := serverd.New(repoAll, cfg, serverdOpt)
 
 	jsmodules := []jsvm.Module{
 		jsmod.NewCrontab(crond),
@@ -156,8 +156,8 @@ func Exec(ctx context.Context, ld config.Loader) error {
 		exprestapi.NewFS(fsSvc),
 		exprestapi.NewLog(logHandler),
 		exprestapi.NewPlay(jsmodules),
-		exprestapi.NewReverse(brokDial, repoAll),
-		exprestapi.NewTunnel(brokGate),
+		exprestapi.NewReverse(nil, repoAll),
+		exprestapi.NewTunnel(brokerTunnelHandler),
 		exprestapi.NewDAV(apiPath, "/"),
 		exprestapi.NewSystem(cfg),
 		shipx.NewHealth(),
@@ -195,16 +195,14 @@ func Exec(ctx context.Context, ld config.Loader) error {
 		TLSConfig: tlsCfg,
 		ErrorLog:  httpLog,
 	}
-	quicSrv := &quick.Server{
-		Addr:    listenAddr,
-		Handler: brokGate,
-		QUICConfig: &quic.Config{
-			TLSConfig: tlsCfg,
-		},
+	quicSrv := &quick.QUICGo{
+		Addr:      listenAddr,
+		Handler:   brokerTunnelHandler,
+		TLSConfig: tlsCfg,
 	}
 
 	errs := make(chan error)
-	go listenQUIC(ctx, errs, quicSrv, log)
+	go listenQUIC(ctx, errs, quicSrv)
 	go listenHTTP(errs, srv, log)
 	select {
 	case err = <-errs:
@@ -251,17 +249,6 @@ func listenHTTP(errs chan<- error, srv *http.Server, log *slog.Logger) {
 	errs <- srv.ServeTLS(ln, "", "")
 }
 
-func listenQUIC(ctx context.Context, errs chan<- error, srv *quick.Server, log *slog.Logger) {
-	addr := srv.Addr
-	endpoint, err := quic.Listen("udp", addr, srv.QUICConfig)
-	if err != nil {
-		errs <- err
-		return
-	}
-	defer endpoint.Close(context.Background())
-
-	laddr := endpoint.LocalAddr()
-	log.Warn("quic 服务监听成功", "listen", laddr)
-
-	errs <- srv.Serve(ctx, endpoint)
+func listenQUIC(ctx context.Context, errs chan<- error, srv quick.Server) {
+	errs <- srv.ListenAndServe(ctx)
 }

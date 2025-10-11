@@ -7,9 +7,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/xmx/aegis-control/contract/linkhub"
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-control/linkhub"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -63,7 +63,7 @@ func (b *Broker) List(ctx context.Context) ([]*model.Broker, error) {
 }
 
 func (b *Broker) Kickout(id bson.ObjectID) error {
-	peer := b.hub.GetByObjectID(id)
+	peer := b.hub.GetByID(id)
 	if peer == nil {
 		return nil
 	}
