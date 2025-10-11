@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/xmx/aegis-control/contract/linkhub"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-control/linkhub"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -25,7 +25,7 @@ type Alive struct {
 
 func (alv *Alive) Ping(ctx context.Context, p linkhub.Peer) error {
 	now := time.Now()
-	id := p.ObjectID()
+	id := p.ID()
 	filter := bson.M{"_id": id, "status": true}
 	update := bson.M{"$set": bson.M{"alive_at": now}}
 
