@@ -1,6 +1,6 @@
 module github.com/xmx/aegis-server
 
-go 1.25.1
+go 1.25.2
 
 require (
 	github.com/creack/pty v1.1.24
@@ -11,8 +11,8 @@ require (
 	github.com/lmittmann/tint v1.1.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20251011055325-15895a3f7de7
-	github.com/xmx/aegis-control v0.0.0-20251011062032-2acf07e823ab
+	github.com/xmx/aegis-common v0.0.0-20251013124854-35a1da585f1a
+	github.com/xmx/aegis-control v0.0.0-20251013130649-e82fcce08189
 	go.mongodb.org/mongo-driver/v2 v2.3.1
 	golang.org/x/crypto v0.43.0
 	golang.org/x/net v0.46.0
@@ -37,7 +37,6 @@ require (
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/xtaci/smux v1.5.35 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
-	go.uber.org/mock v0.6.0 // indirect
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/text v0.30.0 // indirect

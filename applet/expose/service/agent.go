@@ -21,7 +21,7 @@ type Agent struct {
 	log  *slog.Logger
 }
 
-func (a *Agent) List(ctx context.Context) ([]*model.Agent, error) {
+func (a *Agent) List(ctx context.Context) (model.Agents, error) {
 	repo := a.repo.Agent()
 	return repo.Find(ctx, bson.M{})
 }

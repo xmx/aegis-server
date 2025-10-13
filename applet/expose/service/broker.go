@@ -57,7 +57,7 @@ func (b *Broker) Create(ctx context.Context, name string) error {
 	return err
 }
 
-func (b *Broker) List(ctx context.Context) ([]*model.Broker, error) {
+func (b *Broker) List(ctx context.Context) (model.Brokers, error) {
 	repo := b.repo.Broker()
 	return repo.Find(ctx, bson.M{})
 }

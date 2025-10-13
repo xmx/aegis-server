@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"time"
@@ -15,17 +14,18 @@ import (
 	"github.com/xmx/aegis-common/jsos/jsmod"
 	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/cronv3"
+	"github.com/xmx/aegis-common/library/validation"
 	"github.com/xmx/aegis-common/logger"
+	"github.com/xmx/aegis-common/profile"
 	"github.com/xmx/aegis-common/shipx"
-	"github.com/xmx/aegis-common/validation"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
 	"github.com/xmx/aegis-control/quick"
-	brkrestapi "github.com/xmx/aegis-server/applet/broker/restapi"
+	// brkrestapi "github.com/xmx/aegis-server/applet/broker/restapi"
 	expmiddle "github.com/xmx/aegis-server/applet/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/applet/expose/restapi"
 	expservice "github.com/xmx/aegis-server/applet/expose/service"
-	"github.com/xmx/aegis-server/business/bservice"
+	//"github.com/xmx/aegis-server/business/bservice"
 	"github.com/xmx/aegis-server/business/validext"
 	"github.com/xmx/aegis-server/channel/serverd"
 	"github.com/xmx/aegis-server/config"
@@ -36,15 +36,17 @@ import (
 
 func Run(ctx context.Context, path string) error {
 	// 2<<22 = 8388608 (8 MiB)
-	ld := config.Ext(path, 2<<22)
-	return Exec(ctx, ld)
+	opt := profile.NewOption().Limit(2 << 22).ModuleName("aegis/server/config")
+	crd := profile.NewFile[config.Config](path, opt)
+
+	return Exec(ctx, crd)
 }
 
 // Exec 运行服务。
 //
 //goland:noinspection GoUnhandledErrorResult
-func Exec(ctx context.Context, ld config.Loader) error {
-	cfg, err := ld.Load(ctx)
+func Exec(ctx context.Context, crd profile.Reader[config.Config]) error {
+	cfg, err := crd.Read(ctx)
 	if err != nil {
 		return err
 	}
@@ -109,10 +111,10 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	log.Info("数据库索引建立完毕")
 
 	brokerHub := linkhub.NewHub(32)
-	//brokHub := linkhub.NewHub(32)
-	//brokDial := broker.NewDialer(repoAll, brokHub)
-	//httpTrip := &http.Transport{DialContext: brokDial.DialContext}
-	//httpCli := httpx.NewClient(&http.Client{Transport: httpTrip})
+	// brokHub := linkhub.NewHub(32)
+	// brokDial := broker.NewDialer(repoAll, brokHub)
+	// httpTrip := &http.Transport{DialContext: brokDial.DialContext}
+	// httpCli := httpx.NewClient(&http.Client{Transport: httpTrip})
 	certificateSvc := expservice.NewCertificate(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
 	//_ = httpCli
@@ -124,11 +126,9 @@ func Exec(ctx context.Context, ld config.Loader) error {
 	brokSH.Logger = logger.NewShip(logHandler, 6)
 
 	{
-		aliveSvc := bservice.NewAlive(repoAll, log)
-		// systemSvc := bservice.NewSystem(repoAll, log)
+		// aliveSvc := bservice.NewAlive(repoAll, log)
 		routes := []shipx.RouteRegister{
-			brkrestapi.NewAlive(aliveSvc),
-			brkrestapi.NewConfig(cfg),
+			// brkrestapi.NewAlive(aliveSvc),
 		}
 		brokRGB := brokSH.Group("/api")
 		if err = shipx.RegisterRoutes(brokRGB, routes); err != nil {
@@ -181,7 +181,7 @@ func Exec(ctx context.Context, ld config.Loader) error {
 
 	listenAddr := srvCfg.Addr
 	if listenAddr == "" {
-		listenAddr = ":https"
+		listenAddr = ":443"
 	}
 	tlsCfg := &tls.Config{
 		GetCertificate: certificateSvc.GetCertificate,
@@ -200,10 +200,11 @@ func Exec(ctx context.Context, ld config.Loader) error {
 		Handler:   brokerTunnelHandler,
 		TLSConfig: tlsCfg,
 	}
+	log.Info("监听地址", "listen_addr", listenAddr)
 
 	errs := make(chan error)
 	go listenQUIC(ctx, errs, quicSrv)
-	go listenHTTP(errs, srv, log)
+	go listenHTTP(errs, srv)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
@@ -235,18 +236,8 @@ func brokerReset(brk *expservice.Broker) error {
 	return brk.Reset(ctx)
 }
 
-func listenHTTP(errs chan<- error, srv *http.Server, log *slog.Logger) {
-	lc := new(net.ListenConfig)
-	lc.SetMultipathTCP(true)
-	ln, err := lc.Listen(context.Background(), "tcp", srv.Addr)
-	if err != nil {
-		errs <- err
-		return
-	}
-	laddr := ln.Addr().String()
-	log.Warn("http 服务监听成功", "listen", laddr)
-
-	errs <- srv.ServeTLS(ln, "", "")
+func listenHTTP(errs chan<- error, srv *http.Server) {
+	errs <- srv.ListenAndServeTLS("", "")
 }
 
 func listenQUIC(ctx context.Context, errs chan<- error, srv quick.Server) {
