@@ -44,7 +44,7 @@ type Certificate struct {
 	self  atomic.Pointer[tls.Certificate] // 自签名证书。
 }
 
-func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*repository.Pages[model.Certificate, []*model.Certificate], error) {
+func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*repository.Pages[model.Certificate, model.Certificates], error) {
 	filter := make(bson.M, 4)
 	if arr := req.Regexps("common_name", "dns_names"); len(arr) != 0 {
 		filter["$or"] = arr
@@ -261,7 +261,7 @@ func (*Certificate) fingerprintSHA256(cert tls.Certificate) (certSHA256, pubKeyS
 		priKeySHA256 = hex.EncodeToString(sum[:])
 	}
 
-	return
+	return certSHA256, pubKeySHA256, priKeySHA256
 }
 
 func (crt *Certificate) loadManager() *certificateManager {
