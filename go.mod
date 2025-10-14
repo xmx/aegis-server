@@ -11,7 +11,7 @@ require (
 	github.com/lmittmann/tint v1.1.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20251013124854-35a1da585f1a
+	github.com/xmx/aegis-common v0.0.0-20251014095326-d7e73a94b1f8
 	github.com/xmx/aegis-control v0.0.0-20251013130649-e82fcce08189
 	go.mongodb.org/mongo-driver/v2 v2.3.1
 	golang.org/x/crypto v0.43.0

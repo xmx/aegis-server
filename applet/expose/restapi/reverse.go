@@ -2,31 +2,34 @@ package restapi
 
 import (
 	"log/slog"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/library/wsocket"
 	"github.com/xmx/aegis-common/tunnel/tunutil"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-control/library/httpnet"
 )
 
 func NewReverse(dial tunutil.Dialer, repo repository.All) *Reverse {
-	//trip := &http.Transport{DialContext: dial.DialContext}
-	//prx := httpnet.NewReverse(trip)
-	//wsd := &websocket.Dialer{
-	//	NetDialContext:   dial.DialContext,
-	//	HandshakeTimeout: 5 * time.Second,
-	//}
-	//
-	//return &Reverse{
-	//	prx:  prx,
-	//	wsd:  wsd,
-	//	wsu:  wsocket.NewUpgrade(),
-	//	repo: repo,
-	//}
-	return &Reverse{}
+	trip := &http.Transport{DialContext: dial.DialContext}
+	prx := httpnet.NewReverse(trip)
+	wsd := &websocket.Dialer{
+		NetDialContext:   dial.DialContext,
+		HandshakeTimeout: 5 * time.Second,
+	}
+
+	return &Reverse{
+		prx:  prx,
+		wsd:  wsd,
+		wsu:  wsocket.NewUpgrade(),
+		repo: repo,
+	}
 }
 
 type Reverse struct {
@@ -63,22 +66,22 @@ func (rvs *Reverse) agent(c *ship.Context) error {
 }
 
 func (rvs *Reverse) broker(c *ship.Context) error {
-	//id, path := c.Param("id"), "/"+c.Param("path")
-	//w, r := c.Response(), c.Request()
-	//rawPath := r.URL.Path
-	//if path != "/" && strings.HasSuffix(rawPath, "/") {
-	//	path += "/"
-	//}
-	//
-	//reqURL := transport.NewServerBrokerURL(id, path)
-	//r.URL = reqURL
-	//r.Host = reqURL.Host
-	//
-	//if c.IsWebSocket() {
-	//	rvs.serveWebsocket(c, reqURL)
-	//} else {
-	//	rvs.prx.ServeHTTP(w, r)
-	//}
+	id, path := c.Param("id"), "/"+c.Param("path")
+	w, r := c.Response(), c.Request()
+	rawPath := r.URL.Path
+	if path != "/" && strings.HasSuffix(rawPath, "/") {
+		path += "/"
+	}
+
+	reqURL := tunutil.ServerToBroker(id, path)
+	r.URL = reqURL
+	r.Host = reqURL.Host
+
+	if c.IsWebSocket() {
+		rvs.serveWebsocket(c, reqURL)
+	} else {
+		rvs.prx.ServeHTTP(w, r)
+	}
 
 	return nil
 }

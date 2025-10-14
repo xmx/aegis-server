@@ -14,10 +14,12 @@ import (
 	"github.com/xmx/aegis-common/jsos/jsmod"
 	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/cronv3"
+	"github.com/xmx/aegis-common/library/httpx"
 	"github.com/xmx/aegis-common/library/validation"
 	"github.com/xmx/aegis-common/logger"
 	"github.com/xmx/aegis-common/profile"
 	"github.com/xmx/aegis-common/shipx"
+	"github.com/xmx/aegis-common/tunnel/tunutil"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
 	"github.com/xmx/aegis-control/quick"
@@ -110,14 +112,16 @@ func Exec(ctx context.Context, crd profile.Reader[config.Config]) error {
 	}
 	log.Info("数据库索引建立完毕")
 
-	brokerHub := linkhub.NewHub(32)
-	// brokHub := linkhub.NewHub(32)
-	// brokDial := broker.NewDialer(repoAll, brokHub)
-	// httpTrip := &http.Transport{DialContext: brokDial.DialContext}
-	// httpCli := httpx.NewClient(&http.Client{Transport: httpTrip})
+	hub := linkhub.NewHub(32)
+	brokerDialer := linkhub.NewSuffixDialer(hub, tunutil.BrokerHostSuffix)
+	defaultDialer := tunutil.DefaultDialer()
+	dialer := tunutil.NewMatchDialer(defaultDialer, brokerDialer)
+
+	httpTrip := &http.Transport{DialContext: dialer.DialContext}
+	httpCli := httpx.NewClient(&http.Client{Transport: httpTrip})
 	certificateSvc := expservice.NewCertificate(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
-	//_ = httpCli
+	_ = httpCli
 
 	brokSH := ship.Default()
 	brokSH.Validator = valid
@@ -137,12 +141,12 @@ func Exec(ctx context.Context, crd profile.Reader[config.Config]) error {
 	}
 
 	agentSvc := expservice.NewAgent(repoAll, log)
-	brokerSvc := expservice.NewBroker(repoAll, brokerHub, log)
+	brokerSvc := expservice.NewBroker(repoAll, hub, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
 	}
 
-	serverdOpt := serverd.NewOption().Handler(brokSH).Logger(log).Huber(brokerHub)
+	serverdOpt := serverd.NewOption().Handler(brokSH).Logger(log).Huber(hub)
 	brokerTunnelHandler := serverd.New(repoAll, cfg, serverdOpt)
 
 	jsmodules := []jsvm.Module{
@@ -156,7 +160,7 @@ func Exec(ctx context.Context, crd profile.Reader[config.Config]) error {
 		exprestapi.NewFS(fsSvc),
 		exprestapi.NewLog(logHandler),
 		exprestapi.NewPlay(jsmodules),
-		exprestapi.NewReverse(nil, repoAll),
+		exprestapi.NewReverse(dialer, repoAll),
 		exprestapi.NewTunnel(brokerTunnelHandler),
 		exprestapi.NewDAV(apiPath, "/"),
 		exprestapi.NewSystem(cfg),
