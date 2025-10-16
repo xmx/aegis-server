@@ -11,14 +11,14 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/jsos/jsmod"
 	"github.com/xmx/aegis-common/jsos/jsvm"
-	"github.com/xmx/aegis-common/library/wsocket"
+	"github.com/xmx/aegis-common/library/httpkit"
 	"github.com/xmx/aegis-server/applet/expose/data/request"
 )
 
 func NewPlay(mods []jsvm.Module) *Play {
 	return &Play{
 		mods: mods,
-		wsu:  wsocket.NewUpgrade(),
+		wsu:  httpkit.NewWebsocketUpgrader(),
 	}
 }
 
@@ -41,8 +41,8 @@ func (p *Play) js(c *ship.Context) error {
 	}
 	defer ws.Close()
 
-	wsout := wsocket.NewChannelWriter(ws, "stdout")
-	wserr := wsocket.NewChannelWriter(ws, "stderr")
+	wsout := &playWriter{channel: "stdout", socket: ws}
+	wserr := &playWriter{channel: "stderr", socket: ws}
 	req := new(request.PlayJS)
 	now := time.Now()
 	_ = ws.SetReadDeadline(now.Add(10 * time.Second))
@@ -120,4 +120,24 @@ func (p *Play) writeError(w io.Writer, err error) {
 
 func (p *Play) writeText(w io.Writer, msg string) {
 	_, _ = w.Write([]byte(msg))
+}
+
+type playWriter struct {
+	channel string
+	socket  *websocket.Conn
+}
+
+func (pw *playWriter) Write(p []byte) (int, error) {
+	n := len(p)
+	data := &playData{Channel: pw.channel, Message: string(p)}
+	if err := pw.socket.WriteJSON(data); err != nil {
+		return 0, err
+	}
+
+	return n, nil
+}
+
+type playData struct {
+	Channel string `json:"channel"`
+	Message string `json:"message"`
 }

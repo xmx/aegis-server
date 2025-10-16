@@ -6,11 +6,10 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-common/library/wsocket"
+	"github.com/xmx/aegis-common/library/httpkit"
 	"github.com/xmx/aegis-common/tunnel/tunutil"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/library/httpnet"
@@ -19,15 +18,12 @@ import (
 func NewReverse(dial tunutil.Dialer, repo repository.All) *Reverse {
 	trip := &http.Transport{DialContext: dial.DialContext}
 	prx := httpnet.NewReverse(trip)
-	wsd := &websocket.Dialer{
-		NetDialContext:   dial.DialContext,
-		HandshakeTimeout: 5 * time.Second,
-	}
+	wsd := httpkit.NewWebsocketDialer(dial.DialContext)
 
 	return &Reverse{
 		prx:  prx,
 		wsd:  wsd,
-		wsu:  wsocket.NewUpgrade(),
+		wsu:  httpkit.NewWebsocketUpgrader(),
 		repo: repo,
 	}
 }
@@ -68,25 +64,28 @@ func (rvs *Reverse) agent(c *ship.Context) error {
 func (rvs *Reverse) broker(c *ship.Context) error {
 	id, path := c.Param("id"), "/"+c.Param("path")
 	w, r := c.Response(), c.Request()
-	rawPath := r.URL.Path
-	if path != "/" && strings.HasSuffix(rawPath, "/") {
+	reqURL := r.URL
+	reqPath := reqURL.Path
+	if path != "/" && strings.HasSuffix(reqPath, "/") {
 		path += "/"
 	}
 
-	reqURL := tunutil.ServerToBroker(id, path)
-	r.URL = reqURL
-	r.Host = reqURL.Host
+	destURL := tunutil.ServerToBroker(id, path)
+	destURL.RawQuery = reqURL.RawQuery
 
 	if c.IsWebSocket() {
-		rvs.serveWebsocket(c, reqURL)
-	} else {
-		rvs.prx.ServeHTTP(w, r)
+		rvs.serveWebsocket(c, destURL)
+		return nil
 	}
+
+	r.URL = destURL
+	r.Host = destURL.Host
+	rvs.prx.ServeHTTP(w, r)
 
 	return nil
 }
 
-func (rvs *Reverse) serveWebsocket(c *ship.Context, reqURL *url.URL) {
+func (rvs *Reverse) serveWebsocket(c *ship.Context, destURL *url.URL) {
 	w, r := c.Response(), c.Request()
 	ctx := r.Context()
 
@@ -97,13 +96,8 @@ func (rvs *Reverse) serveWebsocket(c *ship.Context, reqURL *url.URL) {
 	}
 	defer cli.Close()
 
-	switch reqURL.Scheme {
-	case "https":
-		reqURL.Scheme = "wss"
-	default:
-		reqURL.Scheme = "ws"
-	}
-	srv, _, err := rvs.wsd.DialContext(ctx, reqURL.String(), nil)
+	destURL.Scheme = "ws"
+	srv, _, err := rvs.wsd.DialContext(ctx, destURL.String(), nil)
 	if err != nil {
 		c.Errorf("websocket 后端连接失败", "error", err)
 		_ = rvs.writeClose(cli, err)
@@ -111,7 +105,7 @@ func (rvs *Reverse) serveWebsocket(c *ship.Context, reqURL *url.URL) {
 	}
 	defer srv.Close()
 
-	ret := wsocket.Pipe(cli, srv)
+	ret := httpkit.ExchangeWebsocket(cli, srv)
 	c.Infof("websocket 连接结束", slog.Any("result", ret))
 }
 

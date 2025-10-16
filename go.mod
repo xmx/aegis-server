@@ -1,6 +1,6 @@
 module github.com/xmx/aegis-server
 
-go 1.25.2
+go 1.25.3
 
 require (
 	github.com/creack/pty v1.1.24
@@ -11,8 +11,8 @@ require (
 	github.com/lmittmann/tint v1.1.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20251014095326-d7e73a94b1f8
-	github.com/xmx/aegis-control v0.0.0-20251013130649-e82fcce08189
+	github.com/xmx/aegis-common v0.0.0-20251016032132-0a3791176b66
+	github.com/xmx/aegis-control v0.0.0-20251016054625-024e1628d4df
 	go.mongodb.org/mongo-driver/v2 v2.3.1
 	golang.org/x/crypto v0.43.0
 	golang.org/x/net v0.46.0
@@ -23,7 +23,7 @@ require (
 
 require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
-	github.com/evanw/esbuild v0.25.10 // indirect
+	github.com/evanw/esbuild v0.25.11 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.10 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect

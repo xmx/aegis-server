@@ -14,7 +14,7 @@ import (
 	"github.com/xmx/aegis-common/jsos/jsmod"
 	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/cronv3"
-	"github.com/xmx/aegis-common/library/httpx"
+	"github.com/xmx/aegis-common/library/httpkit"
 	"github.com/xmx/aegis-common/library/validation"
 	"github.com/xmx/aegis-common/logger"
 	"github.com/xmx/aegis-common/profile"
@@ -23,11 +23,9 @@ import (
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
 	"github.com/xmx/aegis-control/quick"
-	// brkrestapi "github.com/xmx/aegis-server/applet/broker/restapi"
 	expmiddle "github.com/xmx/aegis-server/applet/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/applet/expose/restapi"
 	expservice "github.com/xmx/aegis-server/applet/expose/service"
-	//"github.com/xmx/aegis-server/business/bservice"
 	"github.com/xmx/aegis-server/business/validext"
 	"github.com/xmx/aegis-server/channel/serverd"
 	"github.com/xmx/aegis-server/config"
@@ -118,7 +116,7 @@ func Exec(ctx context.Context, crd profile.Reader[config.Config]) error {
 	dialer := tunutil.NewMatchDialer(defaultDialer, brokerDialer)
 
 	httpTrip := &http.Transport{DialContext: dialer.DialContext}
-	httpCli := httpx.NewClient(&http.Client{Transport: httpTrip})
+	httpCli := httpkit.NewClient(&http.Client{Transport: httpTrip})
 	certificateSvc := expservice.NewCertificate(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
 	_ = httpCli
