@@ -12,7 +12,7 @@ import (
 	"github.com/xmx/aegis-common/jsos/jsmod"
 	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/httpkit"
-	"github.com/xmx/aegis-server/applet/expose/data/request"
+	"github.com/xmx/aegis-server/applet/expose/request"
 )
 
 func NewPlay(mods []jsvm.Module) *Play {

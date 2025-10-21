@@ -9,7 +9,7 @@ import (
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-control/datalayer/model"
-	"github.com/xmx/aegis-server/applet/expose/data/request"
+	"github.com/xmx/aegis-server/applet/expose/request"
 	"github.com/xmx/aegis-server/applet/expose/service"
 )
 
