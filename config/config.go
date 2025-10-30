@@ -2,8 +2,8 @@ package config
 
 import (
 	"log/slog"
-	"time"
 
+	"github.com/xmx/aegis-control/datalayer/model"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -26,10 +26,10 @@ type Database struct {
 
 type Server struct {
 	Addr              string            `json:"addr"`
-	ReadTimeout       Duration          `json:"read_timeout"        validate:"gte=0"`
-	ReadHeaderTimeout Duration          `json:"read_header_timeout" validate:"gte=0"`
-	WriteTimeout      Duration          `json:"write_timeout"       validate:"gte=0"`
-	IdleTimeout       Duration          `json:"idle_timeout"        validate:"gte=0"`
+	ReadTimeout       model.Duration    `json:"read_timeout"        validate:"gte=0"`
+	ReadHeaderTimeout model.Duration    `json:"read_header_timeout" validate:"gte=0"`
+	WriteTimeout      model.Duration    `json:"write_timeout"       validate:"gte=0"`
+	IdleTimeout       model.Duration    `json:"idle_timeout"        validate:"gte=0"`
 	MaxHeaderBytes    int               `json:"max_header_bytes"    validate:"gte=0"`
 	Static            map[string]string `json:"static"              validate:"lte=255"`
 }
@@ -53,28 +53,4 @@ func (l Logger) Lumber() *lumberjack.Logger {
 	}
 
 	return nil
-}
-
-type Duration time.Duration
-
-func (d *Duration) UnmarshalText(raw []byte) error {
-	du, err := time.ParseDuration(string(raw))
-	if err != nil {
-		return err
-	}
-	*d = Duration(du)
-
-	return nil
-}
-
-func (d Duration) MarshalText() ([]byte, error) {
-	du := time.Duration(d)
-	s := du.String()
-
-	return []byte(s), nil
-}
-
-func (d Duration) String() string {
-	du := time.Duration(d)
-	return du.String()
 }

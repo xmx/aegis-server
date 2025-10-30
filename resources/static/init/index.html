@@ -112,6 +112,11 @@
             width: 100%;
             font-size: 16px;
         }
+
+        .required::after {
+            content: " *";
+            color: #e66;
+        }
     </style>
 </head>
 <body>
@@ -119,51 +124,51 @@
     <h2>初始化配置</h2>
 
     <h3>服务器设置</h3>
-    <label>监听地址</label>
+    <label class="required">监听地址</label>
     <input id="addr" type="text" value="0.0.0.0:8443"/>
 
     <label>静态资源路径</label>
     <div id="static-container"></div>
     <button type="button" class="add-btn" onclick="addStaticPair()">＋ 添加路径</button>
 
-    <h3>数据库设置</h3>
-    <label>MongoDB 连接地址</label>
+    <h3>MongoDB 数据库</h3>
+    <label class="required">连接地址</label>
     <input id="dburi" type="text" placeholder="mongodb+srv://username:password@mongo.example.com/dbname"/>
 
     <h3>日志设置</h3>
-    <label>日志级别</label>
+    <label class="required">日志级别</label>
     <select id="loglevel">
         <option>DEBUG</option>
-        <option>INFO</option>
+        <option selected>INFO</option>
         <option>WARN</option>
         <option>ERROR</option>
     </select>
 
     <label>是否输出到控制台</label>
     <select id="console">
-        <option value="true">true</option>
-        <option value="false">false</option>
+        <option value="true">是</option>
+        <option value="false">否</option>
     </select>
 
-    <label>maxsize</label>
+    <label>文件分割大小（单位：M）</label>
     <input id="maxsize" type="number" value="100"/>
 
-    <label>maxage</label>
+    <label>保留天数</label>
     <input id="maxage" type="number" value="180"/>
 
-    <label>maxbackups</label>
+    <label>文件保留个数</label>
     <input id="maxbackups" type="number" value="0"/>
 
-    <label>localtime</label>
+    <label>备份文件是否按照本地时区命名</label>
     <select id="localtime">
-        <option value="true">true</option>
-        <option value="false">false</option>
+        <option value="true">是</option>
+        <option value="false">否</option>
     </select>
 
-    <label>compress</label>
+    <label>是否压缩</label>
     <select id="compress">
-        <option value="true">true</option>
-        <option value="false">false</option>
+        <option value="true">是</option>
+        <option value="false">否</option>
     </select>
 
     <button id="installBtn" class="submit-btn">立即安装</button>
