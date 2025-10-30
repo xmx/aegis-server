@@ -1,9 +1,6 @@
 // 使用前请按照本文格式，创建一个 application.jsonc 的配置文件。
 
 {
-  // 类似于 springboot profile 配置，根据配置切换配置文件。
-  // https://docs.spring.io/spring-boot/reference/features/profiles.html
-  "active": "dev",
   "server": {
     // 服务监听地址，不填写则会随机监听一个端口（看启动日志）。
     "addr": "0.0.0.0:443",

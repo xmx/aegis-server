@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>初始化配置</title>
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background-color: #1e1e1e;
+            color: #ddd;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: #2b2b2b;
+            padding: 30px;
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        h3 {
+            margin-top: 30px;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            background: #1e1e1e;
+            border: 1px solid #555;
+            color: #eee;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #0078d4;
+            box-shadow: 0 0 3px #0078d4;
+        }
+
+        button {
+            background: #0078d4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #005ea2;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background: #333;
+            white-space: pre-wrap;
+        }
+
+        .kv-pair {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .kv-pair input {
+            flex: 1;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: #ccc;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .icon-btn:hover {
+            color: #fff;
+        }
+
+        .add-btn {
+            background: none;
+            border: 1px dashed #777;
+            color: #ccc;
+            border-radius: 4px;
+            padding: 6px 12px;
+            margin-top: 8px;
+            cursor: pointer;
+        }
+
+        .add-btn:hover {
+            border-color: #aaa;
+            color: #fff;
+        }
+
+        .submit-btn {
+            margin-top: 25px;
+            padding: 10px 20px;
+            width: 100%;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>初始化配置</h2>
+
+    <h3>服务器设置</h3>
+    <label>监听地址</label>
+    <input id="addr" type="text" value="0.0.0.0:8443"/>
+
+    <label>静态资源路径</label>
+    <div id="static-container"></div>
+    <button type="button" class="add-btn" onclick="addStaticPair()">＋ 添加路径</button>
+
+    <h3>数据库设置</h3>
+    <label>MongoDB 连接地址</label>
+    <input id="dburi" type="text" placeholder="mongodb+srv://username:password@mongo.example.com/dbname"/>
+
+    <h3>日志设置</h3>
+    <label>日志级别</label>
+    <select id="loglevel">
+        <option>DEBUG</option>
+        <option>INFO</option>
+        <option>WARN</option>
+        <option>ERROR</option>
+    </select>
+
+    <label>是否输出到控制台</label>
+    <select id="console">
+        <option value="true">true</option>
+        <option value="false">false</option>
+    </select>
+
+    <label>maxsize</label>
+    <input id="maxsize" type="number" value="100"/>
+
+    <label>maxage</label>
+    <input id="maxage" type="number" value="180"/>
+
+    <label>maxbackups</label>
+    <input id="maxbackups" type="number" value="0"/>
+
+    <label>localtime</label>
+    <select id="localtime">
+        <option value="true">true</option>
+        <option value="false">false</option>
+    </select>
+
+    <label>compress</label>
+    <select id="compress">
+        <option value="true">true</option>
+        <option value="false">false</option>
+    </select>
+
+    <button id="installBtn" class="submit-btn">立即安装</button>
+    <div id="result" class="result"></div>
+</div>
+
+<script>
+    function createStaticPair(key = "", value = "") {
+        const div = document.createElement("div");
+        div.className = "kv-pair";
+        div.innerHTML = `
+    <input type="text" class="key" placeholder="访问路径，如 /" value="${key}">
+    <input type="text" class="value" placeholder="静态资源目录，如 resources/static/html/" value="${value}">
+    <button class="icon-btn" title="删除" onclick="this.parentElement.remove()">🗑</button>
+  `;
+        return div;
+    }
+
+    function addStaticPair(key = "", value = "") {
+        document.getElementById("static-container").appendChild(createStaticPair(key, value));
+    }
+
+    function collectStaticPairs() {
+        const pairs = document.querySelectorAll("#static-container .kv-pair");
+        const obj = {};
+        pairs.forEach(p => {
+            const key = p.querySelector(".key").value.trim();
+            const value = p.querySelector(".value").value.trim();
+            if (key && value) obj[key] = value;
+        });
+        return obj;
+    }
+
+    // 初始化默认路径
+    addStaticPair("/", "resources/static/root/");
+    addStaticPair("/oas3", "resources/static/oas3/");
+
+    document.getElementById("installBtn").addEventListener("click", async () => {
+        const resultEl = document.getElementById("result");
+        resultEl.textContent = "正在提交配置...";
+
+        try {
+            const payload = {
+                server: {
+                    addr: document.getElementById("addr").value,
+                    static: collectStaticPairs()
+                },
+                database: {
+                    uri: document.getElementById("dburi").value
+                },
+                logger: {
+                    level: document.getElementById("loglevel").value,
+                    console: document.getElementById("console").value === "true",
+                    maxsize: parseInt(document.getElementById("maxsize").value, 10),
+                    maxage: parseInt(document.getElementById("maxage").value, 10),
+                    maxbackups: parseInt(document.getElementById("maxbackups").value, 10),
+                    localtime: document.getElementById("localtime").value === "true",
+                    compress: document.getElementById("compress").value === "true"
+                }
+            };
+
+            const res = await fetch("/api/v1/install", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(payload)
+            });
+
+            const text = await res.text();
+            resultEl.textContent = res.ok
+                ? `安装成功：\n${text}`
+                : `安装失败 (${res.status})：\n${text}`;
+        } catch (err) {
+            resultEl.textContent = `发生错误：${err.message}`;
+        }
+    });
+</script>
+</body>
+</html>

@@ -7,8 +7,14 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+const (
+	// Filename 默认配置文件位置。
+	Filename      = "resources/config/application.jsonc"
+	LogFilename   = "resources/log/application.jsonl"
+	InitialStatic = "resources/static/init/"
+)
+
 type Config struct {
-	Active   string   `json:"active"`
 	Server   Server   `json:"server"`
 	Database Database `json:"database"`
 	Logger   Logger   `json:"logger"`

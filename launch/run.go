@@ -3,7 +3,9 @@ package launch
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -26,6 +28,7 @@ import (
 	expmiddle "github.com/xmx/aegis-server/applet/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/applet/expose/restapi"
 	expservice "github.com/xmx/aegis-server/applet/expose/service"
+	initrestapi "github.com/xmx/aegis-server/applet/initialize/restapi"
 	"github.com/xmx/aegis-server/business/validext"
 	"github.com/xmx/aegis-server/channel/serverd"
 	"github.com/xmx/aegis-server/config"
@@ -34,28 +37,83 @@ import (
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
 )
 
-func Run(ctx context.Context, path string) error {
-	// 2<<22 = 8388608 (8 MiB)
-	opt := profile.NewOption().Limit(2 << 22).ModuleName("aegis/server/config")
-	crd := profile.NewFile[config.Config](path, opt)
+func Run(ctx context.Context, cfgfile string) error {
+	valid := validation.New()
+	_ = valid.RegisterCustomValidations(validation.Customs())
+	_ = valid.RegisterCustomValidations(validext.Customs())
 
-	return Exec(ctx, crd)
-}
+	logHandlers := logger.NewHandler(logger.NewTint(os.Stdout, nil))
+	log := slog.New(logHandlers)
+	log.Info("程序正在启动...")
 
-// Exec 运行服务。
-//
-//goland:noinspection GoUnhandledErrorResult
-func Exec(ctx context.Context, crd profile.Reader[config.Config]) error {
-	cfg, err := crd.Read(ctx)
-	if err != nil {
+	if cfgfile == "" {
+		cfgfile = config.Filename
+	}
+	cfr := profile.File[config.Config](cfgfile)
+	if cfg, err := cfr.Read(); err == nil {
+		return run(ctx, cfg, valid, logHandlers, log)
+	} else if !os.IsNotExist(err) {
+		log.Error("读取配置文件出错", "error", err)
 		return err
 	}
 
-	// 创建参数校验器，并校验配置文件。
-	valid := validation.New()
-	valid.RegisterCustomValidations(validation.Customs())
-	valid.RegisterCustomValidations(validext.Customs())
-	if err = valid.Validate(cfg); err != nil {
+	log.Warn("程序等待初始化")
+	results := make(chan *config.Config, 1)
+	routes := []shipx.RouteRegister{
+		initrestapi.NewInstall(results),
+	}
+
+	sh := ship.Default()
+	sh.Validator = valid
+	sh.NotFound = shipx.NotFound
+	sh.HandleError = shipx.HandleError
+	sh.Logger = logger.NewShip(logHandlers, 6)
+
+	sh.Route("/").Static(config.InitialStatic)
+	apiRBG := sh.Group("/api/v1")
+	if err := shipx.RegisterRoutes(apiRBG, routes); err != nil {
+		log.Error("注册初始化路由错误", "error", err)
+		return err
+	}
+
+	// 从环境变量中获取
+	const envKey = "INIT_LISTEN"
+	listen := os.Getenv(envKey)
+	if listen == "" {
+		log.Info("如需指定监听地址，请设置环境变量", "env_key", envKey)
+	}
+	lis, err := net.Listen("tcp", listen)
+	if err != nil {
+		log.Error("初始化程序监听网络失败", "error", err)
+		return err
+	}
+	errs := make(chan error, 1)
+	srv := &http.Server{Handler: sh}
+	go serveHTTP(errs, srv, lis)
+
+	var port int
+	if laddr, _ := lis.Addr().(*net.TCPAddr); laddr != nil {
+		port = laddr.Port
+	}
+	log.Info("请打开浏览器进行初始化配置", "scheme", "http", "port", port)
+
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case err = <-errs:
+	case cfg := <-results:
+		_ = srv.Close()
+		log.Warn("程序初始化完毕")
+		return run(ctx, cfg, valid, logHandlers, log)
+	}
+	_ = srv.Close()
+
+	return err
+}
+
+func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, logh logger.Handler, log *slog.Logger) error {
+	if err := valid.Validate(cfg); err != nil {
+		log.Error("配置文件校验错误", "error", err)
 		return err
 	}
 
@@ -75,7 +133,6 @@ func Exec(ctx context.Context, crd profile.Reader[config.Config]) error {
 			TimeFormat: time.DateTime,
 		}))
 	}
-	log := slog.New(logHandler)
 	log.Info("日志初始化完毕")
 
 	// -----[ 初始化 mongodb ]-----
@@ -206,7 +263,7 @@ func Exec(ctx context.Context, crd profile.Reader[config.Config]) error {
 
 	errs := make(chan error)
 	go listenQUIC(ctx, errs, quicSrv)
-	go listenHTTP(errs, srv)
+	go listenHTTPS(errs, srv)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
@@ -238,10 +295,18 @@ func brokerReset(brk *expservice.Broker) error {
 	return brk.Reset(ctx)
 }
 
-func listenHTTP(errs chan<- error, srv *http.Server) {
-	errs <- srv.ListenAndServeTLS("", "")
+func serveHTTP(errs chan<- error, srv *http.Server, ln net.Listener) {
+	if err := srv.Serve(ln); errors.Is(err, http.ErrServerClosed) {
+		errs <- nil
+	} else {
+		errs <- err
+	}
 }
 
 func listenQUIC(ctx context.Context, errs chan<- error, srv quick.Server) {
 	errs <- srv.ListenAndServe(ctx)
+}
+
+func listenHTTPS(errs chan<- error, srv *http.Server) {
+	errs <- srv.ListenAndServeTLS("", "")
 }
