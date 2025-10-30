@@ -1,7 +1,10 @@
 package restapi
 
 import (
+	"context"
 	"net"
+	"sync"
+	"time"
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/profile"
@@ -19,6 +22,8 @@ func NewInstall(results chan<- *config.Config) *Install {
 
 type Install struct {
 	results chan<- *config.Config
+	mutex   sync.Mutex
+	done    bool
 }
 
 func (inst *Install) RegisterRoute(r *ship.RouteGroupBuilder) error {
@@ -32,6 +37,13 @@ func (inst *Install) setup(c *ship.Context) error {
 		return err
 	}
 
+	inst.mutex.Lock()
+	defer inst.mutex.Unlock()
+	if inst.done {
+		return ship.ErrBadRequest
+	}
+
+	c.Infof("准备初始化")
 	addr := req.Server.Addr
 	{
 		ln, err := net.Listen("tcp", addr)
@@ -40,13 +52,13 @@ func (inst *Install) setup(c *ship.Context) error {
 		}
 		_ = ln.Close()
 	}
-	//{
-	//	ln, err := net.Listen("udp", addr)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	_ = ln.Close()
-	//}
+	{
+		ln, err := net.ListenPacket("udp", addr)
+		if err != nil {
+			return err
+		}
+		_ = ln.Close()
+	}
 	{
 		parent := c.Request().Context()
 		uri := req.Database.URI
@@ -57,8 +69,11 @@ func (inst *Install) setup(c *ship.Context) error {
 		cli := db.Client()
 		defer cli.Disconnect(parent)
 
-		if err = cli.Ping(parent, nil); err != nil {
-			return err
+		ctx, cancel := context.WithTimeout(parent, 10*time.Second)
+		defer cancel()
+
+		if err = cli.Ping(ctx, nil); err != nil {
+			return ship.ErrBadRequest.Newf("连接数据库错误：%s", err)
 		}
 	}
 	cfg := &config.Config{
@@ -87,6 +102,7 @@ func (inst *Install) setup(c *ship.Context) error {
 		return err
 	}
 	inst.results <- cfg
+	inst.done = true
 
 	return nil
 }
