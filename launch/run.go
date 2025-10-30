@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/lmittmann/tint"
 	"github.com/robfig/cron/v3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/jsos/jsmod"
@@ -127,11 +126,8 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		logHandler.Attach(slog.NewJSONHandler(lumber, logOpts))
 	}
 	if logCfg.Console {
-		logHandler.Attach(tint.NewHandler(os.Stdout, &tint.Options{
-			AddSource:  true,
-			Level:      logLevel,
-			TimeFormat: time.DateTime,
-		}))
+		lh := logger.NewTint(os.Stdout, logOpts)
+		logHandler.Attach(lh)
 	}
 	log.Info("日志初始化完毕")
 
