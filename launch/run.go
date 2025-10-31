@@ -28,6 +28,7 @@ import (
 	exprestapi "github.com/xmx/aegis-server/applet/expose/restapi"
 	expservice "github.com/xmx/aegis-server/applet/expose/service"
 	initrestapi "github.com/xmx/aegis-server/applet/initialize/restapi"
+	initstatic "github.com/xmx/aegis-server/applet/initialize/static"
 	"github.com/xmx/aegis-server/business/validext"
 	"github.com/xmx/aegis-server/channel/serverd"
 	"github.com/xmx/aegis-server/config"
@@ -68,7 +69,7 @@ func Run(ctx context.Context, cfgfile string) error {
 	sh.HandleError = shipx.HandleError
 	sh.Logger = logger.NewShip(logHandlers, 6)
 
-	sh.Route("/").Static(config.InitialStatic)
+	sh.Route("/").StaticFS(http.FS(initstatic.FS))
 	apiRBG := sh.Group("/api/v1")
 	if err := shipx.RegisterRoutes(apiRBG, routes); err != nil {
 		log.Error("注册初始化路由错误", "error", err)

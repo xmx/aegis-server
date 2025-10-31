@@ -6,8 +6,8 @@ CURRENT_TIME=$(date -u +"%FT%TZ")
 
 BEFORE_GOOS=$(go env GOOS)
 BEFORE_GOARCH=$(go env GOARCH)
-for GOOS in linux windows darwin; do
-  for GOARCH in amd64 arm64; do
+for GOOS in linux; do
+  for GOARCH in amd64; do
     go env -w GOOS=${GOOS}
     go env -w GOARCH=${GOARCH}
     BINARY_NAME="${BASE_NAME}_$(go env GOOS)-$(go env GOARCH)_${VERSION}$(go env GOEXE)"
