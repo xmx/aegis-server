@@ -4,13 +4,10 @@ BASE_NAME=$(basename $(pwd))
 VERSION=$(TZ=UTC git log -1 --format="%cd" --date=format-local:"v%y.%m.%d-%H%M%S")
 CURRENT_TIME=$(date -u +"%FT%TZ")
 
-GOOSES=(linux windows darwin)
-GOARCHES=(amd64 arm64)
-
 BEFORE_GOOS=$(go env GOOS)
 BEFORE_GOARCH=$(go env GOARCH)
-for GOOS in "${GOOSES[@]}"; do
-  for GOARCH in "${GOARCHES[@]}"; do
+for GOOS in linux windows darwin; do
+  for GOARCH in amd64 arm64; do
     go env -w GOOS=${GOOS}
     go env -w GOARCH=${GOARCH}
     BINARY_NAME="${BASE_NAME}_$(go env GOOS)-$(go env GOARCH)_${VERSION}$(go env GOEXE)"
