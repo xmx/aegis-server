@@ -3,7 +3,8 @@ package restapi
 import (
 	"context"
 	"net"
-	"sync"
+	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/xgfone/ship/v5"
@@ -11,7 +12,7 @@ import (
 	"github.com/xmx/aegis-control/mongodb"
 	"github.com/xmx/aegis-server/applet/initialize/request"
 	"github.com/xmx/aegis-server/config"
-	"gopkg.in/natefinch/lumberjack.v2"
+	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
 )
 
 func NewInstall(results chan<- *config.Config) *Install {
@@ -22,7 +23,7 @@ func NewInstall(results chan<- *config.Config) *Install {
 
 type Install struct {
 	results chan<- *config.Config
-	mutex   sync.Mutex
+	doing   atomic.Bool
 	done    bool
 }
 
@@ -37,72 +38,74 @@ func (inst *Install) setup(c *ship.Context) error {
 		return err
 	}
 
-	inst.mutex.Lock()
-	defer inst.mutex.Unlock()
+	if !inst.doing.CompareAndSwap(false, true) {
+		return ship.ErrBadRequest.Newf("正在初始化中")
+	}
+	defer inst.doing.Store(false)
 	if inst.done {
-		return ship.ErrBadRequest
+		return ship.ErrBadRequest.Newf("已初始化完毕")
 	}
 
 	c.Infof("准备初始化")
+	parent := c.Request().Context()
 	addr := req.Server.Addr
-	{
-		ln, err := net.Listen("tcp", addr)
-		if err != nil {
-			return err
-		}
-		_ = ln.Close()
-	}
-	{
-		ln, err := net.ListenPacket("udp", addr)
-		if err != nil {
-			return err
-		}
-		_ = ln.Close()
-	}
-	{
-		parent := c.Request().Context()
-		uri := req.Database.URI
-		db, err := mongodb.Open(uri)
-		if err != nil {
-			return err
-		}
-		cli := db.Client()
-		defer cli.Disconnect(parent)
 
-		ctx, cancel := context.WithTimeout(parent, 10*time.Second)
-		defer cancel()
-
-		if err = cli.Ping(ctx, nil); err != nil {
-			return ship.ErrBadRequest.Newf("连接数据库错误：%s", err)
-		}
-	}
-	cfg := &config.Config{
-		Server: config.Server{
-			Addr:   addr,
-			Static: req.Server.Static,
-		},
-		Database: config.Database{
-			URI: req.Database.URI,
-		},
-		Logger: config.Logger{
-			Level:   req.Logger.Level,
-			Console: req.Logger.Console,
-			Logger: &lumberjack.Logger{
-				Filename:   config.LogFilename,
-				MaxSize:    req.Logger.MaxSize,
-				MaxAge:     req.Logger.MaxAge,
-				MaxBackups: req.Logger.MaxBackups,
-				LocalTime:  req.Logger.LocalTime,
-				Compress:   req.Logger.Compress,
-			},
-		},
-	}
-
-	if err := profile.WriteFile(config.Filename, cfg); err != nil {
+	taddr, err := net.ResolveTCPAddr("tcp", addr)
+	if err != nil {
+		c.Errorf("监听地址输入不合法", "addr", addr, "error", err)
 		return err
 	}
-	inst.results <- cfg
+	pkt, err := net.ListenPacket("udp", addr)
+	if err != nil {
+		c.Errorf("UDP 监听不可用", "addr", addr, "error", err)
+		return err
+	}
+	_ = pkt.Close()
+	var same bool
+	val := parent.Value(http.LocalAddrContextKey)
+	if adr, _ := val.(*net.TCPAddr); adr != nil {
+		same = taddr.Port == adr.Port
+	}
+	if !same {
+		ln, err := net.ListenTCP("tcp", taddr)
+		if err != nil {
+			c.Errorf("TCP 监听不可用", "addr", addr, "error", err)
+			return err
+		}
+		_ = ln.Close()
+	}
+
+	uri := req.Database.URI
+	pu, err := connstring.Parse(uri)
+	if err != nil {
+		return err
+	}
+	dbname := pu.Database
+	if dbname == "" {
+		return ship.ErrBadRequest.Newf("数据库连接地址缺少库名")
+	}
+
+	db, err := mongodb.Open(uri)
+	if err != nil {
+		return err
+	}
+	cli := db.Client()
+	defer cli.Disconnect(parent)
+
+	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
+	defer cancel()
+
+	if err = cli.Ping(ctx, nil); err != nil {
+		return ship.ErrBadRequest.Newf("连接数据库错误：%s", err)
+	}
+
+	cfg := req.Config()
+	if err = profile.WriteFile(config.Filename, cfg); err != nil {
+		return err
+	}
+	c.Infof("配置初始化并保存成功")
 	inst.done = true
+	inst.results <- cfg
 
 	return nil
 }

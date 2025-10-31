@@ -37,7 +37,7 @@ resources/log/*
 resources/temp/*
 resources/test/*
 
-aegis-server-*
+aegis-server_*
 
 resources/temp
 resources/test

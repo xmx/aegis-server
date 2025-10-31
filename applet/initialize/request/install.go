@@ -1,6 +1,10 @@
 package request
 
-import "github.com/xmx/aegis-control/datalayer/model"
+import (
+	"github.com/xmx/aegis-control/datalayer/model"
+	"github.com/xmx/aegis-server/config"
+	"gopkg.in/natefinch/lumberjack.v2"
+)
 
 type InstallSetup struct {
 	Server   Server   `json:"server"`
@@ -30,4 +34,33 @@ type Logger struct {
 	MaxBackups int    `json:"maxbackups" validate:"gte=0"`
 	LocalTime  bool   `json:"localtime"`
 	Compress   bool   `json:"compress"`
+}
+
+func (s InstallSetup) Config() *config.Config {
+	return &config.Config{
+		Server: config.Server{
+			Addr:              s.Server.Addr,
+			ReadTimeout:       s.Server.ReadTimeout,
+			ReadHeaderTimeout: s.Server.ReadHeaderTimeout,
+			WriteTimeout:      s.Server.WriteTimeout,
+			IdleTimeout:       s.Server.IdleTimeout,
+			MaxHeaderBytes:    s.Server.MaxHeaderBytes,
+			Static:            s.Server.Static,
+		},
+		Database: config.Database{
+			URI: s.Database.URI,
+		},
+		Logger: config.Logger{
+			Level:   s.Logger.Level,
+			Console: s.Logger.Console,
+			Logger: &lumberjack.Logger{
+				Filename:   config.LogFilename,
+				MaxSize:    s.Logger.MaxSize,
+				MaxAge:     s.Logger.MaxAge,
+				MaxBackups: s.Logger.MaxBackups,
+				LocalTime:  s.Logger.LocalTime,
+				Compress:   s.Logger.Compress,
+			},
+		},
+	}
 }

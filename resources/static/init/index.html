@@ -6,7 +6,7 @@
     <title>初始化配置</title>
     <style>
         body {
-            font-family: "Segoe UI", sans-serif;
+            font-family: "IBM Plex Mono", Consolas, "Segoe UI", sans-serif;
             background-color: #1e1e1e;
             color: #ddd;
             padding: 40px;
@@ -20,7 +20,7 @@
             border-radius: 8px;
         }
 
-        h1 {
+        h2, h5 {
             text-align: center;
         }
 
@@ -31,18 +31,41 @@
         label {
             display: block;
             margin-top: 15px;
+            position: relative;
         }
 
-        input[type="text"], input[type="number"], select {
+        input[type="text"],
+        input[type="number"],
+        input[type="password"],
+        select {
             width: 100%;
-            padding: 8px;
+            padding: 8px 10px;
             margin-top: 5px;
             background: #1e1e1e;
             border: 1px solid #555;
             color: #eee;
+            box-sizing: border-box;
+            height: 36px;
         }
 
-        input:focus, select:focus {
+        input[readonly] {
+            color: #aaa;
+            background-color: #2a2a2a;
+            cursor: not-allowed;
+        }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        input:focus,
+        select:focus {
             outline: none;
             border-color: #0078d4;
             box-shadow: 0 0 3px #0078d4;
@@ -72,6 +95,7 @@
             display: flex;
             gap: 10px;
             margin-top: 8px;
+            align-items: center;
         }
 
         .kv-pair input {
@@ -81,10 +105,16 @@
         .icon-btn {
             background: none;
             border: none;
-            color: #ccc;
-            font-size: 18px;
+            color: #aaa;
             cursor: pointer;
             padding: 0 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        .icon-btn svg {
+            width: 18px;
+            height: 18px;
         }
 
         .icon-btn:hover {
@@ -117,26 +147,88 @@
             content: " *";
             color: #e66;
         }
+
+        .hint-icon {
+            color: #888;
+            cursor: pointer;
+            margin-left: 4px;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .hint-icon:hover {
+            color: #fff;
+        }
+
+        .hint-box {
+            position: absolute;
+            top: -4px;
+            left: 20px;
+            background: rgba(43, 43, 43, 0.95);
+            color: #ddd;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            box-shadow: 0 0 8px #000;
+            z-index: 1000;
+            font-size: 13px;
+            line-height: 1.4em;
+            white-space: normal;
+            width: max-content;
+            max-width: 500px;
+            display: none;
+        }
+
+        .hint-icon.active .hint-box {
+            display: block;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <h2>初始化配置</h2>
+    <h5>如果不确定如何填写，请使用默认值。</h5>
+
+    <!--<h3>初始化管理员</h3>
+    <label>用户名<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">如果不填写，系统会自动初始化一个名为 admin 的管理员用户，请留意后台日志输出查看。</span>
+    </span>
+    </label>
+    <input id="username" type="text" placeholder="admin"/>
+
+    <label>密码<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">如果不填写，系统会自动生成一个密码，请留意后台日志输出查看。</span>
+    </span>
+    </label>
+    <input id="password" type="password" placeholder="请输入初始化密码"/>-->
 
     <h3>服务器设置</h3>
-    <label class="required">监听地址</label>
+    <label class="required">监听地址<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">格式如 0.0.0.0:8443，表示监听所有网卡的 8443 端口。</span>
+    </span>
+    </label>
     <input id="addr" type="text" value="0.0.0.0:8443"/>
 
-    <label>静态资源路径</label>
+    <label>静态资源映射<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">配置访问路径与本地静态目录的映射，如 / → resources/static/root/</span>
+    </span>
+    </label>
     <div id="static-container"></div>
     <button type="button" class="add-btn" onclick="addStaticPair()">＋ 添加路径</button>
 
     <h3>MongoDB 数据库</h3>
-    <label class="required">连接地址</label>
-    <input id="dburi" type="text" placeholder="mongodb+srv://username:password@mongo.example.com/dbname"/>
+    <label class="required">连接地址<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">要包含数据库库名</span>
+    </span>
+    </label>
+    <input id="dburi" type="text"
+           placeholder="mongodb+srv://username:password@db.example.com:27017/dbname?authSource=admin&maxPoolSize=1024"/>
 
     <h3>日志设置</h3>
-    <label class="required">日志级别</label>
+    <label class="required">日志级别<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">建议生产环境使用 INFO 或 WARN。</span>
+    </span>
+    </label>
     <select id="loglevel">
         <option>DEBUG</option>
         <option selected>INFO</option>
@@ -144,28 +236,46 @@
         <option>ERROR</option>
     </select>
 
-    <label>是否输出到控制台</label>
+    <label>是否输出到控制台<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">建议生产环境选不输出到控制台</span>
+    </span>
+    </label>
     <select id="console">
         <option value="true">是</option>
-        <option value="false">否</option>
+        <option value="false" selected>否</option>
     </select>
 
-    <label>文件分割大小（单位：M）</label>
+    <label>文件分割大小<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">单个日志文件达到该大小后将自动切割，单位：MB。</span>
+    </span>
+    </label>
     <input id="maxsize" type="number" value="100"/>
 
-    <label>保留天数</label>
+    <label>保留天数<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">日志文件在多少天后会被自动清理。</span>
+    </span>
+    </label>
     <input id="maxage" type="number" value="180"/>
 
-    <label>文件保留个数</label>
+    <label>文件保留个数<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">最多保留多少个备份文件，0 表示不限。</span>
+    </span>
+    </label>
     <input id="maxbackups" type="number" value="0"/>
 
-    <label>备份文件是否按照本地时区命名</label>
+    <label>备份文件是否使用本地时区命名<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">若为“是”，则日志备份文件名使用本地时间而非 UTC。</span>
+    </span>
+    </label>
     <select id="localtime">
-        <option value="true">是</option>
+        <option value="true" selected>是</option>
         <option value="false">否</option>
     </select>
 
-    <label>是否压缩</label>
+    <label>是否压缩<span class="hint-icon" onclick="toggleHint(this)">ⓘ
+      <span class="hint-box">是否压缩旧的日志文件以节省空间。</span>
+    </span>
+    </label>
     <select id="compress">
         <option value="true">是</option>
         <option value="false">否</option>
@@ -176,14 +286,32 @@
 </div>
 
 <script>
-    function createStaticPair(key = "", value = "") {
+    function toggleHint(el) {
+        const active = el.classList.contains("active");
+        document.querySelectorAll(".hint-icon.active").forEach(e => e.classList.remove("active"));
+        if (!active) el.classList.add("active");
+    }
+
+    document.addEventListener("click", e => {
+        if (!e.target.closest(".hint-icon")) {
+            document.querySelectorAll(".hint-icon.active").forEach(el => el.classList.remove("active"));
+        }
+    });
+
+    // readonly: 是否为只读项（不可编辑、不可删除）
+    function createStaticPair(key = "", value = "", readonly = false) {
         const div = document.createElement("div");
         div.className = "kv-pair";
         div.innerHTML = `
-    <input type="text" class="key" placeholder="访问路径，如 /" value="${key}">
-    <input type="text" class="value" placeholder="静态资源目录，如 resources/static/html/" value="${value}">
-    <button class="icon-btn" title="删除" onclick="this.parentElement.remove()">🗑</button>
-  `;
+            <input type="text" class="key" placeholder="访问路径，如 /" value="${key}" ${readonly ? "readonly" : ""}>
+            <input type="text" class="value" placeholder="静态资源目录，如 resources/static/html/" value="${value}" ${readonly ? "readonly" : ""}>
+            ${readonly ? "" : `
+            <button class="icon-btn" title="删除" onclick="this.parentElement.remove()">
+                <svg viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M9 3v1H4v2h16V4h-5V3H9zm2 5v10h2V8h-2zM7 8v10h2V8H7zm8 0v10h2V8h-2z"/>
+                </svg>
+            </button>`}
+        `;
         return div;
     }
 
@@ -202,22 +330,28 @@
         return obj;
     }
 
-    // 初始化默认路径
-    addStaticPair("/", "resources/static/root/");
+    // 默认静态路径：根目录为只读，其余可编辑
+    document.getElementById("static-container").appendChild(createStaticPair("/", "resources/static/root/", true));
     addStaticPair("/oas3", "resources/static/oas3/");
 
     document.getElementById("installBtn").addEventListener("click", async () => {
         const resultEl = document.getElementById("result");
+        const btn = document.getElementById("installBtn");
         resultEl.textContent = "正在提交配置...";
+        btn.disabled = true;
 
         try {
             const payload = {
+                /*                admin: {
+                                    name: document.getElementById("username").value.trim(),
+                                    passwd: document.getElementById("password").value
+                                },*/
                 server: {
-                    addr: document.getElementById("addr").value,
-                    static: collectStaticPairs()
+                    addr: document.getElementById("addr").value.trim(),
+                    static: collectStaticPairs(),
                 },
                 database: {
-                    uri: document.getElementById("dburi").value
+                    uri: document.getElementById("dburi").value.trim()
                 },
                 logger: {
                     level: document.getElementById("loglevel").value,
@@ -230,6 +364,12 @@
                 }
             };
 
+            if (!payload.database.uri) {
+                resultEl.textContent = "请填写必填项：数据库连接地址。";
+                btn.disabled = false;
+                return;
+            }
+
             const res = await fetch("/api/v1/install", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
@@ -238,10 +378,12 @@
 
             const text = await res.text();
             resultEl.textContent = res.ok
-                ? `安装成功：\n${text}`
+                ? `安装成功，请用浏览器手动访问配置的地址。`
                 : `安装失败 (${res.status})：\n${text}`;
         } catch (err) {
             resultEl.textContent = `发生错误：${err.message}`;
+        } finally {
+            btn.disabled = false;
         }
     });
 </script>

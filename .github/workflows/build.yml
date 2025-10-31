@@ -51,4 +51,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: aegis-server
-          path: aegis-server-*
+          path: aegis-server_*

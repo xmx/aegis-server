@@ -75,11 +75,11 @@ func Run(ctx context.Context, cfgfile string) error {
 		return err
 	}
 
-	// 从环境变量中获取
-	const envKey = "INIT_LISTEN"
-	listen := os.Getenv(envKey)
+	// 如没有指定监听端口，则会随机的监听一个端口。
+	// 但是在机房或者是限制环境中，网络只有部分端口可通，此时需要指定监听地址。
+	listen := os.Getenv(config.EnvKeyInitialAddr)
 	if listen == "" {
-		log.Info("如需指定监听地址，请设置环境变量", "env_key", envKey)
+		log.Info("如需指定监听地址，请设置环境变量", "env_key", config.EnvKeyInitialAddr)
 	}
 	lis, err := net.Listen("tcp", listen)
 	if err != nil {
@@ -87,7 +87,12 @@ func Run(ctx context.Context, cfgfile string) error {
 		return err
 	}
 	errs := make(chan error, 1)
-	srv := &http.Server{Handler: sh}
+	srv := &http.Server{
+		Handler:        sh,
+		MaxHeaderBytes: 10 * 1024,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+	}
 	go serveHTTP(errs, srv, lis)
 
 	var port int
@@ -101,7 +106,9 @@ func Run(ctx context.Context, cfgfile string) error {
 		err = ctx.Err()
 	case err = <-errs:
 	case cfg := <-results:
-		_ = srv.Close()
+		cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		_ = srv.Shutdown(cctx)
+		cancel()
 		log.Warn("程序初始化完毕")
 		return run(ctx, cfg, valid, logHandlers, log)
 	}
