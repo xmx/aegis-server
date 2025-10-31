@@ -26,25 +26,7 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: 编译 linux 程序
-        run: sh build.sh
-
-      - name: 编译 windows 程序
-        env:
-          GOOS: windows
-          GOARCH: amd64
-        run: sh build.sh
-
-      - name: 编译 darwin-amd64 程序
-        env:
-          GOOS: darwin
-          GOARCH: amd64
-        run: sh build.sh
-
-      - name: 编译 darwin-arm64 程序
-        env:
-          GOOS: darwin
-          GOARCH: arm64
+      - name: 编译程序
         run: sh build.sh
 
       - name: 上传产物
