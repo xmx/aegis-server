@@ -80,8 +80,8 @@ func Run(ctx context.Context, cfgfile string) error {
 	// 但是在机房或者是限制环境中，网络只有部分端口可通，此时需要指定监听地址。
 	listen := os.Getenv(config.EnvKeyInitialAddr)
 	if listen == "" {
-		log.Info("如需指定监听地址，请设置环境变量", "env_key", config.EnvKeyInitialAddr)
 		listen = ":8443"
+		log.Info("如需指定监听地址，请设置环境变量", "env_key", config.EnvKeyInitialAddr)
 	}
 	lis, err := net.Listen("tcp", listen)
 	if err != nil {
