@@ -67,7 +67,7 @@ func Run(ctx context.Context, cfgfile string) error {
 	sh.Validator = valid
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
-	sh.Logger = logger.NewShip(logHandlers, 6)
+	sh.Logger = logger.NewShip(logHandlers)
 
 	sh.Route("/").StaticFS(http.FS(initstatic.FS))
 	apiRBG := sh.Group("/api/v1")
@@ -182,11 +182,12 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	fsSvc := expservice.NewFS(repoAll, log)
 	_ = httpCli
 
+	shipLog := logger.NewShip(logh)
 	brokSH := ship.Default()
 	brokSH.Validator = valid
 	brokSH.NotFound = shipx.NotFound
 	brokSH.HandleError = shipx.HandleErrorWithHost("server.internal")
-	brokSH.Logger = logger.NewShip(logh, 6)
+	brokSH.Logger = shipLog
 
 	{
 		// aliveSvc := bservice.NewAlive(repoAll, log)
@@ -232,7 +233,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	outSH.Validator = valid
 	outSH.NotFound = shipx.NotFound
 	outSH.HandleError = shipx.HandleError
-	outSH.Logger = logger.NewShip(logh, 6)
+	outSH.Logger = shipLog
 
 	rootRGB := outSH.Group("/")
 	_ = exprestapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
@@ -251,7 +252,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		NextProtos:     []string{"h2", "http/1.1", "aegis"},
 		MinVersion:     tls.VersionTLS13,
 	}
-	httpLog := logger.NewV1(slog.New(logger.Skip(logHandler, 8)))
+	httpLog := logger.NewV1(slog.New(logger.Skip(logh, 8)))
 	srv := &http.Server{
 		Addr:      listenAddr,
 		Handler:   outSH,
