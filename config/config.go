@@ -11,7 +11,6 @@ const (
 	// Filename 默认配置文件位置。
 	Filename          = "resources/config/application.jsonc"
 	LogFilename       = "resources/log/application.jsonl"
-	InitialStatic     = "resources/static/init/"
 	EnvKeyInitialAddr = "AEGIS_INIT_ADDR"
 )
 

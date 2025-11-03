@@ -18,20 +18,20 @@ type Agent struct {
 	svc *service.Agent
 }
 
-func (a *Agent) RegisterRoute(r *ship.RouteGroupBuilder) error {
-	r.Route("/agents").GET(a.list)
+func (agt *Agent) RegisterRoute(r *ship.RouteGroupBuilder) error {
+	r.Route("/agents").GET(agt.page)
 
 	return nil
 }
 
-func (a *Agent) list(c *ship.Context) error {
+func (agt *Agent) page(c *ship.Context) error {
 	req := new(request.PageKeywords)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 
 	ctx := c.Request().Context()
-	ret, err := a.svc.Page(ctx, req)
+	ret, err := agt.svc.Page(ctx, req)
 	if err != nil {
 		return err
 	}

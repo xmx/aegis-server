@@ -10,6 +10,7 @@ import (
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
+	"github.com/xmx/aegis-server/applet/expose/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -27,17 +28,23 @@ type Broker struct {
 	log  *slog.Logger
 }
 
-func (b *Broker) Reset(ctx context.Context) error {
+func (brk *Broker) Reset(ctx context.Context) error {
 	filter := bson.M{"status": true}
 	update := bson.M{"$set": bson.M{"status": false}}
 
-	repo := b.repo.Broker()
+	repo := brk.repo.Broker()
 	_, err := repo.UpdateMany(ctx, filter, update)
 
 	return err
 }
 
-func (b *Broker) Create(ctx context.Context, name string) error {
+func (brk *Broker) Page(ctx context.Context, req *request.PageKeywords) (*repository.Pages[model.Broker, model.Brokers], error) {
+	repo := brk.repo.Broker()
+
+	return repo.FindPagination(ctx, bson.D{}, req.Page, req.Size)
+}
+
+func (brk *Broker) Create(ctx context.Context, name string) error {
 	now := time.Now()
 	buf := make([]byte, 50)
 	_, _ = rand.Read(buf)
@@ -51,19 +58,14 @@ func (b *Broker) Create(ctx context.Context, name string) error {
 		CreatedAt: now,
 	}
 
-	repo := b.repo.Broker()
+	repo := brk.repo.Broker()
 	_, err := repo.InsertOne(ctx, dat)
 
 	return err
 }
 
-func (b *Broker) List(ctx context.Context) (model.Brokers, error) {
-	repo := b.repo.Broker()
-	return repo.Find(ctx, bson.M{})
-}
-
-func (b *Broker) Kickout(id bson.ObjectID) error {
-	peer := b.hub.GetByID(id)
+func (brk *Broker) Kickout(id bson.ObjectID) error {
+	peer := brk.hub.GetByID(id)
 	if peer == nil {
 		return nil
 	}
