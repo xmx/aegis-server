@@ -81,6 +81,7 @@ func Run(ctx context.Context, cfgfile string) error {
 	listen := os.Getenv(config.EnvKeyInitialAddr)
 	if listen == "" {
 		log.Info("如需指定监听地址，请设置环境变量", "env_key", config.EnvKeyInitialAddr)
+		listen = ":8443"
 	}
 	lis, err := net.Listen("tcp", listen)
 	if err != nil {
@@ -127,15 +128,14 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	// 初始化日志组件。
 	logCfg := cfg.Logger
 	logLevel := logCfg.LevelVar()
-	logHandler := logger.NewHandler()
 	logOpts := &slog.HandlerOptions{AddSource: true, Level: logLevel}
 	if lumber := logCfg.Lumber(); lumber != nil {
 		defer lumber.Close()
-		logHandler.Attach(slog.NewJSONHandler(lumber, logOpts))
+		logh.Attach(slog.NewJSONHandler(lumber, logOpts))
 	}
 	if logCfg.Console {
 		lh := logger.NewTint(os.Stdout, logOpts)
-		logHandler.Attach(lh)
+		logh.Attach(lh)
 	}
 	log.Info("日志初始化完毕")
 
@@ -147,7 +147,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	}
 
 	mongoLogOpt := options.Logger().
-		SetSink(logger.NewSink(logHandler, 13)).
+		SetSink(logger.NewSink(logh, 13)).
 		SetComponentLevel(options.LogComponentCommand, options.LogLevelDebug)
 	mongoOpt := options.Client().
 		ApplyURI(mongoURI).
@@ -186,7 +186,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	brokSH.Validator = valid
 	brokSH.NotFound = shipx.NotFound
 	brokSH.HandleError = shipx.HandleErrorWithHost("server.internal")
-	brokSH.Logger = logger.NewShip(logHandler, 6)
+	brokSH.Logger = logger.NewShip(logh, 6)
 
 	{
 		// aliveSvc := bservice.NewAlive(repoAll, log)
@@ -217,7 +217,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewBroker(brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
 		exprestapi.NewFS(fsSvc),
-		exprestapi.NewLog(logHandler),
+		exprestapi.NewLog(logh),
 		exprestapi.NewPlay(jsmodules),
 		exprestapi.NewReverse(dialer, repoAll),
 		exprestapi.NewTunnel(brokerTunnelHandler),
@@ -232,7 +232,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	outSH.Validator = valid
 	outSH.NotFound = shipx.NotFound
 	outSH.HandleError = shipx.HandleError
-	outSH.Logger = logger.NewShip(logHandler, 6)
+	outSH.Logger = logger.NewShip(logh, 6)
 
 	rootRGB := outSH.Group("/")
 	_ = exprestapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
