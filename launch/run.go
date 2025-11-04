@@ -23,18 +23,18 @@ import (
 	"github.com/xmx/aegis-common/tunnel/tunutil"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
+	"github.com/xmx/aegis-control/mongodb"
 	"github.com/xmx/aegis-control/quick"
 	expmiddle "github.com/xmx/aegis-server/applet/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/applet/expose/restapi"
 	expservice "github.com/xmx/aegis-server/applet/expose/service"
 	initrestapi "github.com/xmx/aegis-server/applet/initialize/restapi"
 	initstatic "github.com/xmx/aegis-server/applet/initialize/static"
+	"github.com/xmx/aegis-server/applet/serverd"
 	"github.com/xmx/aegis-server/business/validext"
-	"github.com/xmx/aegis-server/channel/serverd"
 	"github.com/xmx/aegis-server/config"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
 )
 
 func Run(ctx context.Context, cfgfile string) error {
@@ -139,37 +139,29 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	}
 	log.Info("日志初始化完毕")
 
-	// -----[ 初始化 mongodb ]-----
-	mongoURI := cfg.Database.URI
-	mongoURL, err := connstring.ParseAndValidate(mongoURI)
-	if err != nil {
-		return err
-	}
-
 	mongoLogOpt := options.Logger().
 		SetSink(logger.NewSink(logh, 13)).
 		SetComponentLevel(options.LogComponentCommand, options.LogLevelDebug)
-	mongoOpt := options.Client().
-		ApplyURI(mongoURI).
-		SetLoggerOptions(mongoLogOpt)
-	cli, err := mongo.Connect(mongoOpt)
+	mongoOpt := options.Client().SetLoggerOptions(mongoLogOpt)
+	db, err := mongodb.Open(cfg.Database.URI, mongoOpt)
 	if err != nil {
+		log.Error("数据库连接错误", "error", err)
 		return err
 	}
-	defer disconnectDB(cli)
+	defer disconnectDB(db)
 	log.Info("数据库连接成功")
+
+	log.Info("开始初始化数据库索引...")
+	repoAll := repository.NewAll(db)
+	if err = repoAll.CreateIndex(ctx); err != nil {
+		log.Error("索引创建错误", "error", err)
+		return err
+	}
+	log.Info("数据库索引建立完毕")
 
 	crond := cronv3.New(ctx, log, cron.WithSeconds())
 	crond.Start()
 	defer crond.Stop()
-
-	mongoDB := cli.Database(mongoURL.Database)
-	repoAll := repository.NewAll(mongoDB)
-
-	if err = repoAll.CreateIndex(ctx); err != nil {
-		return err
-	}
-	log.Info("数据库索引建立完毕")
 
 	hub := linkhub.NewHub(32)
 	brokerDialer := linkhub.NewSuffixDialer(hub, tunutil.BrokerHostSuffix)
@@ -286,11 +278,11 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	return err
 }
 
-func disconnectDB(cli *mongo.Client) {
+func disconnectDB(db *mongo.Database) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_ = cli.Disconnect(ctx)
+	_ = db.Client().Disconnect(ctx)
 }
 
 func brokerReset(brk *expservice.Broker) error {

@@ -12,7 +12,6 @@ import (
 	"github.com/xmx/aegis-control/mongodb"
 	"github.com/xmx/aegis-server/applet/initialize/request"
 	"github.com/xmx/aegis-server/config"
-	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/connstring"
 )
 
 func NewInstall(results chan<- *config.Config) *Install {
@@ -75,17 +74,7 @@ func (inst *Install) setup(c *ship.Context) error {
 		_ = ln.Close()
 	}
 
-	uri := req.Database.URI
-	pu, err := connstring.Parse(uri)
-	if err != nil {
-		return err
-	}
-	dbname := pu.Database
-	if dbname == "" {
-		return ship.ErrBadRequest.Newf("数据库连接地址缺少库名")
-	}
-
-	db, err := mongodb.Open(uri)
+	db, err := mongodb.Open(req.Database.URI)
 	if err != nil {
 		return err
 	}

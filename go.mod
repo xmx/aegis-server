@@ -7,23 +7,21 @@ require (
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/grafana/sobek v0.0.0-20251030131753-d05c9166857d
+	github.com/grafana/sobek v0.0.0-20251103154147-6b40183f38e5
 	github.com/lmittmann/tint v1.1.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20251030112629-536220a01757
-	github.com/xmx/aegis-control v0.0.0-20251030114113-8b1823508ec7
+	github.com/xmx/aegis-common v0.0.0-20251103114431-724d3e5abf6d
+	github.com/xmx/aegis-control v0.0.0-20251103114445-e8ef94e0f074
 	go.mongodb.org/mongo-driver/v2 v2.4.0
 	golang.org/x/crypto v0.43.0
 	golang.org/x/net v0.46.0
-	golang.org/x/sys v0.37.0
-	golang.org/x/time v0.14.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
 require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
-	github.com/evanw/esbuild v0.25.11 // indirect
+	github.com/evanw/esbuild v0.25.12 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
@@ -39,6 +37,7 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
 )

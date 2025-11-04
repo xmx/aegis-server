@@ -24,7 +24,7 @@ import (
 	"github.com/xmx/aegis-common/contract/errcode"
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
-	"github.com/xmx/aegis-server/contract/request"
+	"github.com/xmx/aegis-server/applet/expose/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -46,7 +46,8 @@ type Certificate struct {
 
 func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*repository.Pages[model.Certificate, model.Certificates], error) {
 	filter := make(bson.M, 4)
-	if arr := req.Regexps("common_name", "dns_names"); len(arr) != 0 {
+	fields := []string{"common_name", "dns_names"}
+	if arr := req.Regexps(fields); len(arr) != 0 {
 		filter["$or"] = arr
 	}
 	repo := crt.repo.Certificate()

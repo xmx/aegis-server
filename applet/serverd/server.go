@@ -2,6 +2,7 @@ package serverd
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net"
@@ -16,6 +17,7 @@ import (
 	"github.com/xmx/aegis-control/linkhub"
 	"github.com/xmx/aegis-server/config"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 func New(repo repository.All, cfg *config.Config, opts ...options.Lister[option]) tunutil.Handler {
@@ -36,6 +38,7 @@ type brokerServer struct {
 }
 
 func (bs *brokerServer) Handle(mux tundial.Muxer) {
+	//goland:noinspection GoUnhandledErrorResult
 	defer mux.Close()
 
 	if !bs.opt.allow() {
@@ -78,6 +81,7 @@ func (bs *brokerServer) authentication(mux tundial.Muxer, timeout time.Duration)
 		bs.log().Error("等待客户端建立认证连接出错", "error", err)
 		return nil, false
 	}
+	//goland:noinspection GoUnhandledErrorResult
 	defer sig.Close()
 
 	// 读取数据
@@ -99,9 +103,16 @@ func (bs *brokerServer) authentication(mux tundial.Muxer, timeout time.Duration)
 	}
 	brok, err := bs.findBroker(req.Secret, timeout)
 	if err != nil {
-		attrs = append(attrs, slog.Any("error", err))
-		bs.log().Error("查询 broker 节点错误", attrs...)
-		_ = bs.writeError(sig, http.StatusInternalServerError, err)
+		code := http.StatusInternalServerError
+		if errors.Is(err, mongo.ErrNilDocument) {
+			bs.log().Warn("broker 节点不存在")
+			code = http.StatusNotFound
+		} else {
+			attrs = append(attrs, slog.Any("error", err))
+			bs.log().Error("查询 broker 节点错误", attrs...)
+		}
+
+		_ = bs.writeError(sig, code, err)
 		return nil, false
 	}
 	if brok.Status { // 节点已经在线了
@@ -118,7 +129,6 @@ func (bs *brokerServer) authentication(mux tundial.Muxer, timeout time.Duration)
 		return nil, false
 	}
 
-	// TODO 响应成功报文
 	authCfg := authConfig{URI: bs.cfg.Database.URI}
 	if err = bs.writeSucceed(sig, authCfg); err != nil {
 		bs.opt.huber.DelByID(brokerID)
@@ -133,8 +143,8 @@ func (bs *brokerServer) authentication(mux tundial.Muxer, timeout time.Duration)
 		KeepaliveAt: now,
 		Protocol:    protocol,
 		Subprotocol: subprotocol,
-		LocalAddr:   laddr.String(),
-		RemoteAddr:  raddr.String(),
+		LocalAddr:   raddr.String(), // 位置互换
+		RemoteAddr:  laddr.String(),
 	}
 	exeStat := &model.ExecuteStat{
 		Goos:       req.Goos,
