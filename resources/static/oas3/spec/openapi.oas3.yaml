@@ -23,9 +23,9 @@ servers:
     description: 本机服务
 tags:
   - name: ⚙️ 系统设置
-    description: 系统设置
+  - name: "\U0001F680 发布部署"
 paths:
-  /config/certificates:
+  /certificates:
     get:
       summary: TLS证书-分页查询
       tags:
@@ -33,16 +33,17 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/GetConfigCertificates'
-      operationId: get-config-certificates
+      operationId: get-certificates
       description: TLS证书-分页查询
       parameters:
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
         - $ref: '#/components/parameters/keyword'
-  /config/certificate:
+    parameters: []
+  /certificate:
     post:
       summary: TLS证书-新增
-      operationId: post-config-certificate
+      operationId: post-certificate
       responses:
         '200':
           description: OK
@@ -80,7 +81,8 @@ paths:
       description: 删除证书
       parameters:
         - $ref: '#/components/parameters/ids'
-  /config/certificate/cond:
+    parameters: []
+  /certificate/cond:
     get:
       summary: TLS证书-查询条件
       tags:
@@ -88,9 +90,10 @@ paths:
       responses:
         '200':
           description: OK
-      operationId: get-config-certificate-cond
+      operationId: get-certificate-cond
       description: TLS证书-查询条件
-  /config/certificate/download:
+    parameters: []
+  /certificate/download:
     get:
       summary: TLS证书-下载
       tags:
@@ -105,11 +108,12 @@ paths:
                 format: binary
                 description: 文件下载流
                 additionalProperties: false
-      operationId: get-config-certificate-download
+      operationId: get-certificate-download
       description: 下载证书和私钥
       parameters:
         - $ref: '#/components/parameters/ids'
-  /config/certificate/refresh:
+    parameters: []
+  /certificate/refresh:
     get:
       summary: TLS证书-刷新
       tags:
@@ -117,8 +121,9 @@ paths:
       responses:
         '200':
           description: OK
-      operationId: get-config-certificate-refresh
+      operationId: get-certificate-refresh
       description: 刷新HTTP证书
+    parameters: []
   '/dav/{wildcard}':
     parameters:
       - $ref: '#/components/parameters/wildcard'
@@ -390,6 +395,8 @@ paths:
               required:
                 - file
         description: ''
+      tags:
+        - "\U0001F680 发布部署"
   /agent-release/parse:
     post:
       summary: 解析 agent 二进制包信息
@@ -421,6 +428,12 @@ paths:
                       - amd64
                       - arm64
                     example: amd64
+                  version:
+                    type: string
+                    x-stoplight:
+                      id: 2b9o1yypoe1vm
+                    description: 版本
+                    example: 25.3.23-090923
                 required:
                   - goos
                   - goarch
@@ -439,6 +452,8 @@ paths:
                   format: binary
               required:
                 - file
+      tags:
+        - "\U0001F680 发布部署"
 components:
   securitySchemes:
     Authorization:
