@@ -360,6 +360,85 @@ paths:
           in: query
           name: password
           description: SSH 密码
+  /agent-release:
+    post:
+      summary: 上传 agent 二进制
+      operationId: post-agent-release
+      responses:
+        '200':
+          description: OK
+      description: 上传 agent 二进制
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  x-stoplight:
+                    id: 4nxnhr0qr72ml
+                  description: 二进制文件
+                  format: binary
+                changelog:
+                  type: string
+                  x-stoplight:
+                    id: csozkq4s3r3q6
+                  description: 变更日志
+                  example: 优化了用户体验，修复了 xxx BUG。
+                  maxLength: 10000
+              required:
+                - file
+        description: ''
+  /agent-release/parse:
+    post:
+      summary: 解析 agent 二进制包信息
+      operationId: post-agent-release-parse
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  goos:
+                    type: string
+                    x-stoplight:
+                      id: nl5v08mwwjhgf
+                    description: 操作系统
+                    enum:
+                      - linux
+                      - windows
+                      - darwin
+                    example: linux
+                  goarch:
+                    type: string
+                    x-stoplight:
+                      id: szzvb19kkw57o
+                    description: 系统架构
+                    enum:
+                      - amd64
+                      - arm64
+                    example: amd64
+                required:
+                  - goos
+                  - goarch
+      description: 解析 agent 二进制包信息
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  x-stoplight:
+                    id: unk90b6mswtlu
+                  description: 二进制文件
+                  format: binary
+              required:
+                - file
 components:
   securitySchemes:
     Authorization:
