@@ -274,19 +274,6 @@ paths:
       description: WebDAV 文件管理接口。
       tags:
         - ⚙️ 系统设置
-  /sse/log/tail:
-    get:
-      summary: 日志-观测
-      tags:
-        - ⚙️ 系统设置
-      responses:
-        '200':
-          description: OK
-      operationId: get-sse-log-tail
-      description: |-
-        通过 SSE 观测运行日志。
-
-        > 该接口是 Server-Sent Events 协议。
   /js/play/pprof:
     get:
       summary: JS-pprof 火焰图采集
@@ -454,6 +441,36 @@ paths:
                 - file
       tags:
         - "\U0001F680 发布部署"
+  /log/watch:
+    get:
+      summary: 日志观测
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+      operationId: get-log-watch
+      description: 本接口会自适应 `WebSocket` `SSE` `streamableHTTP`
+      parameters:
+        - schema:
+            type: string
+            enum:
+              - DEBUG
+              - INFO
+              - WARN
+              - ERROR
+            example: INFO
+          in: query
+          name: level
+          description: 日志级别
+        - schema:
+            type: string
+            enum:
+              - text
+              - json
+          in: query
+          name: format
+          description: 输出格式
 components:
   securitySchemes:
     Authorization:
