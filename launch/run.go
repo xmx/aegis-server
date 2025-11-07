@@ -178,7 +178,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	brokSH := ship.Default()
 	brokSH.Validator = valid
 	brokSH.NotFound = shipx.NotFound
-	brokSH.HandleError = shipx.HandleErrorWithHost("server.internal")
+	brokSH.HandleError = shipx.HandleError
 	brokSH.Logger = shipLog
 
 	{
@@ -193,6 +193,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	}
 
 	agentSvc := expservice.NewAgent(repoAll, log)
+	agentReleaseSvc := expservice.NewAgentRelease(repoAll, log)
 	brokerSvc := expservice.NewBroker(repoAll, hub, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
@@ -207,6 +208,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
 		exprestapi.NewAgent(agentSvc),
+		exprestapi.NewAgentRelease(agentReleaseSvc, brokerSvc),
 		exprestapi.NewBroker(brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
 		exprestapi.NewFS(fsSvc),

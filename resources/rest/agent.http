@@ -1,0 +1,12 @@
+### 下载 agent 二进制程序
+GET {{host}}/api/agent-release?id=6909eae156d2cd88047aaeb2
+
+### 上传文件
+POST {{host}}/api/agent-release
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="aegis-agent_windows-arm64_v25.11.04-032143.exe"
+
+< aegis-agent_windows-arm64_v25.11.04-032143.exe
+--WebAppBoundary--

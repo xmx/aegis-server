@@ -92,7 +92,7 @@ func (crt *Certificate) detail(c *ship.Context) error {
 
 	ctx := c.Request().Context()
 	oid, _ := bson.ObjectIDFromHex(req.ID)
-	ret, err := crt.svc.Detail(ctx, oid)
+	ret, err := crt.svc.Get(ctx, oid)
 	if err != nil {
 		return err
 	}

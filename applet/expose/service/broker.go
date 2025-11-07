@@ -10,8 +10,10 @@ import (
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
+	"github.com/xmx/aegis-server/applet/errcode"
 	"github.com/xmx/aegis-server/applet/expose/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func NewBroker(repo repository.All, hub linkhub.Huber, log *slog.Logger) *Broker {
@@ -44,7 +46,7 @@ func (brk *Broker) Page(ctx context.Context, req *request.PageKeywords) (*reposi
 	return repo.FindPagination(ctx, bson.D{}, req.Page, req.Size)
 }
 
-func (brk *Broker) Create(ctx context.Context, name string) error {
+func (brk *Broker) Create(ctx context.Context, req *request.BrokerCreate) error {
 	now := time.Now()
 	buf := make([]byte, 50)
 	_, _ = rand.Read(buf)
@@ -52,7 +54,8 @@ func (brk *Broker) Create(ctx context.Context, name string) error {
 	secret := hex.EncodeToString(buf)
 
 	dat := &model.Broker{
-		Name:      name,
+		Name:      req.Name,
+		Exposes:   req.Exposes,
 		Secret:    secret,
 		UpdatedAt: now,
 		CreatedAt: now,
@@ -73,4 +76,32 @@ func (brk *Broker) Kickout(id bson.ObjectID) error {
 	_ = mux.Close()
 
 	return nil
+}
+
+func (brk *Broker) Exposes(ctx context.Context) ([]string, error) {
+	opt := options.Find().SetProjection(bson.M{"exposes": 1})
+	repo := brk.repo.Broker()
+	brks, err := repo.Find(ctx, bson.D{}, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	exposes := make([]string, 0, 10)
+	uniq := make(map[string]struct{}, 16)
+	for _, b := range brks {
+		for _, exp := range b.Exposes {
+			if exp == "" {
+				continue
+			}
+			if _, ok := uniq[exp]; !ok {
+				uniq[exp] = struct{}{}
+				exposes = append(exposes, exp)
+			}
+		}
+	}
+	if len(exposes) == 0 {
+		return nil, errcode.ErrNilDocument
+	}
+
+	return exposes, nil
 }

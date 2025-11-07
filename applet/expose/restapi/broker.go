@@ -47,7 +47,7 @@ func (bk *Broker) create(c *ship.Context) error {
 	}
 	ctx := c.Request().Context()
 
-	return bk.svc.Create(ctx, req.Name)
+	return bk.svc.Create(ctx, req)
 }
 
 func (bk *Broker) kickout(c *ship.Context) error {

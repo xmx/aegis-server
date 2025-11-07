@@ -112,16 +112,12 @@ func (fs *FS) download(c *ship.Context) error {
 		size := strconv.FormatInt(stat.Size(), 10)
 		c.SetRespHeader(ship.HeaderContentLength, size)
 
-		param := map[string]string{"filename": name}
+		params := make(map[string]string, 4)
 		if mfs, _ := stat.Sys().(*model.FS); mfs != nil {
-			chk := mfs.Checksum
-			param["md5"] = chk.MD5
-			param["sha1"] = chk.SHA1
-			param["sha256"] = chk.SHA256
-			param["sha512"] = chk.SHA512
-			param["sha3256"] = chk.SHA3256
+			params = mfs.Checksum.Map()
 		}
-		disposition := mime.FormatMediaType("attachment", param)
+		params["filename"] = name
+		disposition := mime.FormatMediaType("attachment", params)
 		c.SetRespHeader(ship.HeaderContentDisposition, disposition)
 	}
 	if contentType == "" {

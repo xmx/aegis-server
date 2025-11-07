@@ -1,0 +1,17 @@
+### 创建 broker 节点
+POST {{host}}/api/broker
+Content-Type: application/json
+
+{
+  "name": "本地测试",
+  "exposes": [
+    "172.31.61.168:9443"
+  ],
+  "config": {
+    "server": {
+      "addr": "0.0.0.0:9443"
+    }
+  }
+}
+
+###

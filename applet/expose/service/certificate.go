@@ -21,9 +21,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/xmx/aegis-common/contract/errcode"
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-server/applet/errcode"
 	"github.com/xmx/aegis-server/applet/expose/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -58,7 +58,7 @@ func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*r
 	return repo.FindPagination(ctx, filter, req.Page, req.Size, opt)
 }
 
-func (crt *Certificate) Detail(ctx context.Context, id bson.ObjectID) (*model.Certificate, error) {
+func (crt *Certificate) Get(ctx context.Context, id bson.ObjectID) (*model.Certificate, error) {
 	repo := crt.repo.Certificate()
 	return repo.FindByID(ctx, id)
 }
@@ -167,7 +167,7 @@ func (crt *Certificate) Delete(ctx context.Context, ids []bson.ObjectID) error {
 	if err != nil {
 		return err
 	} else if res.DeletedCount == 0 {
-		return errcode.ErrDataNotExists
+		return errcode.ErrNilDocument
 	}
 	crt.Forget(ctx)
 
