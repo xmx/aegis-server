@@ -5,6 +5,7 @@ import (
 	"debug/buildinfo"
 	"io"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/xmx/aegis-common/banner"
@@ -12,23 +13,24 @@ import (
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-server/applet/errcode"
 	"github.com/xmx/aegis-server/applet/expose/request"
+	"github.com/xmx/aegis-server/applet/expose/response"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func NewAgentRelease(repo repository.All, log *slog.Logger) *AgentRelease {
-	return &AgentRelease{
+func NewBrokerRelease(repo repository.All, log *slog.Logger) *BrokerRelease {
+	return &BrokerRelease{
 		repo: repo,
 		log:  log,
 	}
 }
 
-type AgentRelease struct {
+type BrokerRelease struct {
 	repo repository.All
 	log  *slog.Logger
 }
 
-func (ar *AgentRelease) Upload(ctx context.Context, req *request.AgentReleaseUpload) error {
+func (br *BrokerRelease) Upload(ctx context.Context, req *request.BrokerReleaseUpload) error {
 	now := time.Now()
 	file, err := req.File.Open()
 	if err != nil {
@@ -36,21 +38,22 @@ func (ar *AgentRelease) Upload(ctx context.Context, req *request.AgentReleaseUpl
 	}
 	defer file.Close()
 
-	build, meta, err := ar.Parse(file)
+	bi, meta, err := br.Parse(file)
 	if err != nil {
 		return err
 	}
 
 	// 上传文件
 	filename := req.File.Filename
-	repo := ar.repo.AgentRelease()
+	repo := br.repo.BrokerRelease()
 	info, err := repo.SaveFile(ctx, file, filename)
 	if err != nil {
 		return err
 	}
 
+	build := model.FormatBuildInfo(bi)
 	semver := model.ParseSemver(meta.Version)
-	data := &model.AgentRelease{
+	data := &model.BrokerRelease{
 		FileID:    info.FileID,
 		Filename:  filename,
 		Goos:      meta.Goos,
@@ -58,7 +61,7 @@ func (ar *AgentRelease) Upload(ctx context.Context, req *request.AgentReleaseUpl
 		Length:    info.Length,
 		Semver:    semver.Version,
 		Version:   semver.Number,
-		BuildInfo: model.FormatBuildInfo(build),
+		BuildInfo: build,
 		Checksum:  info.Checksum,
 		Changelog: req.Changelog,
 		CreatedAt: now,
@@ -71,21 +74,47 @@ func (ar *AgentRelease) Upload(ctx context.Context, req *request.AgentReleaseUpl
 	return err
 }
 
-func (ar *AgentRelease) Parse(r io.ReaderAt) (*buildinfo.BuildInfo, *banner.Info, error) {
+func (br *BrokerRelease) Parse(r io.ReaderAt) (*buildinfo.BuildInfo, *response.ExecutableMetadata, error) {
 	bi, err := buildinfo.Read(r)
 	if err != nil {
 		return nil, nil, err
 	}
-	if bi.Main.Path != "github.com/xmx/aegis-agent" {
-		return nil, nil, errcode.ErrInvalidBinaryRelease
+
+	if bi.Main.Path != "github.com/xmx/aegis-broker" {
+		return nil, nil, errcode.ErrBadAgentRelease
 	}
-	info := banner.ParseInfo(bi)
+
+	info := new(response.ExecutableMetadata)
+	for _, set := range bi.Settings {
+		key, val := set.Key, set.Value
+		switch key {
+		case "GOOS":
+			info.Goos = val
+		case "GOARCH":
+			info.Goarch = val
+		case "vcs.time":
+			if at, _ := time.ParseInLocation(time.RFC3339, val, time.UTC); !at.IsZero() {
+				info.Version = banner.ParseVersion(at)
+			}
+		}
+	}
+	if info.Version != "" {
+		return bi, info, nil
+	}
+
+	mv := bi.Main.Version
+	after, _ := strings.CutPrefix(mv, "v0.0.0-")
+	before, _, _ := strings.Cut(after, "-")
+	at, _ := time.ParseInLocation("20060102150405", before, time.UTC)
+	if !at.IsZero() {
+		info.Version = banner.ParseVersion(at)
+	}
 
 	return bi, info, nil
 }
 
-func (ar *AgentRelease) Open(ctx context.Context, id bson.ObjectID) (*model.AgentRelease, *mongo.GridFSDownloadStream, error) {
-	repo := ar.repo.AgentRelease()
+func (br *BrokerRelease) Open(ctx context.Context, id bson.ObjectID) (*model.AgentRelease, *mongo.GridFSDownloadStream, error) {
+	repo := br.repo.AgentRelease()
 	release, err := repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, nil, err
