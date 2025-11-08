@@ -5,7 +5,6 @@ import (
 	"debug/buildinfo"
 	"io"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/xmx/aegis-common/banner"
@@ -13,7 +12,6 @@ import (
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-server/applet/errcode"
 	"github.com/xmx/aegis-server/applet/expose/request"
-	"github.com/xmx/aegis-server/applet/expose/response"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -74,41 +72,16 @@ func (br *BrokerRelease) Upload(ctx context.Context, req *request.BrokerReleaseU
 	return err
 }
 
-func (br *BrokerRelease) Parse(r io.ReaderAt) (*buildinfo.BuildInfo, *response.ExecutableMetadata, error) {
+func (br *BrokerRelease) Parse(r io.ReaderAt) (*buildinfo.BuildInfo, *banner.Info, error) {
 	bi, err := buildinfo.Read(r)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if bi.Main.Path != "github.com/xmx/aegis-broker" {
-		return nil, nil, errcode.ErrBadAgentRelease
+		return nil, nil, errcode.ErrInvalidBinaryRelease
 	}
-
-	info := new(response.ExecutableMetadata)
-	for _, set := range bi.Settings {
-		key, val := set.Key, set.Value
-		switch key {
-		case "GOOS":
-			info.Goos = val
-		case "GOARCH":
-			info.Goarch = val
-		case "vcs.time":
-			if at, _ := time.ParseInLocation(time.RFC3339, val, time.UTC); !at.IsZero() {
-				info.Version = banner.ParseVersion(at)
-			}
-		}
-	}
-	if info.Version != "" {
-		return bi, info, nil
-	}
-
-	mv := bi.Main.Version
-	after, _ := strings.CutPrefix(mv, "v0.0.0-")
-	before, _, _ := strings.Cut(after, "-")
-	at, _ := time.ParseInLocation("20060102150405", before, time.UTC)
-	if !at.IsZero() {
-		info.Version = banner.ParseVersion(at)
-	}
+	info := banner.ParseInfo(bi)
 
 	return bi, info, nil
 }
