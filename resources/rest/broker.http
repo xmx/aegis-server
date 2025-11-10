@@ -14,4 +14,18 @@ Content-Type: application/json
   }
 }
 
-###
+### 上传 broker 二进制
+POST {{host}}/api/broker-release
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="changelog"
+Content-Type: text/plain
+
+测试发布版本
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="aegis-broker_linux-arm64_v25.11.8-111641"
+Content-Type: application/json
+
+< aegis-broker_linux-arm64_v25.11.8-111641
+--WebAppBoundary--

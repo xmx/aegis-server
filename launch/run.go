@@ -31,7 +31,7 @@ import (
 	initrestapi "github.com/xmx/aegis-server/applet/initialize/restapi"
 	initstatic "github.com/xmx/aegis-server/applet/initialize/static"
 	"github.com/xmx/aegis-server/applet/serverd"
-	"github.com/xmx/aegis-server/business/validext"
+	"github.com/xmx/aegis-server/applet/validext"
 	"github.com/xmx/aegis-server/config"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -195,6 +195,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	agentSvc := expservice.NewAgent(repoAll, log)
 	agentReleaseSvc := expservice.NewAgentRelease(repoAll, log)
 	brokerSvc := expservice.NewBroker(repoAll, hub, log)
+	brokerReleaseSvc := expservice.NewBrokerRelease(repoAll, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
 	}
@@ -210,6 +211,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewAgent(agentSvc),
 		exprestapi.NewAgentRelease(agentReleaseSvc, brokerSvc),
 		exprestapi.NewBroker(brokerSvc),
+		exprestapi.NewBrokerRelease(brokerReleaseSvc),
 		exprestapi.NewCertificate(certificateSvc),
 		exprestapi.NewFS(fsSvc),
 		exprestapi.NewLog(logh),
