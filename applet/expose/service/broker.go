@@ -78,7 +78,7 @@ func (brk *Broker) Kickout(id bson.ObjectID) error {
 	return nil
 }
 
-func (brk *Broker) Exposes(ctx context.Context) ([]string, error) {
+func (brk *Broker) Exposes(ctx context.Context) (model.ExposeAddresses, error) {
 	opt := options.Find().SetProjection(bson.M{"exposes": 1})
 	repo := brk.repo.Broker()
 	brks, err := repo.Find(ctx, bson.D{}, opt)
@@ -86,18 +86,9 @@ func (brk *Broker) Exposes(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	exposes := make([]string, 0, 10)
-	uniq := make(map[string]struct{}, 16)
+	var exposes model.ExposeAddresses
 	for _, b := range brks {
-		for _, exp := range b.Exposes {
-			if exp == "" {
-				continue
-			}
-			if _, ok := uniq[exp]; !ok {
-				uniq[exp] = struct{}{}
-				exposes = append(exposes, exp)
-			}
-		}
+		exposes = append(exposes, b.Exposes...)
 	}
 	if len(exposes) == 0 {
 		return nil, errcode.ErrNilDocument

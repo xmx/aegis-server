@@ -84,7 +84,7 @@ func (ar *AgentRelease) download(c *ship.Context) error {
 
 	filesize := info.Length
 	manifest := &response.AgentManifest{
-		Addresses: exposes,
+		Addresses: exposes.Addresses(),
 		Offset:    filesize,
 	}
 

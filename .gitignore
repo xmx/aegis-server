@@ -38,11 +38,14 @@ resources/temp/*
 resources/test/*
 
 aegis-server_*
+aegis-broker_*
+aegis-agent_*
 
 resources/temp
 resources/test
 resources/app
 
+http-client.private.env.json
 crash.txt
 *.crash.txt
 *.cast

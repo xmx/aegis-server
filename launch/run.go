@@ -129,6 +129,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	logCfg := cfg.Logger
 	logLevel := logCfg.LevelVar()
 	logOpts := &slog.HandlerOptions{AddSource: true, Level: logLevel}
+	logh.Replace() // reset 日志
 	if lumber := logCfg.Lumber(); lumber != nil {
 		defer lumber.Close()
 		logh.Attach(slog.NewJSONHandler(lumber, logOpts))
