@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-server/applet/expose/request"
-	"github.com/xmx/aegis-server/applet/expose/service"
+	"github.com/xmx/aegis-server/application/expose/request"
+	"github.com/xmx/aegis-server/application/expose/service"
 )
 
 func NewAgent(svc *service.Agent) *Agent {

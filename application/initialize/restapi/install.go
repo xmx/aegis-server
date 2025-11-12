@@ -10,7 +10,7 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/profile"
 	"github.com/xmx/aegis-control/mongodb"
-	"github.com/xmx/aegis-server/applet/initialize/request"
+	"github.com/xmx/aegis-server/application/initialize/request"
 	"github.com/xmx/aegis-server/config"
 )
 

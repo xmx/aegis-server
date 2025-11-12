@@ -23,8 +23,8 @@ import (
 
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
-	"github.com/xmx/aegis-server/applet/errcode"
-	"github.com/xmx/aegis-server/applet/expose/request"
+	"github.com/xmx/aegis-server/application/errcode"
+	"github.com/xmx/aegis-server/application/expose/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )

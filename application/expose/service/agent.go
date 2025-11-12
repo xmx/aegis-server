@@ -6,7 +6,7 @@ import (
 
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
-	"github.com/xmx/aegis-server/applet/expose/request"
+	"github.com/xmx/aegis-server/application/expose/request"
 )
 
 func NewAgent(repo repository.All, log *slog.Logger) *Agent {

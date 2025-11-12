@@ -8,9 +8,9 @@ import (
 
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/stegano"
-	"github.com/xmx/aegis-server/applet/expose/request"
-	"github.com/xmx/aegis-server/applet/expose/response"
-	"github.com/xmx/aegis-server/applet/expose/service"
+	"github.com/xmx/aegis-server/application/expose/request"
+	"github.com/xmx/aegis-server/application/expose/response"
+	"github.com/xmx/aegis-server/application/expose/service"
 )
 
 func NewAgentRelease(svc *service.AgentRelease, brok *service.Broker) *AgentRelease {

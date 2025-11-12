@@ -12,7 +12,7 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/library/useragent"
 	"github.com/xmx/aegis-common/logger"
-	"github.com/xmx/aegis-server/applet/expose/request"
+	"github.com/xmx/aegis-server/application/expose/request"
 	"github.com/xmx/aegis-server/protocol/eventsource"
 )
 
