@@ -282,7 +282,7 @@ paths:
         description: ''
   /log/watch:
     get:
-      summary: 日志观测
+      summary: 【日志】实时观测
       tags:
         - ⚙️ 系统设置
       responses:
