@@ -212,7 +212,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewAgent(agentSvc),
 		exprestapi.NewAgentRelease(agentReleaseSvc, brokerSvc),
 		exprestapi.NewBroker(brokerSvc),
-		exprestapi.NewBrokerRelease(brokerReleaseSvc),
+		exprestapi.NewBrokerRelease(brokerReleaseSvc, brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
 		exprestapi.NewFS(fsSvc),
 		exprestapi.NewLog(logh),
