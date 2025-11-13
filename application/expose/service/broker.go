@@ -10,10 +10,8 @@ import (
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
-	"github.com/xmx/aegis-server/application/errcode"
 	"github.com/xmx/aegis-server/application/expose/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func NewBroker(repo repository.All, hub linkhub.Huber, log *slog.Logger) *Broker {
@@ -78,21 +76,8 @@ func (brk *Broker) Kickout(id bson.ObjectID) error {
 	return nil
 }
 
-func (brk *Broker) Exposes(ctx context.Context) (model.ExposeAddresses, error) {
-	opt := options.Find().SetProjection(bson.M{"exposes": 1})
+func (brk *Broker) GetByName(ctx context.Context, name string) (*model.Broker, error) {
+	filter := bson.D{{"name", name}}
 	repo := brk.repo.Broker()
-	brks, err := repo.Find(ctx, bson.D{}, opt)
-	if err != nil {
-		return nil, err
-	}
-
-	var exposes model.ExposeAddresses
-	for _, b := range brks {
-		exposes = append(exposes, b.Exposes...)
-	}
-	if len(exposes) == 0 {
-		return nil, errcode.ErrNilDocument
-	}
-
-	return exposes, nil
+	return repo.FindOne(ctx, filter)
 }

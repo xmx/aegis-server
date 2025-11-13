@@ -14,6 +14,7 @@ import (
 	"github.com/xmx/aegis-server/application/expose/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func NewAgentRelease(repo repository.All, log *slog.Logger) *AgentRelease {
@@ -84,17 +85,39 @@ func (ar *AgentRelease) Parse(r io.ReaderAt) (*buildinfo.BuildInfo, *banner.Info
 	return bi, info, nil
 }
 
-func (ar *AgentRelease) Open(ctx context.Context, id bson.ObjectID) (*model.AgentRelease, *mongo.GridFSDownloadStream, error) {
+func (ar *AgentRelease) Open(ctx context.Context, fileID bson.ObjectID) (*mongo.GridFSDownloadStream, error) {
 	repo := ar.repo.AgentRelease()
-	release, err := repo.FindByID(ctx, id)
-	if err != nil {
-		return nil, nil, err
-	}
-	fileID := release.FileID
 	stm, err := repo.OpenFile(ctx, fileID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return release, stm, nil
+	return stm, nil
+}
+
+func (ar *AgentRelease) Latest(ctx context.Context, goos, goarch string) (*model.AgentRelease, error) {
+	filter := bson.D{{"goos", goos}, {"goarch", goarch}}
+	order := bson.D{{"version", -1}, {"_id", -1}}
+	opt := options.FindOne().SetSort(order)
+	repo := ar.repo.AgentRelease()
+
+	return repo.FindOne(ctx, filter, opt)
+}
+
+func (ar *AgentRelease) Exposes(ctx context.Context) (model.ExposeAddresses, error) {
+	opt := options.Find().SetProjection(bson.M{"exposes": 1})
+	repo := ar.repo.Broker()
+	broks, err := repo.Find(ctx, bson.D{}, opt)
+	if err != nil {
+		return nil, err
+	} else if len(broks) == 0 {
+		return nil, errcode.ErrNilDocument
+	}
+
+	var exposes model.ExposeAddresses
+	for _, brok := range broks {
+		exposes = append(exposes, brok.Exposes...)
+	}
+
+	return exposes, nil
 }

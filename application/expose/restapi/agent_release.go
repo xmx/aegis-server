@@ -65,29 +65,41 @@ func (ar *AgentRelease) parse(c *ship.Context) error {
 }
 
 func (ar *AgentRelease) download(c *ship.Context) error {
-	req := new(request.ObjectID)
+	req := new(request.ReleaseDownload)
 	if err := c.BindQuery(req); err != nil {
 		return err
 	}
 
+	goos, goarch := req.Goos, req.Goarch
+	attrs := []any{"goos", goos, "goarch", goarch}
 	ctx := c.Request().Context()
-	info, stm, err := ar.svc.Open(ctx, req.OID())
+	exposes, err := ar.svc.Exposes(ctx)
 	if err != nil {
+		attrs = append(attrs, "error", err)
+		c.Warnf("请检查 broker 是否存在并且配置了暴露地址", attrs...)
+		return err
+	}
+
+	last, err := ar.svc.Latest(ctx, req.Goos, req.Goarch)
+	if err != nil {
+		attrs = append(attrs, "error", err)
+		c.Warnf("没有找到对应的发行版本", attrs...)
+		return err
+	}
+
+	stm, err := ar.svc.Open(ctx, last.FileID)
+	if err != nil {
+		attrs = append(attrs, "error", err)
+		c.Warnf("打开文件出错", attrs...)
 		return err
 	}
 	defer stm.Close()
 
-	exposes, err := ar.brok.Exposes(ctx)
-	if err != nil {
-		return err
-	}
-
-	filesize := info.Length
+	filesize := last.Length
 	manifest := &response.AgentManifest{
 		Addresses: exposes.Addresses(),
 		Offset:    filesize,
 	}
-
 	zipbuf, err := stegano.CreateManifestZip(manifest, filesize)
 	if err != nil {
 		return err
@@ -95,8 +107,8 @@ func (ar *AgentRelease) download(c *ship.Context) error {
 
 	totalLen := filesize + int64(zipbuf.Len())
 	contentLength := strconv.FormatInt(totalLen, 10)
-	params := info.Checksum.Map()
-	params["filename"] = info.Filename
+	params := last.Checksum.Map()
+	params["filename"] = last.Filename
 	mediaType := mime.FormatMediaType("attachment", params)
 	c.SetRespHeader(ship.HeaderContentDisposition, mediaType)
 	c.SetRespHeader(ship.HeaderContentLength, contentLength)

@@ -14,6 +14,7 @@ import (
 	"github.com/xmx/aegis-server/application/expose/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func NewBrokerRelease(repo repository.All, log *slog.Logger) *BrokerRelease {
@@ -86,17 +87,33 @@ func (br *BrokerRelease) Parse(r io.ReaderAt) (*buildinfo.BuildInfo, *banner.Inf
 	return bi, info, nil
 }
 
-func (br *BrokerRelease) Open(ctx context.Context, id bson.ObjectID) (*model.AgentRelease, *mongo.GridFSDownloadStream, error) {
-	repo := br.repo.AgentRelease()
-	release, err := repo.FindByID(ctx, id)
-	if err != nil {
-		return nil, nil, err
-	}
-	fileID := release.FileID
+func (br *BrokerRelease) Open(ctx context.Context, fileID bson.ObjectID) (*mongo.GridFSDownloadStream, error) {
+	repo := br.repo.BrokerRelease()
 	stm, err := repo.OpenFile(ctx, fileID)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return release, stm, nil
+	return stm, nil
+}
+
+func (br *BrokerRelease) Exposes(ctx context.Context) (model.ExposeAddresses, error) {
+	repo := br.repo.Setting()
+	dat, err := repo.Get(ctx)
+	if err != nil {
+		return nil, err
+	} else if len(dat.Exposes) == 0 {
+		return nil, errcode.ErrNilDocument
+	}
+
+	return dat.Exposes, nil
+}
+
+func (br *BrokerRelease) Latest(ctx context.Context, goos, goarch string) (*model.BrokerRelease, error) {
+	filter := bson.D{{"goos", goos}, {"goarch", goarch}}
+	order := bson.D{{"version", -1}, {"_id", -1}}
+	opt := options.FindOne().SetSort(order)
+	repo := br.repo.BrokerRelease()
+
+	return repo.FindOne(ctx, filter, opt)
 }
