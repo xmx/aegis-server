@@ -27,7 +27,7 @@ tags:
 paths:
   /certificates:
     get:
-      summary: TLS证书-分页查询
+      summary: 【TLS 证书】分页查询
       tags:
         - ⚙️ 系统设置
       responses:
@@ -42,7 +42,7 @@ paths:
     parameters: []
   /certificate:
     post:
-      summary: TLS证书-新增
+      summary: 【TLS 证书】新增
       operationId: post-certificate
       responses:
         '200':
@@ -56,7 +56,7 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateCertificate'
     put:
-      summary: TLS证书-修改
+      summary: 【TLS 证书】修改
       operationId: put-config-certificate
       responses:
         '200':
@@ -71,7 +71,7 @@ paths:
               $ref: '#/components/schemas/UpdateCertificate'
         description: ''
     delete:
-      summary: TLS证书-删除
+      summary: 【TLS 证书】删除
       operationId: delete-config-certificate
       responses:
         '200':
@@ -82,20 +82,9 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ids'
     parameters: []
-  /certificate/cond:
-    get:
-      summary: TLS证书-查询条件
-      tags:
-        - ⚙️ 系统设置
-      responses:
-        '200':
-          description: OK
-      operationId: get-certificate-cond
-      description: TLS证书-查询条件
-    parameters: []
   /certificate/download:
     get:
-      summary: TLS证书-下载
+      summary: 【TLS 证书】下载
       tags:
         - ⚙️ 系统设置
       responses:
@@ -115,246 +104,18 @@ paths:
     parameters: []
   /certificate/refresh:
     get:
-      summary: TLS证书-刷新
+      summary: 【TLS 证书】刷新
       tags:
         - ⚙️ 系统设置
       responses:
         '200':
           description: OK
       operationId: get-certificate-refresh
-      description: 刷新HTTP证书
+      description: 手动清除缓存中的 TLS 证书，系统会重新加载证书。
     parameters: []
-  '/dav/{wildcard}':
-    parameters:
-      - $ref: '#/components/parameters/wildcard'
-    get:
-      summary: WebDAV-文件管理
-      tags:
-        - ⚙️ 系统设置
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  path:
-                    type: string
-                    x-stoplight:
-                      id: k1e4wn16uc21c
-                    description: 当前所在路径
-                    example: /home/tom
-                  files:
-                    type: array
-                    x-stoplight:
-                      id: uqeot08v6zdb6
-                    description: 文件列表
-                    items:
-                      x-stoplight:
-                        id: isv2i0jgdf5dx
-                      type: object
-                      properties:
-                        name:
-                          type: string
-                          x-stoplight:
-                            id: l1zupoteadfw5
-                          example: sbin
-                          description: 文件名
-                        size:
-                          type: integer
-                          x-stoplight:
-                            id: r3hurjfv1te9u
-                          description: 文件大小
-                          example: 8
-                        mode:
-                          type: string
-                          x-stoplight:
-                            id: l6c8fd4a0iu7d
-                          example: Lrwxrwxrwx
-                          description: 权限mode
-                        directory:
-                          type: boolean
-                          x-stoplight:
-                            id: de3zyfp78927h
-                          description: 是否是目录类型
-                        updated_at:
-                          type: string
-                          x-stoplight:
-                            id: b7yvu35l4be7z
-                          example: '2024-06-25T09:34:40.204173373+08:00'
-                          description: 更新时间
-                        created_at:
-                          type: string
-                          x-stoplight:
-                            id: hlzcsxuw0cl0d
-                          example: '2024-06-25T09:34:40.204173373+08:00'
-                          description: 创建时间
-                        accessed_at:
-                          type: string
-                          x-stoplight:
-                            id: 0jzy5s7tt9p4e
-                          example: '2024-08-30T03:45:49.210773168+08:00'
-                          description: 最新访问时间
-                        user:
-                          type: string
-                          x-stoplight:
-                            id: 2njghtuiy8ygf
-                          example: root
-                          description: 所属用户
-                        group:
-                          type: string
-                          x-stoplight:
-                            id: 70a4wl95o1wqj
-                          example: root
-                          description: 所属用户组
-                        symlink:
-                          type: string
-                          x-stoplight:
-                            id: a1od8ps7dmlk3
-                          example: usr/sbin
-                          description: 链接类型文件的指向文件（链接类型文件才有该值）
-                      required:
-                        - name
-                        - size
-                        - mode
-                        - directory
-                required:
-                  - path
-      operationId: get-dav-wildcard
-      description: |
-        WebDAV 文件管理接口。
-
-        - 当请求的是个文件时，则会触发下载文件。
-
-        - 当请求的是个目录时，如果请求 Header 的 `Accept` 是 `application/json`，会响应 JSON 格式数据；否则响应 HTML 格式数据。
-      parameters: []
-    post:
-      summary: WebDAV-文件管理
-      operationId: post-dav-wildcard
-      responses:
-        '200':
-          description: OK
-      description: WebDAV 文件管理接口。
-      tags:
-        - ⚙️ 系统设置
-    put:
-      summary: WebDAV-文件管理
-      operationId: put-dav-wildcard
-      responses:
-        '200':
-          description: OK
-      description: WebDAV 文件管理接口。
-      tags:
-        - ⚙️ 系统设置
-    patch:
-      summary: WebDAV-文件管理
-      operationId: patch-dav-wildcard
-      responses:
-        '200':
-          description: OK
-      description: WebDAV 文件管理接口。
-      tags:
-        - ⚙️ 系统设置
-    delete:
-      summary: WebDAV-文件管理
-      operationId: delete-dav-wildcard
-      responses:
-        '200':
-          description: OK
-      description: WebDAV 文件管理接口。
-      tags:
-        - ⚙️ 系统设置
-    head:
-      summary: WebDAV-文件管理
-      operationId: head-dav-wildcard
-      responses:
-        '200':
-          description: OK
-      description: WebDAV 文件管理接口。
-      tags:
-        - ⚙️ 系统设置
-  /js/play/pprof:
-    get:
-      summary: JS-pprof 火焰图采集
-      tags:
-        - ⚙️ 系统设置
-      responses:
-        '200':
-          description: pprof 下载流。
-      operationId: get-js-play-pprof
-      parameters:
-        - schema:
-            type: integer
-            example: 30
-          in: query
-          name: seconds
-          description: 采集秒数
-      description: goja js 引擎 pprof 火焰图采集
-  /ws/pty:
-    get:
-      summary: TERM-PTY
-      tags:
-        - ⚙️ 系统设置
-      responses:
-        '200':
-          description: OK
-      operationId: get-ws-pty
-      description: pty 代理
-      parameters:
-        - schema:
-            type: integer
-          in: query
-          name: rows
-          description: 终端字符行数
-        - schema:
-            type: integer
-          in: query
-          name: cols
-          description: 终端字符列数
-  /ws/ssh:
-    get:
-      summary: TERM-SSH
-      tags:
-        - ⚙️ 系统设置
-      responses:
-        '200':
-          description: OK
-      operationId: get-ws-ssh
-      description: ssh 代理
-      parameters:
-        - schema:
-            type: integer
-          in: query
-          name: rows
-          description: 终端字符行数
-        - schema:
-            type: integer
-          in: query
-          name: cols
-          description: 终端字符列数
-        - schema:
-            type: string
-            example: '10.23.44.32:22'
-          in: query
-          required: true
-          name: bastion
-          description: SSH 服务端地址（含端口号）
-        - schema:
-            type: string
-            example: root
-          in: query
-          name: username
-          required: true
-          description: SSH 登录用户名
-        - schema:
-            type: string
-          in: query
-          name: password
-          description: SSH 密码
   /agent-release:
     post:
-      summary: 上传 agent 二进制
+      summary: 【Agent】上传
       operationId: post-agent-release
       responses:
         '200':
@@ -384,9 +145,20 @@ paths:
         description: ''
       tags:
         - "\U0001F680 发布部署"
+    delete:
+      summary: 【Agent】删除
+      operationId: delete-agent-release
+      responses:
+        '200':
+          description: OK
+      tags:
+        - "\U0001F680 发布部署"
+      description: 删除 agent 发行包。
+      parameters:
+        - $ref: '#/components/parameters/ObjectID'
   /agent-release/parse:
     post:
-      summary: 解析 agent 二进制包信息
+      summary: 【Agent】解析二进制包信息
       operationId: post-agent-release-parse
       responses:
         '200':
@@ -441,6 +213,73 @@ paths:
                 - file
       tags:
         - "\U0001F680 发布部署"
+  /broker-release:
+    post:
+      summary: 【Broker】上传
+      operationId: post-broker-release
+      responses:
+        '200':
+          description: OK
+      tags:
+        - "\U0001F680 发布部署"
+      description: 上传 broker 二进制。
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  x-stoplight:
+                    id: 5mdzjeexbphti
+                  format: binary
+                  description: 二进制文件
+                changelog:
+                  type: string
+                  x-stoplight:
+                    id: 11txfg7p8pp75
+                  description: 变更日志
+                  maxLength: 10000
+                  example: 升级了 xxx，修复了 xxx BUG。
+              required:
+                - file
+    delete:
+      summary: 【Broker】删除
+      operationId: delete-broker-release
+      responses:
+        '200':
+          description: OK
+      description: 删除 broker 二进制。
+      tags:
+        - "\U0001F680 发布部署"
+      parameters:
+        - $ref: '#/components/parameters/ObjectID'
+  /broker-release/parse:
+    post:
+      summary: 【Broker】解析二进制包信息
+      operationId: post-broker-release-parse
+      responses:
+        '200':
+          description: OK
+      tags:
+        - "\U0001F680 发布部署"
+      description: 解析 broker 二进制包信息
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  x-stoplight:
+                    id: g7ueu3ur60opu
+                  format: binary
+                  description: 二进制文件
+              required:
+                - file
+        description: ''
   /log/watch:
     get:
       summary: 日志观测
@@ -529,6 +368,16 @@ components:
         example: img/avatar/tom.png
       description: 路径通配
       required: true
+    ObjectID:
+      name: id
+      in: query
+      required: true
+      schema:
+        type: string
+        example: 68f7502cc628b9e207f564d6
+        minLength: 24
+        maxLength: 24
+      description: ID
   responses:
     GetConfigCertificates:
       description: Example response
@@ -628,6 +477,15 @@ components:
       type: string
       pattern: '^[0-9]+'
       example: '100023'
+    ObjectID:
+      title: ObjectID
+      x-stoplight:
+        id: o8f77850vrt9h
+      type: string
+      description: ID
+      example: 68f7502ac628b9e207f569d6
+      minLength: 24
+      maxLength: 24
   requestBodies: {}
 security:
   - Authorization: []
