@@ -129,6 +129,7 @@ func (crt *Certificate) GetCertificate(chi *tls.ClientHelloInfo) (*tls.Certifica
 		args := append(attrs, slog.Any("error", err))
 		crt.log.Warn("从管理器中匹配证书错误", args...)
 	} else if cert != nil {
+		crt.log.Debug("匹配到了合适的证书", attrs...)
 		return cert, nil
 	} else {
 		crt.log.Warn("从管理器中未匹配到任何证书", attrs...)
@@ -140,6 +141,7 @@ func (crt *Certificate) GetCertificate(chi *tls.ClientHelloInfo) (*tls.Certifica
 		crt.log.Warn("获取自签证书错误", attrs...)
 		return nil, err
 	}
+	crt.log.Debug("返回自签证书", attrs...)
 
 	return self, nil
 }
