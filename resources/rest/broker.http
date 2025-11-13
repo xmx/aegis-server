@@ -22,10 +22,10 @@ Content-Type: multipart/form-data; boundary=WebAppBoundary
 Content-Disposition: form-data; name="changelog"
 Content-Type: text/plain
 
-测试发布版本
+公测版本
 --WebAppBoundary
-Content-Disposition: form-data; name="file"; filename="aegis-broker_linux-arm64_v25.11.8-111641"
+Content-Disposition: form-data; name="file"; filename="aegis-broker_linux-amd64_v25.11.13-030600"
 Content-Type: application/json
 
-< aegis-broker_linux-arm64_v25.11.8-111641
+< aegis-broker_linux-amd64_v25.11.13-030600
 --WebAppBoundary--
