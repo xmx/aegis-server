@@ -7,12 +7,12 @@ require (
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/grafana/sobek v0.0.0-20251112160923-0a6e37e05506
+	github.com/grafana/sobek v0.0.0-20251113105955-976a34df9c09
 	github.com/lmittmann/tint v1.1.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20251113072253-3da916513549
-	github.com/xmx/aegis-control v0.0.0-20251113081208-51c8d8b3db9b
+	github.com/xmx/aegis-common v0.0.0-20251113105218-0fb981edd993
+	github.com/xmx/aegis-control v0.0.0-20251113110000-fba88c367dee
 	go.mongodb.org/mongo-driver/v2 v2.4.0
 	golang.org/x/crypto v0.44.0
 	golang.org/x/net v0.47.0

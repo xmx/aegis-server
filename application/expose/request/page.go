@@ -21,10 +21,10 @@ type Keywords struct {
 	Keyword string `json:"keyword" query:"keyword" form:"keyword" validate:"lte=255"`
 }
 
-func (k Keywords) Regexps(fields []string) bson.D {
+func (k Keywords) Regexps(fields []string) bson.A {
 	kw := strings.TrimSpace(k.Keyword)
 	if len(fields) == 0 || kw == "" {
-		return bson.D{}
+		return bson.A{}
 	}
 	kw = regexp.QuoteMeta(kw) // 防止用户注入特殊 regex 元字符
 	reg := bson.Regex{Pattern: kw, Options: "i"}
@@ -34,5 +34,5 @@ func (k Keywords) Regexps(fields []string) bson.D {
 		likes = append(likes, bson.D{{Key: f, Value: reg}})
 	}
 
-	return bson.D{{Key: "$or", Value: likes}}
+	return likes
 }
