@@ -28,10 +28,21 @@ type AgentRelease struct {
 func (ar *AgentRelease) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/agent-release").
 		GET(ar.download).
-		POST(ar.upload)
+		POST(ar.upload).
+		DELETE(ar.delete)
 	r.Route("/agent-release/parse").POST(ar.parse)
 
 	return nil
+}
+
+func (ar *AgentRelease) delete(c *ship.Context) error {
+	req := new(request.ObjectID)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+	ctx := c.Request().Context()
+
+	return ar.svc.Delete(ctx, req.OID())
 }
 
 func (ar *AgentRelease) upload(c *ship.Context) error {

@@ -29,6 +29,21 @@ type AgentRelease struct {
 	log  *slog.Logger
 }
 
+func (ar *AgentRelease) Delete(ctx context.Context, id bson.ObjectID) error {
+	repo := ar.repo.AgentRelease()
+	dat, err := repo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if err = repo.DeleteFile(ctx, dat.FileID); err != nil {
+		return err
+	}
+	_, err = repo.DeleteByID(ctx, id)
+
+	return err
+}
+
 func (ar *AgentRelease) Upload(ctx context.Context, req *request.AgentReleaseUpload) error {
 	now := time.Now()
 	file, err := req.File.Open()

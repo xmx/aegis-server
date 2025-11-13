@@ -11,7 +11,7 @@ mux.handleFunc('/', (w, r) => {
     w.header().set('Content-Type', 'text/html')
     w.write('<h1>HELLO</h1>')
     count++
-    console.log(`欢迎 ${r.remoteAddr}，网站总访问次数：${count}`)
+    console.log(`${r.remoteAddr}: ${r.url.path} - ${r.url.rawQuery}`)
 })
 const opt = {addr: '0.0.0.0:8888', handler: mux, readTimeout: time.minute, readHeaderTimeout: 5 * time.second}
 const handle = http.serve(opt)

@@ -28,10 +28,21 @@ type BrokerRelease struct {
 func (br *BrokerRelease) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/broker-release").
 		GET(br.download).
-		POST(br.upload)
+		POST(br.upload).
+		DELETE(br.delete)
 	r.Route("/broker-release/parse").POST(br.parse)
 
 	return nil
+}
+
+func (br *BrokerRelease) delete(c *ship.Context) error {
+	req := new(request.ObjectID)
+	if err := c.BindQuery(req); err != nil {
+		return err
+	}
+	ctx := c.Request().Context()
+
+	return br.svc.Delete(ctx, req.OID())
 }
 
 func (br *BrokerRelease) upload(c *ship.Context) error {

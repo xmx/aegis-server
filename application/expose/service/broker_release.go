@@ -29,6 +29,21 @@ type BrokerRelease struct {
 	log  *slog.Logger
 }
 
+func (br *BrokerRelease) Delete(ctx context.Context, id bson.ObjectID) error {
+	repo := br.repo.BrokerRelease()
+	dat, err := repo.FindByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if err = repo.DeleteFile(ctx, dat.FileID); err != nil {
+		return err
+	}
+	_, err = repo.DeleteByID(ctx, id)
+
+	return err
+}
+
 func (br *BrokerRelease) Upload(ctx context.Context, req *request.BrokerReleaseUpload) error {
 	now := time.Now()
 	file, err := req.File.Open()
