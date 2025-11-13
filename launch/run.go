@@ -247,7 +247,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	tlsCfg := &tls.Config{
 		GetCertificate: certificateSvc.GetCertificate,
 		NextProtos:     []string{"h2", "http/1.1", "aegis"},
-		// MinVersion:     tls.VersionTLS13,
+		MinVersion:     tls.VersionTLS13,
 	}
 	httpLog := logger.NewV1(slog.New(logger.Skip(logh, 8)))
 	srv := &http.Server{
