@@ -24,6 +24,7 @@ servers:
 tags:
   - name: ⚙️ 系统设置
   - name: "\U0001F680 发布部署"
+  - name: "\U0001F50C Broker 接入端口"
 paths:
   /certificates:
     get:
@@ -310,6 +311,20 @@ paths:
           in: query
           name: format
           description: 输出格式
+  /tunnel:
+    get:
+      summary: 【隧道】Broker 接入端口
+      responses:
+        '101':
+          description: Switching Protocols
+        '200':
+          description: OK
+      operationId: get-tunnel
+      tags:
+        - "\U0001F50C Broker 接入端口"
+      description: Broker 接入端口
+      requestBody:
+        content: {}
 components:
   securitySchemes:
     Authorization:
@@ -360,14 +375,6 @@ components:
         minItems: 1
         maxItems: 1000
       description: '允许传入多个ID，ElementsUI 中输入示例：["1","2"] 或 [1,2]。'
-    wildcard:
-      name: wildcard
-      in: path
-      schema:
-        type: string
-        example: img/avatar/tom.png
-      description: 路径通配
-      required: true
     ObjectID:
       name: id
       in: query
