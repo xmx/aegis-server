@@ -13,16 +13,23 @@ Content-Disposition: form-data; name="file"; filename="aegis-agent_windows-arm64
 
 
 ### 获取任务列表
-GET {{host}}/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/tasks
+@brokerId = www
+@agentId = 122
+GET https://{{host}}/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/tasks
+Cache-Control: no-cache
 
 ### 下发任务
-POST {{host}}/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/task/exec
+POST https://{{host}}/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/task/exec
 Content-Type: application/json
 
 {
   "name": "http-server",
-  "code": "import time from 'time'\nimport url from 'net/url'\nimport http from 'net/http'\nimport httputil from 'net/http/httputil'\nconst target = url.parse('https://mirrors.zju.edu.cn/')\nconst proxy = httputil.newSingleHostReverseProxy(target)\nconst mux = http.newServeMux()\nmux.handleFunc('/', (w, r) => {\nw.header().set('Content-Type', 'text/html')\nw.write('<h1>HELLO</h1>')\n})\nconst opt = {\naddr: '0.0.0.0:8888', \nhandler: proxy,\n//handler: mux, \nreadTimeout: time.minute, \nreadHeaderTimeout: 5 * time.second,\n}\nconst handle = http.serve(opt)\nhandle.wait()"
+  "code": "import console from 'console'\nimport time from 'time'\nimport url from 'net/url'\nimport http from 'net/http'\nimport httputil from 'net/http/httputil'\nconst target = url.parse('https://mirrors.zju.edu.cn/')\nconst proxy = httputil.newSingleHostReverseProxy(target)\nlet count = 0\nconst mux = http.newServeMux()\nmux.handleFunc('/', (w, r) => {\nw.header().set('Content-Type', 'text/html')\nw.write('<h1>HELLO</h1>')\ncount++\nconsole.log(`欢迎 ${r.remoteAddr}，网站总访问次数：${count}`)\n})\nconst opt = {addr: '0.0.0.0:8888', handler: mux, readTimeout: time.minute, readHeaderTimeout: 5 * time.second}\nconst handle = http.serve(opt)\nhandle.wait()"
 }
 
 ### 结束任务
-DELETE {{host}}/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/task/kill?pid=2
+DELETE https://{{host}}/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/task/kill?pid=3
+
+
+### 测试 SNI
+GET https://lo.rust.wang:8443/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/tasks

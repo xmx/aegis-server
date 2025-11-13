@@ -118,6 +118,7 @@ func (crt *Certificate) Update(ctx context.Context, req *request.ConfigCertifica
 func (crt *Certificate) GetCertificate(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	serverName := chi.ServerName
 	attrs := []any{slog.String("server_name", serverName)}
+	crt.log.Debug("收到 SNI 请求", attrs...)
 
 	mana := crt.mana.Load()
 	if mana == nil {
@@ -134,6 +135,16 @@ func (crt *Certificate) GetCertificate(chi *tls.ClientHelloInfo) (*tls.Certifica
 	}
 
 	// 没有配置证书或证书加载错误时，回退到自签名证书，优先保证服务能够访问。
+	self, err := crt.returnSelf()
+	if err != nil {
+		crt.log.Warn("获取自签证书错误", attrs...)
+		return nil, err
+	}
+
+	return self, nil
+}
+
+func (crt *Certificate) returnSelf() (*tls.Certificate, error) {
 	if self := crt.self.Load(); self != nil {
 		return self, nil
 	}
@@ -143,16 +154,13 @@ func (crt *Certificate) GetCertificate(chi *tls.ClientHelloInfo) (*tls.Certifica
 		return self, nil
 	}
 
-	crt.log.Warn("开始生成自签名证书", attrs...)
-	self, err := crt.generate()
-	if err != nil {
-		attrs = append(attrs, slog.Any("error", err))
-		crt.log.Warn("生成自签名证书错误", attrs...)
+	crt.log.Warn("开始生成自签名证书")
+	if self, err := crt.generate(); err != nil {
+		return nil, err
 	} else {
 		crt.self.Store(self)
+		return self, nil
 	}
-
-	return self, err
 }
 
 // Delete 通过 ID 删除证书。
@@ -316,11 +324,6 @@ func (crt *Certificate) loadManager() *certificateManager {
 }
 
 func (*Certificate) generate() (*tls.Certificate, error) {
-	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
-	if err != nil {
-		return nil, err
-	}
-
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
@@ -328,15 +331,16 @@ func (*Certificate) generate() (*tls.Certificate, error) {
 
 	now := time.Now()
 	template := &x509.Certificate{
-		SerialNumber: serialNumber,
+		IsCA:         true,
+		SerialNumber: big.NewInt(1),
 		Subject: pkix.Name{
 			CommonName:   "aegis",
 			Organization: []string{"aegis"},
 		},
 		NotBefore:             now.Add(-time.Hour),
 		NotAfter:              now.AddDate(1, 0, 0),
-		KeyUsage:              x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		DNSNames:              []string{"server.aegis.internal"},
 		IPAddresses:           []net.IP{{127, 0, 0, 1}},
@@ -393,7 +397,7 @@ func (cm *certificateManager) match(serverName string) *tls.Certificate {
 	wildcardName := strings.Join(labels, ".")
 	for _, crt := range cm.certs[wildcardName] {
 		notBefore, notAfter := crt.Leaf.NotBefore, crt.Leaf.NotAfter
-		if notBefore.After(now) && notAfter.Before(now) {
+		if now.After(notBefore) && now.Before(notAfter) {
 			return crt
 		}
 		last = crt
