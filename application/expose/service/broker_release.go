@@ -29,6 +29,14 @@ type BrokerRelease struct {
 	log  *slog.Logger
 }
 
+func (br *BrokerRelease) List(ctx context.Context) ([]*model.BrokerRelease, error) {
+	order := bson.D{{"version", -1}, {"goos", 1}, {"goarch", 1}}
+	opt := options.Find().SetSort(order)
+	repo := br.repo.BrokerRelease()
+
+	return repo.Find(ctx, bson.D{}, opt)
+}
+
 func (br *BrokerRelease) Delete(ctx context.Context, id bson.ObjectID) error {
 	repo := br.repo.BrokerRelease()
 	dat, err := repo.FindByID(ctx, id)

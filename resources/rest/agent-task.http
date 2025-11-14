@@ -1,0 +1,9 @@
+### 获取任务列表
+GET {{baseURL}}/api/reverse/broker/{{brokerID}}/api/reverse/{{agentID}}/api/tasks
+
+### 结束任务
+DELETE {{baseURL}}/api/reverse/broker/{{brokerID}}/api/reverse/{{agentID}}/api/task/kill?pid={{pid}}
+
+### 下发任务
+POST {{baseURL}}/api/reverse/broker/{{brokerID}}/api/reverse/{{agentID}}/api/task/exec
+Content-Type: application/json

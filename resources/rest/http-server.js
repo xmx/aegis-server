@@ -3,16 +3,22 @@ import time from 'time'
 import url from 'net/url'
 import http from 'net/http'
 import httputil from 'net/http/httputil'
+
 const target = url.parse('https://mirrors.zju.edu.cn/')
 const proxy = httputil.newSingleHostReverseProxy(target)
-let count = 0
+
 const mux = http.newServeMux()
 mux.handleFunc('/', (w, r) => {
     w.header().set('Content-Type', 'text/html')
     w.write('<h1>HELLO</h1>')
-    count++
-    console.log(`${r.remoteAddr}: ${r.url.path} - ${r.url.rawQuery}`)
+    console.log(`${r.remoteAddr}: ${r.url.path} ${r.url.rawQuery}`)
 })
-const opt = {addr: '0.0.0.0:8888', handler: mux, readTimeout: time.minute, readHeaderTimeout: 5 * time.second}
+
+const opt = {
+    addr: '0.0.0.0:8888',
+    handler: mux,
+    readTimeout: time.minute,
+    readHeaderTimeout: 5 * time.second
+}
 const handle = http.serve(opt)
 handle.wait()

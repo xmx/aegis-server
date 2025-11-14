@@ -29,6 +29,14 @@ type AgentRelease struct {
 	log  *slog.Logger
 }
 
+func (ar *AgentRelease) List(ctx context.Context) ([]*model.AgentRelease, error) {
+	order := bson.D{{"version", -1}, {"goos", 1}, {"goarch", 1}}
+	opt := options.Find().SetSort(order)
+	repo := ar.repo.AgentRelease()
+
+	return repo.Find(ctx, bson.D{}, opt)
+}
+
 func (ar *AgentRelease) Delete(ctx context.Context, id bson.ObjectID) error {
 	repo := ar.repo.AgentRelease()
 	dat, err := repo.FindByID(ctx, id)

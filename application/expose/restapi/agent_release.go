@@ -30,9 +30,20 @@ func (ar *AgentRelease) RegisterRoute(r *ship.RouteGroupBuilder) error {
 		GET(ar.download).
 		POST(ar.upload).
 		DELETE(ar.delete)
+	r.Route("/agent-releases").GET(ar.list)
 	r.Route("/agent-release/parse").POST(ar.parse)
 
 	return nil
+}
+
+func (ar *AgentRelease) list(c *ship.Context) error {
+	ctx := c.Request().Context()
+	ret, err := ar.svc.List(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
 }
 
 func (ar *AgentRelease) delete(c *ship.Context) error {

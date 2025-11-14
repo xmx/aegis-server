@@ -30,9 +30,20 @@ func (br *BrokerRelease) RegisterRoute(r *ship.RouteGroupBuilder) error {
 		GET(br.download).
 		POST(br.upload).
 		DELETE(br.delete)
+	r.Route("/broker-releases").GET(br.list)
 	r.Route("/broker-release/parse").POST(br.parse)
 
 	return nil
+}
+
+func (br *BrokerRelease) list(c *ship.Context) error {
+	ctx := c.Request().Context()
+	ret, err := br.svc.List(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
 }
 
 func (br *BrokerRelease) delete(c *ship.Context) error {

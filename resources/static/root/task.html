@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>面板</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            margin: 20px;
+            color: #e2e2e2;
+            background: #1b1c1d;
+        }
+
+        h1 {
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        label {
+            min-width: 90px;
+            color: #cfcfcf;
+        }
+
+        select {
+            min-width: 360px;
+            padding: 6px 8px;
+            background: #2a2c2e;
+            border: 1px solid #3a3d40;
+            color: #f0f0f0;
+            border-radius: 4px;
+        }
+
+        .status-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 6px;
+            box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25) inset;
+        }
+
+        .status-online {
+            background: #2ecc71;
+        }
+
+        .status-offline {
+            background: #7f8c8d;
+        }
+
+        #editor {
+            width: 100%;
+            height: 480px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        button {
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid #4d89d6;
+            background: #1b73c6;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .small {
+            font-size: 13px;
+        }
+
+        .muted {
+            color: #9aa0a6;
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .success {
+            color: #4cd964;
+        }
+
+        #taskConsole {
+            width: 100%;
+            height: 200px;
+            background: #1b1c1d;
+            color: #e2e2e2;
+            padding: 6px;
+            overflow: auto;
+            font-family: monospace;
+            font-size: 13px;
+            margin-top: 8px;
+            border: 1px solid #333;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 选择 Agent -->
+<div class="row">
+    <select id="agentSelect" aria-label="agent select">
+        <option value="">加载中...</option>
+    </select>
+    <div id="selectedStatus" class="small muted" aria-live="polite">—</div>
+</div>
+
+<!-- Monaco Editor -->
+<div id="editor" aria-label="monaco editor"></div>
+
+<!-- 下发按钮 -->
+<div style="margin-top:12px; display:flex; gap:10px; align-items:center;">
+    <button id="dispatchBtn" disabled>下发</button>
+    <div id="resultMsg" class="small"></div>
+</div>
+
+<!-- 任务管理 -->
+<div class="row">
+    <label for="taskSelect">任务列表：</label>
+    <select id="taskSelect">
+        <option value="">请先获取任务</option>
+    </select>
+    <button id="fetchTasksBtn" disabled>获取任务</button>
+    <button id="attachTaskBtn" disabled>观察任务</button>
+    <button id="killTaskBtn" disabled>结束任务</button>
+</div>
+
+<!-- 任务控制台 -->
+<div id="taskConsole"></div>
+
+<script>
+    // ========== 工具函数 ==========
+    function pickFirstIp(record) {
+        if (!record || !Array.isArray(record.networks)) return null;
+        for (const n of record.networks) if (Array.isArray(n.ipv4) && n.ipv4.length > 0) return n.ipv4[0];
+        for (const n of record.networks) if (Array.isArray(n.ipv6) && n.ipv6.length > 0) return n.ipv6[0];
+        return null;
+    }
+
+    function appendConsole(msg, channel = 'stdout') {
+        const div = document.createElement('div');
+        div.textContent = msg;
+        if (channel === 'stderr') {
+            div.style.color = '#ff6b6b'; // 红色
+        } else {
+            div.style.color = '#e2e2e2'; // 默认灰白色
+        }
+        taskConsole.appendChild(div);
+        taskConsole.scrollTop = taskConsole.scrollHeight;
+    }
+
+    // ========== Agent 下拉与状态 ==========
+    const select = document.getElementById('agentSelect');
+    const selectedStatus = document.getElementById('selectedStatus');
+    const dispatchBtn = document.getElementById('dispatchBtn');
+    const resultMsg = document.getElementById('resultMsg');
+    const fetchTasksBtn = document.getElementById('fetchTasksBtn');
+    const attachTaskBtn = document.getElementById('attachTaskBtn');
+    const killTaskBtn = document.getElementById('killTaskBtn');
+    const taskSelect = document.getElementById('taskSelect');
+
+    let agents = [];
+    let editor = null;
+    let currentWs = null;
+
+    async function loadAgents() {
+        try {
+            const res = await fetch('/api/agents?size=100', {method: 'GET', credentials: 'same-origin'});
+            if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+            const data = await res.json();
+            if (!data || !Array.isArray(data.records)) throw new Error('返回格式错误：缺少 records');
+            agents = data.records;
+            populateSelect(agents);
+        } catch (err) {
+            select.innerHTML = '<option value="">加载失败</option>';
+            resultMsg.className = 'error small';
+            resultMsg.textContent = '加载失败：' + err.message;
+            console.error(err);
+        }
+    }
+
+    function populateSelect(records) {
+        select.innerHTML = '';
+        if (records.length === 0) {
+            select.innerHTML = '<option value="">无可用 Agent</option>';
+            dispatchBtn.disabled = true;
+            return;
+        }
+        records.forEach((r, idx) => {
+            const ip = pickFirstIp(r) || '(无 IP)';
+            const host = r.execute_stat?.hostname || '';
+            const statusText = r.status ? '在线' : '离线';
+            const opt = document.createElement('option');
+            opt.value = String(idx);
+            opt.text = `${ip} — ${host} — ${statusText}`;
+            select.appendChild(opt);
+        });
+        select.selectedIndex = 0;
+        onSelectChange();
+        updateTaskButtons();
+    }
+
+    function onSelectChange() {
+        const idx = select.value;
+        if (idx === '' || !agents.length) {
+            selectedStatus.innerHTML = '';
+            dispatchBtn.disabled = true;
+            return;
+        }
+        const r = agents[Number(idx)];
+        const ip = pickFirstIp(r) || '(无 IP)';
+        const host = r.execute_stat?.hostname || '';
+        const online = Boolean(r.status);
+        const dot = document.createElement('span');
+        dot.className = 'status-dot ' + (online ? 'status-online' : 'status-offline');
+        selectedStatus.innerHTML = '';
+        selectedStatus.appendChild(dot);
+        selectedStatus.appendChild(document.createTextNode(`${ip} ${host ? '— ' + host : ''} ${online ? '在线' : '离线'}`));
+        dispatchBtn.disabled = false;
+    }
+
+    function updateTaskButtons() {
+        const idx = select.value;
+        const agent = agents[idx];
+        if (!agent || !agent.broker?.id) {
+            fetchTasksBtn.disabled = true;
+            attachTaskBtn.disabled = true;
+            killTaskBtn.disabled = true;
+        } else {
+            fetchTasksBtn.disabled = false;
+            attachTaskBtn.disabled = true;
+            killTaskBtn.disabled = true;
+        }
+    }
+
+    // ========== Monaco 编辑器 ==========
+    function loadMonacoAndInit() {
+        const loaderUrl = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs/loader.js';
+        const s = document.createElement('script');
+        s.src = loaderUrl;
+        s.onload = () => {
+            require.config({paths: {'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs'}});
+            require(['vs/editor/editor.main'], function () {
+                monaco.editor.setTheme('vs-dark');
+                const saved = localStorage.getItem("agent-editor-code");
+                const initialCode = saved || `// 在此输入要下发的 JS 代码\nconsole.log("hello agent");`;
+                editor = monaco.editor.create(document.getElementById('editor'), {
+                    value: initialCode,
+                    language: 'javascript',
+                    automaticLayout: true,
+                    minimap: {enabled: false},
+                    fontSize: 13
+                });
+            });
+        };
+        s.onerror = err => {
+            resultMsg.textContent = '加载 Monaco Editor 失败';
+            resultMsg.className = 'error small';
+            console.error(err);
+        };
+        document.body.appendChild(s);
+    }
+
+    // ========== 下发任务 ==========
+    async function dispatchCode() {
+        resultMsg.textContent = '';
+        resultMsg.className = 'small';
+        try {
+            localStorage.setItem("agent-editor-code", editor.getValue());
+        } catch (_) {
+            console.warn("localStorage 写入失败");
+        }
+        const idx = select.value;
+        if (idx === '' || !agents[Number(idx)]) {
+            resultMsg.textContent = '请选择一个 Agent';
+            resultMsg.className = 'error small';
+            return;
+        }
+        const r = agents[Number(idx)];
+        const brokerId = r.broker?.id;
+        const agentId = r.id;
+        if (!brokerId || !agentId) {
+            resultMsg.textContent = 'agent 数据不完整';
+            resultMsg.className = 'error small';
+            return;
+        }
+        const payload = {name: 'test-code', code: editor.getValue()};
+        const url = `/api/reverse/broker/${encodeURIComponent(brokerId)}/api/reverse/${encodeURIComponent(agentId)}/api/task/exec`;
+        dispatchBtn.disabled = true;
+        dispatchBtn.textContent = '下发中...';
+        try {
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'same-origin',
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error(await resp.text());
+            resultMsg.textContent = '下发成功';
+            resultMsg.className = 'success small';
+        } catch (err) {
+            resultMsg.textContent = '下发失败：' + err.message;
+            resultMsg.className = 'error small';
+        } finally {
+            dispatchBtn.disabled = false;
+            dispatchBtn.textContent = '下发';
+        }
+    }
+
+    // ========== 任务管理 ==========
+    async function fetchTasks() {
+        const idx = select.value;
+        const agent = agents[idx];
+        if (!agent) return;
+        const brokerId = agent.broker?.id;
+        const agentId = agent.id;
+        const url = `/api/reverse/broker/${encodeURIComponent(brokerId)}/api/reverse/${encodeURIComponent(agentId)}/api/tasks`;
+        taskSelect.innerHTML = '<option value="">加载中...</option>';
+        attachTaskBtn.disabled = true;
+        killTaskBtn.disabled = true;
+        try {
+            const resp = await fetch(url, {credentials: 'same-origin'});
+            if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText}`);
+            const tasks = await resp.json();
+            taskSelect.innerHTML = '';
+            if (!tasks.length) {
+                taskSelect.innerHTML = '<option value="">无任务</option>';
+                return;
+            }
+            tasks.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = String(t.pid);
+                opt.textContent = `${t.pid} — ${t.name} — ${t.status === 1 ? '运行中' : '已停止'}`;
+                taskSelect.appendChild(opt);
+            });
+            attachTaskBtn.disabled = false;
+            killTaskBtn.disabled = false;
+        } catch (err) {
+            taskSelect.innerHTML = '<option value="">加载失败</option>';
+            appendConsole('获取任务失败：' + err.message);
+        }
+    }
+
+    function attachTask() {
+        const idx = select.value;
+        const agent = agents[idx];
+        const pid = taskSelect.value;
+        if (!agent || !pid) return;
+
+        const brokerId = agent.broker.id;
+        const agentId = agent.id;
+        const wsUrl = `/api/reverse/broker/${encodeURIComponent(brokerId)}/api/reverse/${encodeURIComponent(agentId)}/api/task/attach?pid=${encodeURIComponent(pid)}`;
+
+        // 关闭已有 WS
+        if (currentWs) currentWs.close();
+        currentWs = new WebSocket(wsUrl);
+
+        taskConsole.innerHTML = '';
+
+        currentWs.onopen = () => appendConsole('连接已建立...', 'stdout');
+        currentWs.onmessage = e => {
+            try {
+                const data = JSON.parse(e.data);
+                const channel = data.channel || 'stdout';
+                const message = data.message || '';
+                appendConsole(message, channel);
+            } catch (err) {
+                appendConsole('解析 WS 消息失败: ' + e.data, 'stderr');
+            }
+        };
+        currentWs.onclose = () => appendConsole('连接已关闭', 'stdout');
+        currentWs.onerror = e => appendConsole('WS 错误', 'stderr');
+
+        attachTaskBtn.disabled = true;
+    }
+
+
+    async function killTask() {
+        const idx = select.value;
+        const agent = agents[idx];
+        const pid = taskSelect.value;
+        if (!agent || !pid) return;
+        const brokerId = agent.broker.id;
+        const agentId = agent.id;
+        const url = `/api/reverse/broker/${encodeURIComponent(brokerId)}/api/reverse/${encodeURIComponent(agentId)}/api/task/kill?pid=${encodeURIComponent(pid)}`;
+        try {
+            const resp = await fetch(url, {method: 'DELETE', credentials: 'same-origin'});
+            if (!resp.ok) throw new Error(await resp.text());
+            appendConsole(`任务 ${pid} 已结束`);
+            if (currentWs) currentWs.close();
+            attachTaskBtn.disabled = false;
+            killTaskBtn.disabled = false;
+            fetchTasks();
+        } catch (err) {
+            appendConsole('结束任务失败：' + err.message);
+        }
+    }
+
+    // ========== 事件绑定 ==========
+    select.addEventListener('change', () => {
+        onSelectChange();
+        updateTaskButtons();
+    });
+    dispatchBtn.addEventListener('click', dispatchCode);
+    fetchTasksBtn.addEventListener('click', fetchTasks);
+    attachTaskBtn.addEventListener('click', attachTask);
+    killTaskBtn.addEventListener('click', killTask);
+
+    loadMonacoAndInit();
+    loadAgents();
+</script>
+</body>
+</html>
