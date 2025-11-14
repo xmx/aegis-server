@@ -7,6 +7,7 @@ import (
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-server/application/expose/request"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 func NewAgent(repo repository.All, log *slog.Logger) *Agent {
@@ -27,7 +28,10 @@ func (agt *Agent) Page(ctx context.Context, req *request.PageKeywords) (*reposit
 		"machine_id", "networks.name", "networks.ipv4", "networks.ipv6",
 		"tunnel_stat.local_addr", "tunnel_stat.remote_addr",
 	}
-	filter := req.Regexps(fields)
+	filter := make(bson.M, 4)
+	if arr := req.Regexps(fields); len(arr) != 0 {
+		filter["$or"] = arr
+	}
 	repo := agt.repo.Agent()
 
 	return repo.FindPagination(ctx, filter, req.Page, req.Size)

@@ -13,8 +13,7 @@ Content-Disposition: form-data; name="file"; filename="aegis-agent_windows-arm64
 
 
 ### 获取任务列表
-GET https://{{host}}/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/tasks
-Cache-Control: no-cache
+GET {{base_url}}/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/tasks
 
 ### 下发任务
 POST https://{{host}}/api/reverse/broker/{{brokerId}}/api/reverse/{{agentId}}/api/task/exec
