@@ -1,14 +1,8 @@
 openapi: 3.1.0
 info:
   title: 接口文档
-  description: |
-    ### Websocket
+  description: |+
 
-    `/ws` 前缀的路径是 websocket 协议接口。
-
-    ### Server-Sent Events
-
-    `/sse` 前缀路径是 Server-Sent Events 协议接口。
   version: 1.0.0
   summary: 接口文档
   contact:
@@ -19,7 +13,7 @@ info:
 servers:
   - url: /api
     description: 当前服务
-  - url: 'https://lo.zzu.wiki:1443/api'
+  - url: 'https://ali.rust.wang:1443/api'
     description: 本机服务
 tags:
   - name: ⚙️ 系统设置
