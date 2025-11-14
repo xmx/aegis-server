@@ -23,6 +23,7 @@ servers:
     description: 本机服务
 tags:
   - name: ⚙️ 系统设置
+  - name: "\U0001F5A5️ 节点"
   - name: "\U0001F680 发布部署"
   - name: "\U0001F50C Broker 接入端口"
 paths:
@@ -325,6 +326,106 @@ paths:
       description: Broker 接入端口，websocket 协议。
       requestBody:
         content: {}
+  /broker:
+    post:
+      summary: 【Broker】创建
+      operationId: post-broker
+      responses:
+        '200':
+          description: OK
+      description: 创建 broker 节点
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  x-stoplight:
+                    id: co4j65jyp0nqa
+                  description: 节点名（唯一）
+                  example: 我的节点
+                  minLength: 3
+                  maxLength: 20
+                exposes:
+                  type: array
+                  x-stoplight:
+                    id: pr96i5moe39sf
+                  maxItems: 10
+                  items:
+                    $ref: '#/components/schemas/ExposeAddress'
+                    x-stoplight:
+                      id: oagzr6c3z4x8d
+                config:
+                  type: object
+                  x-stoplight:
+                    id: foqr6hyzipohj
+                  properties:
+                    server:
+                      type: object
+                      x-stoplight:
+                        id: a0f72dlf8lnhp
+                      properties:
+                        addr:
+                          type: string
+                          x-stoplight:
+                            id: lyqbx1qapgaj8
+                          description: 监听地址
+                      required:
+                        - addr
+                    logger:
+                      type: object
+                      x-stoplight:
+                        id: ghzpyee2iaq2b
+                      properties:
+                        level:
+                          type: string
+                          x-stoplight:
+                            id: hpz934169ktij
+                          description: 日志级别
+                          enum:
+                            - DEBUG
+                            - INFO
+                            - WARN
+                            - ERROR
+                          example: INFO
+                        console:
+                          type: boolean
+                          x-stoplight:
+                            id: 7wke1ehkmylgk
+                          description: 是否输出到控制台
+                        filename:
+                          type: string
+                          x-stoplight:
+                            id: r8azxzxnkwc9t
+                          example: resources/log/application.jsonl
+                          description: 日志输出文件
+                        maxsize:
+                          type: integer
+                          x-stoplight:
+                            id: 2chqkdq4qy08f
+                        maxage:
+                          type: integer
+                          x-stoplight:
+                            id: g9vk6ypa90ns6
+                        maxbackups:
+                          type: integer
+                          x-stoplight:
+                            id: j8tdjorj9jkwj
+                        localtime:
+                          type: boolean
+                          x-stoplight:
+                            id: 4wr8yu3qpc3gj
+                        compress:
+                          type: boolean
+                          x-stoplight:
+                            id: u756wt3h330bi
+              required:
+                - name
+        description: ''
+      tags:
+        - "\U0001F5A5️ 节点"
 components:
   securitySchemes:
     Authorization:
@@ -493,6 +594,28 @@ components:
       example: 68f7502ac628b9e207f569d6
       minLength: 24
       maxLength: 24
+    ExposeAddress:
+      title: ExposeAddress
+      x-stoplight:
+        id: x0cxsf0ek5xnf
+      type: object
+      properties:
+        name:
+          type: string
+          x-stoplight:
+            id: b3wpno1rfn2mz
+          description: 描述
+          example: 公网
+        addr:
+          type: string
+          x-stoplight:
+            id: ou4aw20enr8yx
+          description: 地址
+          example: 'aegis.example.com:8443'
+      required:
+        - name
+        - addr
+      description: 服务暴露地址
   requestBodies: {}
 security:
   - Authorization: []
