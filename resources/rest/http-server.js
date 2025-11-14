@@ -7,11 +7,19 @@ import httputil from 'net/http/httputil'
 const target = url.parse('https://mirrors.zju.edu.cn/')
 const proxy = httputil.newSingleHostReverseProxy(target)
 
+let cnt = 0
 const mux = http.newServeMux()
 mux.handleFunc('/', (w, r) => {
-    w.header().set('Content-Type', 'text/html')
-    w.write('<h1>HELLO</h1>')
-    console.log(`[${new Date().toJSON()}] ${r.remoteAddr}: ${r.url.path} ${r.url.rawQuery}`)
+    cnt++
+    w.header().set('Content-Type', 'text/html; charset=utf8')
+    const content = `<h1>你访问了<kbd>${r.url.path}</kbd> ，网站总访问量 ${cnt} </h1>`
+    w.write(content)
+
+    const log = `[${new Date().toJSON()}] ${r.remoteAddr} 第 ${cnt} 次访问：${r.url.path} ${r.url.rawQuery}`
+    console.log(log)
+})
+mux.handleFunc('/favicon.ico', (w, r) => {
+   w.writeHeader(404)
 })
 
 const opt = {
