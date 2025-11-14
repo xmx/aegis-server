@@ -322,7 +322,7 @@ paths:
       operationId: get-tunnel
       tags:
         - "\U0001F50C Broker 接入端口"
-      description: Broker 接入端口
+      description: Broker 接入端口，websocket 协议。
       requestBody:
         content: {}
 components:
