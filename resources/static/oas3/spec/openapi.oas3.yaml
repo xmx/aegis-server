@@ -157,6 +157,16 @@ paths:
       description: 删除 agent 发行包。
       parameters:
         - $ref: '#/components/parameters/ObjectID'
+  /agent-releases:
+    get:
+      summary: 【Agent】列表
+      tags:
+        - "\U0001F680 发布部署"
+      responses:
+        '200':
+          description: OK
+      operationId: get-agent-releases
+      description: 获取 agent 二进制发行版列表
   /agent-release/parse:
     post:
       summary: 【Agent】解析二进制包信息
@@ -256,6 +266,16 @@ paths:
         - "\U0001F680 发布部署"
       parameters:
         - $ref: '#/components/parameters/ObjectID'
+  /broker-releases:
+    get:
+      summary: 【Broker】列表
+      tags:
+        - "\U0001F680 发布部署"
+      responses:
+        '200':
+          description: OK
+      operationId: get-broker-releases
+      description: 获取 broker 二进制发行版列表
   /broker-release/parse:
     post:
       summary: 【Broker】解析二进制包信息
