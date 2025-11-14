@@ -33,3 +33,13 @@ go work use aegis-common aegis-control aegis-agent aegis-broker aegis-server
 - [aegis-control](https://github.com/xmx/aegis-control): server, broker 共用的代码。
 
 - [aegis-common](https://github.com/xmx/aegis-common): server, broker, agent 共用的代码。
+
+## 在安卓设备上运行
+
+```shell
+adb push myprogram /data/local/tmp/
+adb shell
+cd /data/local/tmp
+chmod +x myprogram
+./myprogram
+```
