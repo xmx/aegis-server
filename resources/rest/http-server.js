@@ -11,7 +11,7 @@ const mux = http.newServeMux()
 mux.handleFunc('/', (w, r) => {
     w.header().set('Content-Type', 'text/html')
     w.write('<h1>HELLO</h1>')
-    console.log(`${r.remoteAddr}: ${r.url.path} ${r.url.rawQuery}`)
+    console.log(`[${new Date().toJSON()}] ${r.remoteAddr}: ${r.url.path} ${r.url.rawQuery}`)
 })
 
 const opt = {
