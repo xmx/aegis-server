@@ -104,17 +104,16 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ids'
     parameters: []
-  /certificate/refresh:
-    get:
+  /certificate/reset:
+    delete:
       summary: 【TLS 证书】刷新
-      tags:
-        - ⚙️ 系统设置
+      operationId: delete-certificate-reset
       responses:
         '200':
           description: OK
-      operationId: get-certificate-refresh
-      description: 手动清除缓存中的 TLS 证书，系统会重新加载证书。
-    parameters: []
+      tags:
+        - ⚙️ 系统设置
+      description: 刷新 TLS 证书
   /agent-release:
     post:
       summary: 【Agent】上传
@@ -372,6 +371,7 @@ paths:
                           x-stoplight:
                             id: lyqbx1qapgaj8
                           description: 监听地址
+                          example: '0.0.0.0:9443'
                       required:
                         - addr
                     logger:
