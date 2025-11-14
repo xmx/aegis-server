@@ -55,6 +55,7 @@ func (brk *Broker) Create(ctx context.Context, req *request.BrokerCreate) error 
 		Name:      req.Name,
 		Exposes:   req.Exposes,
 		Secret:    secret,
+		Config:    req.Config,
 		UpdatedAt: now,
 		CreatedAt: now,
 	}

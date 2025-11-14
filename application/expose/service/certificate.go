@@ -2,46 +2,36 @@ package service
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
-	"encoding/pem"
-	"fmt"
 	"iter"
 	"log/slog"
-	"math/big"
-	"net"
-	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-control/tlscert"
 	"github.com/xmx/aegis-server/application/errcode"
 	"github.com/xmx/aegis-server/application/expose/request"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func NewCertificate(repo repository.All, log *slog.Logger) *Certificate {
+func NewCertificate(repo repository.All, pool tlscert.Certifier, log *slog.Logger) *Certificate {
 	return &Certificate{
 		repo: repo,
+		pool: pool,
 		log:  log,
 	}
 }
 
 type Certificate struct {
-	repo  repository.All
-	log   *slog.Logger
-	mutex sync.Mutex
-	mana  atomic.Pointer[certificateManager]
-	self  atomic.Pointer[tls.Certificate] // 自签名证书。
+	repo repository.All
+	pool tlscert.Certifier
+	log  *slog.Logger
 }
 
 func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*repository.Pages[model.Certificate, model.Certificates], error) {
@@ -80,7 +70,7 @@ func (crt *Certificate) Create(ctx context.Context, req *request.ConfigCertifica
 		return err
 	}
 	if enabled {
-		crt.Forget(ctx)
+		crt.Reset(ctx)
 	}
 
 	return nil
@@ -109,60 +99,10 @@ func (crt *Certificate) Update(ctx context.Context, req *request.ConfigCertifica
 		return err
 	}
 	if enabled || last.Enabled {
-		crt.Forget(ctx)
+		crt.Reset(ctx)
 	}
 
 	return nil
-}
-
-func (crt *Certificate) GetCertificate(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	serverName := chi.ServerName
-	attrs := []any{slog.String("server_name", serverName)}
-	crt.log.Debug("收到 SNI 请求", attrs...)
-
-	mana := crt.mana.Load()
-	if mana == nil {
-		mana = crt.loadManager()
-	}
-
-	if cert, err := mana.GetCertificate(chi); err != nil {
-		args := append(attrs, slog.Any("error", err))
-		crt.log.Warn("从管理器中匹配证书错误", args...)
-	} else if cert != nil {
-		crt.log.Debug("匹配到了合适的证书", attrs...)
-		return cert, nil
-	} else {
-		crt.log.Warn("从管理器中未匹配到任何证书", attrs...)
-	}
-
-	// 没有配置证书或证书加载错误时，回退到自签名证书，优先保证服务能够访问。
-	self, err := crt.returnSelf()
-	if err != nil {
-		crt.log.Warn("获取自签证书错误", attrs...)
-		return nil, err
-	}
-	crt.log.Debug("返回自签证书", attrs...)
-
-	return self, nil
-}
-
-func (crt *Certificate) returnSelf() (*tls.Certificate, error) {
-	if self := crt.self.Load(); self != nil {
-		return self, nil
-	}
-	crt.mutex.Lock()
-	defer crt.mutex.Unlock()
-	if self := crt.self.Load(); self != nil {
-		return self, nil
-	}
-
-	crt.log.Warn("开始生成自签名证书")
-	if self, err := crt.generate(); err != nil {
-		return nil, err
-	} else {
-		crt.self.Store(self)
-		return self, nil
-	}
 }
 
 // Delete 通过 ID 删除证书。
@@ -179,7 +119,7 @@ func (crt *Certificate) Delete(ctx context.Context, ids []bson.ObjectID) error {
 	} else if res.DeletedCount == 0 {
 		return errcode.ErrNilDocument
 	}
-	crt.Forget(ctx)
+	crt.Reset(ctx)
 
 	return nil
 }
@@ -195,9 +135,9 @@ func (crt *Certificate) All(ctx context.Context, ids []bson.ObjectID) iter.Seq2[
 	return repo.All(ctx, filter)
 }
 
-func (crt *Certificate) Forget(ctx context.Context) {
+func (crt *Certificate) Reset(ctx context.Context) {
 	crt.log.WarnContext(ctx, "清除证书缓存")
-	crt.mana.Store(nil)
+	crt.pool.Reset()
 }
 
 func (crt *Certificate) Parse(publicKey, privateKey string) (*model.Certificate, error) {
@@ -273,137 +213,4 @@ func (*Certificate) fingerprintSHA256(cert tls.Certificate) (certSHA256, pubKeyS
 	}
 
 	return certSHA256, pubKeySHA256, priKeySHA256
-}
-
-func (crt *Certificate) loadManager() *certificateManager {
-	crt.mutex.Lock()
-	defer crt.mutex.Unlock()
-	if mana := crt.mana.Load(); mana != nil {
-		return mana
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	mana := &certificateManager{certs: make(map[string][]*tls.Certificate)}
-	repo := crt.repo.Certificate()
-	dats, err := repo.Find(ctx, bson.M{"enabled": true})
-	if err != nil {
-		mana.err = fmt.Errorf("查询已启用证书错误: %w", err)
-		crt.mana.Store(mana)
-		return mana
-	} else if len(dats) == 0 {
-		mana.err = errcode.ErrCertificateUnavailable
-		crt.mana.Store(mana)
-		return mana
-	}
-
-	for _, dat := range dats {
-		pubKey, priKey := []byte(dat.PublicKey), []byte(dat.PrivateKey)
-		pair, exx := tls.X509KeyPair(pubKey, priKey)
-		if exx != nil {
-			err = exx
-			continue
-		}
-
-		leaf := pair.Leaf
-		for _, name := range leaf.DNSNames {
-			cts := mana.certs[name]
-			mana.certs[name] = append(cts, &pair)
-		}
-		for _, ip := range leaf.IPAddresses {
-			name := ip.String()
-			cts := mana.certs[name]
-			mana.certs[name] = append(cts, &pair)
-		}
-	}
-	if len(mana.certs) == 0 {
-		mana.err = err
-	}
-	crt.mana.Store(mana)
-
-	return mana
-}
-
-func (*Certificate) generate() (*tls.Certificate, error) {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-
-	now := time.Now()
-	template := &x509.Certificate{
-		IsCA:         true,
-		SerialNumber: big.NewInt(1),
-		Subject: pkix.Name{
-			CommonName:   "aegis",
-			Organization: []string{"aegis"},
-		},
-		NotBefore:             now.Add(-time.Hour),
-		NotAfter:              now.AddDate(1, 0, 0),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		BasicConstraintsValid: true,
-		DNSNames:              []string{"server.aegis.internal"},
-		IPAddresses:           []net.IP{{127, 0, 0, 1}},
-	}
-
-	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &priv.PublicKey, priv)
-	if err != nil {
-		return nil, err
-	}
-	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
-	privBytes, err := x509.MarshalECPrivateKey(priv)
-	if err != nil {
-		return nil, err
-	}
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
-
-	tlsCert, err := tls.X509KeyPair(certPEM, keyPEM)
-	if err != nil {
-		return nil, err
-	}
-
-	return &tlsCert, nil
-}
-
-type certificateManager struct {
-	err   error
-	certs map[string][]*tls.Certificate
-}
-
-func (cm *certificateManager) GetCertificate(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	if cm.err != nil {
-		return nil, cm.err
-	}
-	crt := cm.match(chi.ServerName)
-
-	return crt, nil
-}
-
-func (cm *certificateManager) match(serverName string) *tls.Certificate {
-	now := time.Now()
-	// https://github.com/golang/go/blob/go1.22.5/src/crypto/tls/common.go#L1141-L1154
-	name := strings.ToLower(serverName)
-	var last *tls.Certificate
-	for _, crt := range cm.certs[name] {
-		notBefore, notAfter := crt.Leaf.NotBefore, crt.Leaf.NotAfter
-		if notBefore.After(now) && notAfter.Before(now) {
-			return crt
-		}
-		last = crt
-	}
-
-	labels := strings.Split(name, ".")
-	labels[0] = "*"
-	wildcardName := strings.Join(labels, ".")
-	for _, crt := range cm.certs[wildcardName] {
-		notBefore, notAfter := crt.Leaf.NotBefore, crt.Leaf.NotAfter
-		if now.After(notBefore) && now.Before(notAfter) {
-			return crt
-		}
-		last = crt
-	}
-
-	return last
 }

@@ -25,7 +25,7 @@ type Certificate struct {
 func (crt *Certificate) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/certificates").GET(crt.page)
 	r.Route("/certificate/download").GET(crt.download)
-	r.Route("/certificate/forget").DELETE(crt.forget)
+	r.Route("/certificate/reset").DELETE(crt.reset)
 	r.Route("/certificate/parse").POST(crt.parse)
 	r.Route("/certificate").
 		GET(crt.detail).
@@ -170,8 +170,8 @@ func (crt *Certificate) download(c *ship.Context) error {
 	return nil
 }
 
-func (crt *Certificate) forget(c *ship.Context) error {
+func (crt *Certificate) reset(c *ship.Context) error {
 	ctx := c.Request().Context()
-	crt.svc.Forget(ctx)
+	crt.svc.Reset(ctx)
 	return nil
 }

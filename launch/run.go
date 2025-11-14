@@ -25,6 +25,7 @@ import (
 	"github.com/xmx/aegis-control/linkhub"
 	"github.com/xmx/aegis-control/mongodb"
 	"github.com/xmx/aegis-control/quick"
+	"github.com/xmx/aegis-control/tlscert"
 	expmiddle "github.com/xmx/aegis-server/application/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/application/expose/restapi"
 	expservice "github.com/xmx/aegis-server/application/expose/service"
@@ -169,9 +170,12 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	defaultDialer := tunutil.DefaultDialer()
 	dialer := tunutil.NewMatchDialer(defaultDialer, brokerDialer)
 
+	loadCert := repoAll.Certificate().Enables
+	certPool := tlscert.NewCertPool(loadCert, log)
+
 	httpTrip := &http.Transport{DialContext: dialer.DialContext}
 	httpCli := httpkit.NewClient(&http.Client{Transport: httpTrip})
-	certificateSvc := expservice.NewCertificate(repoAll, log)
+	certificateSvc := expservice.NewCertificate(repoAll, certPool, log)
 	fsSvc := expservice.NewFS(repoAll, log)
 	_ = httpCli
 
@@ -245,7 +249,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		listenAddr = ":443"
 	}
 	tlsCfg := &tls.Config{
-		GetCertificate: certificateSvc.GetCertificate,
+		GetCertificate: certPool.Match,
 		NextProtos:     []string{"h2", "http/1.1", "aegis"},
 		MinVersion:     tls.VersionTLS13,
 	}
