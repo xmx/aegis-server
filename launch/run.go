@@ -248,22 +248,19 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	if listenAddr == "" {
 		listenAddr = ":443"
 	}
-	tlsCfg := &tls.Config{
-		GetCertificate: certPool.Match,
-		NextProtos:     []string{"h2", "http/1.1", "aegis"},
-		MinVersion:     tls.VersionTLS13,
-	}
+	httpTLS := &tls.Config{GetCertificate: certPool.Match}
+	quicTLS := &tls.Config{GetCertificate: certPool.Match, NextProtos: []string{"aegis"}, MinVersion: tls.VersionTLS13}
 	httpLog := logger.NewV1(slog.New(logger.Skip(logh, 8)))
 	srv := &http.Server{
 		Addr:      listenAddr,
 		Handler:   outSH,
-		TLSConfig: tlsCfg,
+		TLSConfig: httpTLS,
 		ErrorLog:  httpLog,
 	}
 	quicSrv := &quick.QUICGo{
 		Addr:      listenAddr,
 		Handler:   brokerTunnelHandler,
-		TLSConfig: tlsCfg,
+		TLSConfig: quicTLS,
 	}
 	log.Info("监听地址", "listen_addr", listenAddr)
 

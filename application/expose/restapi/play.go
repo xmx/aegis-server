@@ -60,7 +60,7 @@ func (p *Play) js(c *ship.Context) error {
 		return nil
 	}
 
-	mods := append(p.mods, jsmod.Modules()...)
+	mods := append(p.mods, jsmod.All()...)
 	vm := jsvm.New(context.Background())
 	require := vm.Require()
 	require.Registers(mods)
