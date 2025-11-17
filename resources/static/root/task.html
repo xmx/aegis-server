@@ -258,13 +258,14 @@
             require(['vs/editor/editor.main'], function () {
                 monaco.editor.setTheme('vs-dark');
                 const saved = localStorage.getItem("agent-editor-code");
-                const initialCode = saved || `// 在此输入要下发的 JS 代码\nconsole.log("hello agent");`;
+                const initialCode = saved || `import console from 'console'\nconsole.log('hello world')`;
                 editor = monaco.editor.create(document.getElementById('editor'), {
                     value: initialCode,
                     language: 'javascript',
                     automaticLayout: true,
-                    minimap: {enabled: false},
-                    fontSize: 13
+                    minimap: {enabled: true},
+                    fontSize: 13,
+                    fontFamily: 'IBM Plex Mono, Consolas, monospace'
                 });
             });
         };
@@ -299,7 +300,7 @@
             resultMsg.className = 'error small';
             return;
         }
-        const payload = {name: 'test-code', code: editor.getValue()};
+        const payload = {name: 'code-' + Date.now(), code: editor.getValue()};
         const url = `/api/reverse/broker/${encodeURIComponent(brokerId)}/api/reverse/${encodeURIComponent(agentId)}/api/task/exec`;
         dispatchBtn.disabled = true;
         dispatchBtn.textContent = '下发中...';
