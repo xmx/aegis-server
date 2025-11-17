@@ -258,7 +258,7 @@
             require(['vs/editor/editor.main'], function () {
                 monaco.editor.setTheme('vs-dark');
                 const saved = localStorage.getItem("agent-editor-code");
-                const initialCode = saved || `import console from 'console'\nconsole.log('hello world')`;
+                const initialCode = saved || "import console from 'console'\nimport time from 'time'\n\nlet cnt = 0\nfor (let i = 1; i <= 10; i++) {\n  cnt++\n  console.log(\`${new Date().toJSON()} 第 ${cnt} 次打印\`)\n  time.sleep(2*time.second)\n}\n\nconsole.error('执行完毕')";
                 editor = monaco.editor.create(document.getElementById('editor'), {
                     value: initialCode,
                     language: 'javascript',
