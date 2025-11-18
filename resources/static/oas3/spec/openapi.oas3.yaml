@@ -415,6 +415,20 @@ paths:
       description: Broker 接入端口，websocket 协议。
       requestBody:
         content: {}
+  /agents:
+    get:
+      summary: 【Agent】分页查询
+      tags:
+        - "\U0001F5A5️ 节点"
+      responses:
+        '200':
+          description: OK
+      operationId: get-agents
+      description: 分页查询 agent 列表
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+        - $ref: '#/components/parameters/keyword'
   /broker:
     post:
       summary: 【Broker】创建
@@ -516,20 +530,6 @@ paths:
         description: ''
       tags:
         - "\U0001F5A5️ 节点"
-  /agents:
-    get:
-      summary: 【Agent】分页查询
-      tags:
-        - "\U0001F5A5️ 节点"
-      responses:
-        '200':
-          description: OK
-      operationId: get-agents
-      description: 分页查询 agent 列表
-      parameters:
-        - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/size'
-        - $ref: '#/components/parameters/keyword'
   /brokers:
     get:
       summary: 【Broker】分页查询
