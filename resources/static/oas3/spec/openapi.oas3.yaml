@@ -603,9 +603,16 @@ components:
           x-stoplight:
             id: cpaz624bh0aiy
           description: 是否启用
+        name:
+          type: string
+          x-stoplight:
+            id: 2fwvg6cqw04gr
+          description: 友好可识别的名字
+          example: example.com
       required:
         - public_key
         - private_key
+        - name
     UpdateCertificate:
       title: UpdateCertificate
       x-stoplight:
