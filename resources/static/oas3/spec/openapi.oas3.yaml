@@ -544,6 +544,58 @@ paths:
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/size'
         - $ref: '#/components/parameters/keyword'
+  /setting:
+    get:
+      summary: 【全局配置】获取
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+      operationId: get-setting
+      description: 获取全局配置
+    post:
+      summary: 【全局配置】修改
+      operationId: post-setting
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 修改全局配置
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                exposes:
+                  type: array
+                  x-stoplight:
+                    id: nendpw98bryk8
+                  description: 中心端暴露地址
+                  items:
+                    x-stoplight:
+                      id: ak1u0cvn1cjo2
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        x-stoplight:
+                          id: u6k2zacd16rjn
+                        description: 友好的名字
+                        example: 公网
+                      addr:
+                        type: string
+                        x-stoplight:
+                          id: l5zz1oc671kz0
+                        description: 地址
+                        example: 'example.com:8443'
+                    required:
+                      - name
+                      - addr
+              required:
+                - exposes
 components:
   securitySchemes:
     Authorization:
