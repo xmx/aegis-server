@@ -516,6 +516,34 @@ paths:
         description: ''
       tags:
         - "\U0001F5A5️ 节点"
+  /agents:
+    get:
+      summary: 【Agent】分页查询
+      tags:
+        - "\U0001F5A5️ 节点"
+      responses:
+        '200':
+          description: OK
+      operationId: get-agents
+      description: 分页查询 agent 列表
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+        - $ref: '#/components/parameters/keyword'
+  /brokers:
+    get:
+      summary: 【Broker】分页查询
+      tags:
+        - "\U0001F5A5️ 节点"
+      responses:
+        '200':
+          description: OK
+      operationId: get-brokers
+      description: 分页查询 broker 列表
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+        - $ref: '#/components/parameters/keyword'
 components:
   securitySchemes:
     Authorization:
