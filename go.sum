@@ -62,6 +62,8 @@ github.com/xmx/aegis-control v0.0.0-20251118023853-304466e4d641 h1:2Q9/vH7zBAijn
 github.com/xmx/aegis-control v0.0.0-20251118023853-304466e4d641/go.mod h1:7QHWO9kaisLVuaZGPhXbuqbqC9wEXM/1kIZysXJWjDY=
 github.com/xtaci/smux v1.5.37 h1:kJxOw1Uq/fF3fb6K0bAgxUwfdsyCypWRuH5l9v8icDI=
 github.com/xtaci/smux v1.5.37/go.mod h1:OMlQbT5vcgl2gb49mFkYo6SMf+zP3rcjcwQz7ZU7IGY=
+github.com/xtaci/smux v1.5.38 h1:E8lFhhsMJs/zOM+JDVU4p0tgnsEGWKgLShHwvwQoweA=
+github.com/xtaci/smux v1.5.38/go.mod h1:OMlQbT5vcgl2gb49mFkYo6SMf+zP3rcjcwQz7ZU7IGY=
 github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 h1:ilQV1hzziu+LLM3zUTJ0trRztfwgjqKnBWNtSRkbmwM=
 github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78/go.mod h1:aL8wCCfTfSfmXjznFBSZNN13rSJjlIOI1fUNAtF7rmI=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=

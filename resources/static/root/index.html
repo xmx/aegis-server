@@ -58,27 +58,34 @@
 
 <div class="container">
     <!-- 移除所有文本提示，仅保留选择框 -->
-    <select id="os">
-        <option value="linux">Linux</option>
-        <option value="windows">Windows</option>
-        <option value="darwin">macOS</option>
-    </select>
-
-    <select id="arch">
-        <option value="amd64">amd64</option>
-        <option value="arm64">arm64</option>
-    </select>
-
+    <select id="os"></select>
+    <select id="arch"></select>
     <button id="downloadBtn">下载</button>
 </div>
 
 <script>
+    async function fetchPlatforms() {
+        try {
+            const resp = await fetch("/api/agent-release/platforms", {
+                method: "GET",
+                headers: {"Accept": "application/json"}
+            });
+            if (!resp.ok) throw new Error("failed to load platforms");
+
+            return await resp.json();
+        } catch (err) {
+            console.error("加载平台信息失败:", err);
+            return [];
+        }
+    }
+
     function detectOS() {
         const ua = navigator.userAgent.toLowerCase();
         if (ua.includes("windows")) return "windows";
+        if (ua.includes("android")) return "android";
         if (ua.includes("mac os") || ua.includes("darwin")) return "darwin";
         if (ua.includes("linux")) return "linux";
-        return "linux";
+        return "";
     }
 
     function detectArch() {
@@ -87,14 +94,65 @@
         return "amd64";
     }
 
-    (function autoFill() {
-        document.getElementById("os").value = detectOS();
-        document.getElementById("arch").value = detectArch();
+    function fillSelect(select, values) {
+        select.innerHTML = "";
+        values.forEach(v => {
+            const opt = document.createElement("option");
+            opt.value = v;
+            opt.textContent = v;
+            select.appendChild(opt);
+        });
+    }
+
+    // 主入口
+    (async function init() {
+        const osSelect = document.getElementById("os");
+        const archSelect = document.getElementById("arch");
+
+        const platforms = await fetchPlatforms();
+
+        if (platforms.length === 0) {
+            // fallback：保留原静态选项，不自动填充
+            console.warn("平台数据为空，使用静态选项");
+            return;
+        }
+
+        // 填充 OS 下拉列表
+        const allOS = platforms.map(p => p.field);
+        fillSelect(osSelect, allOS);
+
+        // OS 切换时更新 arch 列表
+        osSelect.onchange = function () {
+            const selectedOS = osSelect.value;
+            const p = platforms.find(x => x.field === selectedOS);
+            if (p) fillSelect(archSelect, p.values);
+        };
+
+        // 自动探测 OS / Arch 并选择合法组合
+        const detectedOS = detectOS();
+        const detectedArch = detectArch();
+
+        if (allOS.includes(detectedOS)) {
+            osSelect.value = detectedOS;
+            const p = platforms.find(x => x.field === detectedOS);
+            fillSelect(archSelect, p.values);
+
+            if (p.values.includes(detectedArch)) {
+                archSelect.value = detectedArch;
+            }
+        } else {
+            // 使用默认第一个
+            osSelect.value = allOS[0];
+            const p = platforms[0];
+            fillSelect(archSelect, p.values);
+        }
     })();
 
+    // 下载按钮
     document.getElementById("downloadBtn").onclick = function () {
         const os = document.getElementById("os").value;
         const arch = document.getElementById("arch").value;
+
         const url = `/api/agent-release?goos=${encodeURIComponent(os)}&goarch=${encodeURIComponent(arch)}`;
         window.location.href = url;
     };
