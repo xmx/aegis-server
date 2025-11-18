@@ -164,8 +164,6 @@ paths:
   /agent-release/platforms:
     get:
       summary: 【Agent】平台列表
-      tags:
-        - "\U0001F5A5️ 节点"
       responses:
         '200':
           description: OK
@@ -199,6 +197,8 @@ paths:
                     - values
       operationId: get-agent-release-platforms
       description: 查询 agent 二进制已发布的平台列表。
+      tags:
+        - "\U0001F680 发布部署"
   /agent-release/parse:
     post:
       summary: 【Agent】解析二进制包信息
@@ -311,8 +311,6 @@ paths:
   /broker-release/platforms:
     get:
       summary: 【Broker】平台列表
-      tags:
-        - "\U0001F5A5️ 节点"
       responses:
         '200':
           description: OK
@@ -346,6 +344,8 @@ paths:
                     - values
       operationId: get-broker-release-platforms
       description: 查询 broker 二进制已发布的平台列表。
+      tags:
+        - "\U0001F680 发布部署"
   /broker-release/parse:
     post:
       summary: 【Broker】解析二进制包信息
