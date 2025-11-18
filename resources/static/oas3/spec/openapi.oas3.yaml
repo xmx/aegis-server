@@ -161,6 +161,44 @@ paths:
           description: OK
       operationId: get-agent-releases
       description: 获取 agent 二进制发行版列表
+  /agent-release/platforms:
+    get:
+      summary: 【Agent】平台列表
+      tags:
+        - "\U0001F5A5️ 节点"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  x-stoplight:
+                    id: 97tuwjm4tpr96
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                      x-stoplight:
+                        id: jhxpe1dmmbfit
+                      description: 操作系统
+                      example: windows
+                    values:
+                      type: array
+                      x-stoplight:
+                        id: v8xifeyk6ti3r
+                      description: 系统架构
+                      items:
+                        x-stoplight:
+                          id: ep8ove2dkopyn
+                        type: string
+                        example: amd64
+                  required:
+                    - field
+                    - values
+      operationId: get-agent-release-platforms
+      description: 查询 agent 二进制已发布的平台列表。
   /agent-release/parse:
     post:
       summary: 【Agent】解析二进制包信息
@@ -270,6 +308,44 @@ paths:
           description: OK
       operationId: get-broker-releases
       description: 获取 broker 二进制发行版列表
+  /broker-release/platforms:
+    get:
+      summary: 【Broker】平台列表
+      tags:
+        - "\U0001F5A5️ 节点"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  x-stoplight:
+                    id: iuquc3kbg64r1
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                      x-stoplight:
+                        id: wxzv42gi5hhat
+                      description: 操作系统
+                      example: windows
+                    values:
+                      type: array
+                      x-stoplight:
+                        id: r8zcmv2opkm7f
+                      description: 架构
+                      items:
+                        x-stoplight:
+                          id: vsyth48xi1j5r
+                        type: string
+                        example: amd64
+                  required:
+                    - field
+                    - values
+      operationId: get-broker-release-platforms
+      description: 查询 broker 二进制已发布的平台列表。
   /broker-release/parse:
     post:
       summary: 【Broker】解析二进制包信息
