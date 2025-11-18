@@ -32,6 +32,7 @@ func (ar *AgentRelease) RegisterRoute(r *ship.RouteGroupBuilder) error {
 		DELETE(ar.delete)
 	r.Route("/agent-releases").GET(ar.list)
 	r.Route("/agent-release/parse").POST(ar.parse)
+	r.Route("/agent-release/platforms").GET(ar.platforms)
 
 	return nil
 }
@@ -137,4 +138,14 @@ func (ar *AgentRelease) download(c *ship.Context) error {
 	down := io.MultiReader(stm, zipbuf)
 
 	return c.Stream(http.StatusOK, ship.MIMEOctetStream, down)
+}
+
+func (ar *AgentRelease) platforms(c *ship.Context) error {
+	ctx := c.Request().Context()
+	ret, err := ar.svc.Platforms(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
 }

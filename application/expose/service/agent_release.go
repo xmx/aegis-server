@@ -1,10 +1,12 @@
 package service
 
 import (
+	"cmp"
 	"context"
 	"debug/buildinfo"
 	"io"
 	"log/slog"
+	"slices"
 	"time"
 
 	"github.com/xmx/aegis-common/banner"
@@ -12,6 +14,7 @@ import (
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-server/application/errcode"
 	"github.com/xmx/aegis-server/application/expose/request"
+	"github.com/xmx/aegis-server/application/expose/response"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -143,4 +146,27 @@ func (ar *AgentRelease) Exposes(ctx context.Context) (model.ExposeAddresses, err
 	}
 
 	return exposes, nil
+}
+
+func (ar *AgentRelease) Platforms(ctx context.Context) ([]*response.FieldValues[string, string], error) {
+	pipe := mongo.Pipeline{
+		{{"$group", bson.D{{"_id", "$goos"}, {"values", bson.D{{"$addToSet", "$goarch"}}}}}},
+		{{"$project", bson.D{{"field", "$_id"}, {"values", 1}, {"_id", 0}}}},
+	}
+
+	var ret []*response.FieldValues[string, string]
+	repo := ar.repo.AgentRelease()
+	if err := repo.AggregateTo(ctx, pipe, &ret); err != nil {
+		return nil, err
+	}
+	slices.SortFunc(ret, func(a, b *response.FieldValues[string, string]) int {
+		return cmp.Compare(a.Field, b.Field)
+	})
+	for _, r := range ret {
+		slices.SortFunc(r.Values, func(a, b string) int {
+			return cmp.Compare(a, b)
+		})
+	}
+
+	return ret, nil
 }

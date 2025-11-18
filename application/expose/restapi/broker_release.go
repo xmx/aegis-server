@@ -32,6 +32,7 @@ func (br *BrokerRelease) RegisterRoute(r *ship.RouteGroupBuilder) error {
 		DELETE(br.delete)
 	r.Route("/broker-releases").GET(br.list)
 	r.Route("/broker-release/parse").POST(br.parse)
+	r.Route("/broker-release/platforms").GET(br.platforms)
 
 	return nil
 }
@@ -143,4 +144,14 @@ func (br *BrokerRelease) download(c *ship.Context) error {
 	down := io.MultiReader(stm, zipbuf)
 
 	return c.Stream(http.StatusOK, ship.MIMEOctetStream, down)
+}
+
+func (br *BrokerRelease) platforms(c *ship.Context) error {
+	ctx := c.Request().Context()
+	ret, err := br.svc.Platforms(ctx)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, ret)
 }

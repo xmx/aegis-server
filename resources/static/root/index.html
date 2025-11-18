@@ -2,177 +2,102 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>列表</title>
+    <title>下载</title>
     <style>
         body {
-            font-family: system-ui, sans-serif;
-            background-color: #1e1e1e;
-            color: #e0e0e0;
-            margin: 2em;
-        }
-        h2 { color: #81d4fa; }
+            background: #121212;
+            color: #e6e6e6;
+            font-family: sans-serif;
+            margin: 0;
+            height: 100vh;
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #2b2b2b;
-            border-radius: 6px;
-            overflow: hidden;
+            /* 居中核心：Flex + 水平/垂直居中 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #444;
-        }
-        th {
-            background-color: #333;
-            color: #b0bec5;
-            text-align: left;
-        }
-        tr:hover {
-            background-color: #383838;
-        }
-        button {
-            background: #1565c0;
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background: #1976d2;
-        }
-        input {
-            padding: 6px 10px;
-            background: #2b2b2b;
-            color: #fff;
-            border: 1px solid #555;
-            border-radius: 4px;
-        }
-        .status-true { color: #4caf50; font-weight: bold; }
-        .status-false { color: #e53935; font-weight: bold; }
-        .details {
-            display: none;
-            background-color: #212121;
-            font-size: 0.9em;
-        }
-        pre {
-            white-space: pre-wrap;
-            color: #b0bec5;
-        }
-        #pagination {
-            margin-top: 10px;
+
+        .container {
+            width: 320px;
             text-align: center;
         }
-        #pagination button {
-            background: #424242;
-            margin: 0 5px;
+
+        h2 {
+            color: #fafafa;
+            margin-bottom: 28px;
         }
-        #pagination button:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
+
+        select, button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            font-family: "IBM Plex Mono", Consolas, "Segoe UI", sans-serif;
+            margin-top: 14px;
+
+            border-radius: 6px;
+            border: 1px solid #333;
+            background: #1e1e1e;
+            color: #e6e6e6;
+        }
+
+        button {
+            cursor: pointer;
+            background: #2b2b2b;
+            border: 1px solid #444;
+            transition: background 0.15s;
+            margin-top: 22px;
+        }
+
+        button:hover {
+            background: #3a3a3a;
         }
     </style>
 </head>
 <body>
 
-<div>
-    <input id="keyword" placeholder="搜索关键字..."/>
-    <button onclick="loadAgents(1)">搜索</button>
-</div>
+<div class="container">
+    <!-- 移除所有文本提示，仅保留选择框 -->
+    <select id="os">
+        <option value="linux">Linux</option>
+        <option value="windows">Windows</option>
+        <option value="darwin">macOS</option>
+    </select>
 
-<table id="agents-table">
-    <thead>
-    <tr>
-        <th>IPv4</th>
-        <th>IPv6</th>
-        <th>Hostname</th>
-        <th>Tunnel</th>
-        <th>Status</th>
-        <th>操作</th>
-    </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+    <select id="arch">
+        <option value="amd64">amd64</option>
+        <option value="arm64">arm64</option>
+    </select>
 
-<div id="pagination">
-    <button id="prev" onclick="prevPage()">上一页</button>
-    <span id="page-info"></span>
-    <button id="next" onclick="nextPage()">下一页</button>
+    <button id="downloadBtn">下载</button>
 </div>
 
 <script>
-    let currentPage = 1;
-    const pageSize = 10;
-
-    async function loadAgents(page) {
-        currentPage = page;
-        const keyword = document.getElementById("keyword").value.trim();
-        const params = new URLSearchParams({ page, size: pageSize });
-        if (keyword) params.append("keyword", keyword);
-
-        document.body.style.cursor = "wait";
-        const res = await fetch(`/api/agents?${params}`);
-        document.body.style.cursor = "default";
-        if (!res.ok) {
-            alert("请求失败：" + res.status);
-            return;
-        }
-        const data = await res.json();
-        renderTable(data);
+    function detectOS() {
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.includes("windows")) return "windows";
+        if (ua.includes("mac os") || ua.includes("darwin")) return "darwin";
+        if (ua.includes("linux")) return "linux";
+        return "linux";
     }
 
-    function renderTable(data) {
-        const tbody = document.querySelector("#agents-table tbody");
-        tbody.innerHTML = "";
-        data.records.forEach(agent => {
-            const ipv4 = agent.networks?.map(n => n.ipv4?.join(", ") || "").filter(Boolean).join("<br>") || "-";
-            const ipv6 = agent.networks?.map(n => n.ipv6?.join(", ") || "").filter(Boolean).join("<br>") || "-";
-            const tunnel = agent.tunnel_stat
-                ? `${agent.tunnel_stat.protocol} → ${agent.tunnel_stat.remote_addr}<br>
-         ⏱ RX:${agent.tunnel_stat.receive_bytes} TX:${agent.tunnel_stat.transmit_bytes}`
-                : "-";
-
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-      <td>${ipv4}</td>
-      <td>${ipv6}</td>
-      <td>${agent.execute_stat.hostname}</td>
-      <td>${tunnel}</td>
-      <td class="${agent.status ? 'status-true' : 'status-false'}">${agent.status}</td>
-      <td><button onclick="toggleDetails('${agent.id}')">详情</button></td>
-    `;
-            tbody.appendChild(tr);
-
-            const detail = document.createElement("tr");
-            detail.className = "details";
-            detail.id = "details-" + agent.id;
-            detail.innerHTML = `
-      <td colspan="6">
-        <details>
-          <summary>查看完整 JSON</summary>
-          <pre>${JSON.stringify(agent, null, 2)}</pre>
-        </details>
-      </td>
-    `;
-            tbody.appendChild(detail);
-        });
-
-        document.getElementById("page-info").textContent =
-            `第 ${data.page} 页，共 ${Math.ceil(data.count / data.size)} 页`;
-        document.getElementById("prev").disabled = data.page <= 1;
-        document.getElementById("next").disabled = data.page >= Math.ceil(data.count / data.size);
+    function detectArch() {
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.includes("arm64") || ua.includes("aarch64")) return "arm64";
+        return "amd64";
     }
 
-    function toggleDetails(id) {
-        const row = document.getElementById("details-" + id);
-        row.style.display = row.style.display === "none" || row.style.display === "" ? "table-row" : "none";
-    }
+    (function autoFill() {
+        document.getElementById("os").value = detectOS();
+        document.getElementById("arch").value = detectArch();
+    })();
 
-    function nextPage() { loadAgents(currentPage + 1); }
-    function prevPage() { if (currentPage > 1) loadAgents(currentPage - 1); }
-
-    loadAgents(1);
+    document.getElementById("downloadBtn").onclick = function () {
+        const os = document.getElementById("os").value;
+        const arch = document.getElementById("arch").value;
+        const url = `/api/agent-release?goos=${encodeURIComponent(os)}&goarch=${encodeURIComponent(arch)}`;
+        window.location.href = url;
+    };
 </script>
 
 </body>

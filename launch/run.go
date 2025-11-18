@@ -176,6 +176,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	httpTrip := &http.Transport{DialContext: dialer.DialContext}
 	httpCli := httpkit.NewClient(&http.Client{Transport: httpTrip})
 	certificateSvc := expservice.NewCertificate(repoAll, certPool, log)
+	settingSvc := expservice.NewSetting(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
 	_ = httpCli
 
@@ -222,6 +223,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewLog(logh),
 		exprestapi.NewPlay(jsmodules),
 		exprestapi.NewReverse(dialer, repoAll),
+		exprestapi.NewSetting(settingSvc),
 		exprestapi.NewTunnel(brokerTunnelHandler),
 		exprestapi.NewDAV(apiPath, "/"),
 		exprestapi.NewSystem(cfg),

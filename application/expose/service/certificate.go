@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"iter"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/xmx/aegis-control/datalayer/model"
@@ -29,9 +30,10 @@ func NewCertificate(repo repository.All, pool tlscert.Certifier, log *slog.Logge
 }
 
 type Certificate struct {
-	repo repository.All
-	pool tlscert.Certifier
-	log  *slog.Logger
+	repo  repository.All
+	pool  tlscert.Certifier
+	log   *slog.Logger
+	mutex sync.Mutex
 }
 
 func (crt *Certificate) Page(ctx context.Context, req *request.PageKeywords) (*repository.Pages[model.Certificate, model.Certificates], error) {
@@ -66,11 +68,14 @@ func (crt *Certificate) Create(ctx context.Context, req *request.ConfigCertifica
 	mod.CreatedAt = now
 
 	repo := crt.repo.Certificate()
+
+	crt.mutex.Lock()
+	defer crt.mutex.Unlock()
 	if _, err = repo.InsertOne(ctx, mod); err != nil {
 		return err
 	}
 	if enabled {
-		crt.Reset(ctx)
+		crt.lockedReset()
 	}
 
 	return nil
@@ -94,12 +99,15 @@ func (crt *Certificate) Update(ctx context.Context, req *request.ConfigCertifica
 
 	filter := bson.M{"_id": id}
 	update := bson.M{"$set": mod}
+
+	crt.mutex.Lock()
+	defer crt.mutex.Unlock()
 	last, err := repo.FindOneAndUpdate(ctx, filter, update, opt)
 	if err != nil {
 		return err
 	}
 	if enabled || last.Enabled {
-		crt.Reset(ctx)
+		crt.lockedReset()
 	}
 
 	return nil
@@ -111,6 +119,9 @@ func (crt *Certificate) Delete(ctx context.Context, ids []bson.ObjectID) error {
 		return nil
 	}
 
+	crt.mutex.Lock()
+	defer crt.mutex.Unlock()
+
 	repo := crt.repo.Certificate()
 	filter := bson.M{"_id": bson.M{"$in": ids}}
 	res, err := repo.DeleteMany(ctx, filter)
@@ -119,7 +130,7 @@ func (crt *Certificate) Delete(ctx context.Context, ids []bson.ObjectID) error {
 	} else if res.DeletedCount == 0 {
 		return errcode.ErrNilDocument
 	}
-	crt.Reset(ctx)
+	crt.lockedReset()
 
 	return nil
 }
@@ -137,6 +148,13 @@ func (crt *Certificate) All(ctx context.Context, ids []bson.ObjectID) iter.Seq2[
 
 func (crt *Certificate) Reset(ctx context.Context) {
 	crt.log.WarnContext(ctx, "清除证书缓存")
+
+	crt.mutex.Lock()
+	crt.lockedReset()
+	crt.mutex.Unlock()
+}
+
+func (crt *Certificate) lockedReset() {
 	crt.pool.Reset()
 }
 

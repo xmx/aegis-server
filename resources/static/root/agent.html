@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>列表</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            margin: 2em;
+        }
+        h2 { color: #81d4fa; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #2b2b2b;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #444;
+        }
+        th {
+            background-color: #333;
+            color: #b0bec5;
+            text-align: left;
+        }
+        tr:hover {
+            background-color: #383838;
+        }
+        button {
+            background: #1565c0;
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1976d2;
+        }
+        input {
+            padding: 6px 10px;
+            background: #2b2b2b;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+        }
+        .status-true { color: #4caf50; font-weight: bold; }
+        .status-false { color: #e53935; font-weight: bold; }
+        .details {
+            display: none;
+            background-color: #212121;
+            font-size: 0.9em;
+        }
+        pre {
+            white-space: pre-wrap;
+            color: #b0bec5;
+        }
+        #pagination {
+            margin-top: 10px;
+            text-align: center;
+        }
+        #pagination button {
+            background: #424242;
+            margin: 0 5px;
+        }
+        #pagination button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+<div>
+    <input id="keyword" placeholder="搜索关键字..."/>
+    <button onclick="loadAgents(1)">搜索</button>
+</div>
+
+<table id="agents-table">
+    <thead>
+    <tr>
+        <th>IPv4</th>
+        <th>IPv6</th>
+        <th>Hostname</th>
+        <th>Tunnel</th>
+        <th>Status</th>
+        <th>操作</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<div id="pagination">
+    <button id="prev" onclick="prevPage()">上一页</button>
+    <span id="page-info"></span>
+    <button id="next" onclick="nextPage()">下一页</button>
+</div>
+
+<script>
+    let currentPage = 1;
+    const pageSize = 10;
+
+    async function loadAgents(page) {
+        currentPage = page;
+        const keyword = document.getElementById("keyword").value.trim();
+        const params = new URLSearchParams({ page, size: pageSize });
+        if (keyword) params.append("keyword", keyword);
+
+        document.body.style.cursor = "wait";
+        const res = await fetch(`/api/agents?${params}`);
+        document.body.style.cursor = "default";
+        if (!res.ok) {
+            alert("请求失败：" + res.status);
+            return;
+        }
+        const data = await res.json();
+        renderTable(data);
+    }
+
+    function renderTable(data) {
+        const tbody = document.querySelector("#agents-table tbody");
+        tbody.innerHTML = "";
+        data.records.forEach(agent => {
+            const ipv4 = agent.networks?.map(n => n.ipv4?.join(", ") || "").filter(Boolean).join("<br>") || "-";
+            const ipv6 = agent.networks?.map(n => n.ipv6?.join(", ") || "").filter(Boolean).join("<br>") || "-";
+            const tunnel = agent.tunnel_stat
+                ? `${agent.tunnel_stat.protocol} → ${agent.tunnel_stat.remote_addr}<br>
+         ⏱ RX:${agent.tunnel_stat.receive_bytes} TX:${agent.tunnel_stat.transmit_bytes}`
+                : "-";
+
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+      <td>${ipv4}</td>
+      <td>${ipv6}</td>
+      <td>${agent.execute_stat.hostname}</td>
+      <td>${tunnel}</td>
+      <td class="${agent.status ? 'status-true' : 'status-false'}">${agent.status}</td>
+      <td><button onclick="toggleDetails('${agent.id}')">详情</button></td>
+    `;
+            tbody.appendChild(tr);
+
+            const detail = document.createElement("tr");
+            detail.className = "details";
+            detail.id = "details-" + agent.id;
+            detail.innerHTML = `
+      <td colspan="6">
+        <details>
+          <summary>查看完整 JSON</summary>
+          <pre>${JSON.stringify(agent, null, 2)}</pre>
+        </details>
+      </td>
+    `;
+            tbody.appendChild(detail);
+        });
+
+        document.getElementById("page-info").textContent =
+            `第 ${data.page} 页，共 ${Math.ceil(data.count / data.size)} 页`;
+        document.getElementById("prev").disabled = data.page <= 1;
+        document.getElementById("next").disabled = data.page >= Math.ceil(data.count / data.size);
+    }
+
+    function toggleDetails(id) {
+        const row = document.getElementById("details-" + id);
+        row.style.display = row.style.display === "none" || row.style.display === "" ? "table-row" : "none";
+    }
+
+    function nextPage() { loadAgents(currentPage + 1); }
+    function prevPage() { if (currentPage > 1) loadAgents(currentPage - 1); }
+
+    loadAgents(1);
+</script>
+
+</body>
+</html>

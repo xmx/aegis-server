@@ -7,9 +7,10 @@ import (
 )
 
 type InstallSetup struct {
-	Server   Server   `json:"server"`
-	Database Database `json:"database"`
-	Logger   Logger   `json:"logger"`
+	Server   Server                `json:"server"`
+	Database Database              `json:"database"`
+	Logger   Logger                `json:"logger"`
+	Exposes  model.ExposeAddresses `json:"exposes"  validate:"gte=1,dive"`
 }
 
 type Database struct {

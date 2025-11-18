@@ -21,3 +21,8 @@ func (st *Setting) Get(ctx context.Context) (*model.Setting, error) {
 	repo := st.repo.Setting()
 	return repo.Get(ctx)
 }
+
+func (st *Setting) Upsert(ctx context.Context, req *model.SettingData) error {
+	repo := st.repo.Setting()
+	return repo.Upsert(ctx, req)
+}
