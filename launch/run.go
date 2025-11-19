@@ -20,7 +20,8 @@ import (
 	"github.com/xmx/aegis-common/logger"
 	"github.com/xmx/aegis-common/profile"
 	"github.com/xmx/aegis-common/shipx"
-	"github.com/xmx/aegis-common/tunnel/tunutil"
+	"github.com/xmx/aegis-common/tunnel/tunconst"
+	"github.com/xmx/aegis-common/tunnel/tundial"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
 	"github.com/xmx/aegis-control/mongodb"
@@ -166,14 +167,16 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	defer crond.Stop()
 
 	hub := linkhub.NewHub(32)
-	brokerDialer := linkhub.NewSuffixDialer(hub, tunutil.BrokerHostSuffix)
-	defaultDialer := tunutil.DefaultDialer()
-	dialer := tunutil.NewMatchDialer(defaultDialer, brokerDialer)
-
+	netDialer := &net.Dialer{Timeout: 30 * time.Second}
+	tunDialer := []tundial.ContextDialer{
+		linkhub.NewSuffixDialer(tunconst.BrokerHostSuffix, hub),
+		serverd.NewFindAgentDialer(tunconst.AgentHostSuffix, hub, repoAll),
+	}
+	dualDialer := tundial.NewFirstMatchDialer(tunDialer, netDialer)
 	loadCert := repoAll.Certificate().Enables
 	certPool := tlscert.NewCertPool(loadCert, log)
 
-	httpTrip := &http.Transport{DialContext: dialer.DialContext}
+	httpTrip := &http.Transport{DialContext: dualDialer.DialContext}
 	httpCli := httpkit.NewClient(&http.Client{Transport: httpTrip})
 	certificateSvc := expservice.NewCertificate(repoAll, certPool, log)
 	settingSvc := expservice.NewSetting(repoAll, log)
@@ -222,7 +225,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewFS(fsSvc),
 		exprestapi.NewLog(logh),
 		exprestapi.NewPlay(jsmodules),
-		exprestapi.NewReverse(dialer, repoAll),
+		exprestapi.NewReverse(dualDialer, repoAll),
 		exprestapi.NewSetting(settingSvc),
 		exprestapi.NewTunnel(brokerTunnelHandler),
 		exprestapi.NewDAV(apiPath, "/"),

@@ -10,12 +10,13 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/library/httpkit"
-	"github.com/xmx/aegis-common/tunnel/tunutil"
+	"github.com/xmx/aegis-common/tunnel/tunconst"
+	"github.com/xmx/aegis-common/tunnel/tundial"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/library/httpnet"
 )
 
-func NewReverse(dial tunutil.Dialer, repo repository.All) *Reverse {
+func NewReverse(dial tundial.ContextDialer, repo repository.All) *Reverse {
 	trip := &http.Transport{DialContext: dial.DialContext}
 	prx := httpnet.NewReverse(trip)
 	wsd := httpkit.NewWebsocketDialer(dial.DialContext)
@@ -44,19 +45,21 @@ func (rvs *Reverse) RegisterRoute(r *ship.RouteGroupBuilder) error {
 }
 
 func (rvs *Reverse) agent(c *ship.Context) error {
-	//id, pth := c.Param("id"), "/"+c.Param("path")
-	//w, r := c.Response(), c.Request()
-	//
-	//rawPath := r.URL.Path
-	//if pth != "/" && strings.HasSuffix(rawPath, "/") {
-	//	pth += "/"
-	//}
-	//pth = "/api/reverse/agent/" + id + pth
-	//reqURL := transport.NewServerBrokerAgentURL(id, pth)
-	//r.URL = reqURL
-	//r.Host = reqURL.Host
-	//
-	//rvs.prx.ServeHTTP(w, r)
+	id, pth := c.Param("id"), "/"+c.Param("path")
+	w, r := c.Response(), c.Request()
+
+	rawPath := r.URL.Path
+	if pth != "/" && strings.HasSuffix(rawPath, "/") {
+		pth += "/"
+	}
+
+	reqURL := tunconst.ServerToAgent(id, "/api/reverse/")
+	reqURL = reqURL.JoinPath(id, pth)
+	reqURL.RawQuery = r.URL.RawQuery
+	r.URL = reqURL
+	r.Host = reqURL.Host
+
+	rvs.prx.ServeHTTP(w, r)
 
 	return nil
 }
@@ -70,7 +73,7 @@ func (rvs *Reverse) broker(c *ship.Context) error {
 		path += "/"
 	}
 
-	destURL := tunutil.ServerToBroker(id, path)
+	destURL := tunconst.ServerToBroker(id, path)
 	destURL.RawQuery = reqURL.RawQuery
 
 	if c.IsWebSocket() {

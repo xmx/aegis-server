@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/xmx/aegis-common/options"
-	"github.com/xmx/aegis-common/tunnel/tundial"
-	"github.com/xmx/aegis-common/tunnel/tunutil"
+	"github.com/xmx/aegis-common/tunnel/tunconst"
+	"github.com/xmx/aegis-common/tunnel/tunopen"
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
@@ -20,7 +20,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func New(repo repository.All, cfg *config.Config, opts ...options.Lister[option]) tunutil.Handler {
+func New(repo repository.All, cfg *config.Config, opts ...options.Lister[option]) tunconst.Handler {
 	opts = append(opts, fallbackOptions())
 	opt := options.Eval[option](opts...)
 
@@ -37,7 +37,7 @@ type brokerServer struct {
 	opt  option
 }
 
-func (bs *brokerServer) Handle(mux tundial.Muxer) {
+func (bs *brokerServer) Handle(mux tunopen.Muxer) {
 	//goland:noinspection GoUnhandledErrorResult
 	defer mux.Close()
 
@@ -63,7 +63,7 @@ func (bs *brokerServer) Handle(mux tundial.Muxer) {
 
 // authentication 节点认证。
 // 客户端主动建立一条虚拟子流连接用于交换认证信息，认证后改子流关闭，后续子流即为业务流。
-func (bs *brokerServer) authentication(mux tundial.Muxer, timeout time.Duration) (linkhub.Peer, bool) {
+func (bs *brokerServer) authentication(mux tunopen.Muxer, timeout time.Duration) (linkhub.Peer, bool) {
 	protocol, subprotocol := mux.Protocol()
 	laddr, raddr := mux.Addr(), mux.RemoteAddr()
 	attrs := []any{
@@ -88,7 +88,7 @@ func (bs *brokerServer) authentication(mux tundial.Muxer, timeout time.Duration)
 	now := time.Now()
 	_ = sig.SetDeadline(now.Add(timeout))
 	req := new(authRequest)
-	if err = tunutil.ReadAuth(sig, req); err != nil {
+	if err = tunopen.ReadAuth(sig, req); err != nil {
 		attrs = append(attrs, slog.Any("error", err))
 		bs.log().Error("读取请求信息错误", attrs...)
 		return nil, false
@@ -240,10 +240,10 @@ func (bs *brokerServer) writeError(w io.Writer, code int, err error) error {
 		resp.Message = err.Error()
 	}
 
-	return tunutil.WriteAuth(w, resp)
+	return tunopen.WriteAuth(w, resp)
 }
 
 func (bs *brokerServer) writeSucceed(w io.Writer, cfg authConfig) error {
 	resp := &authResponse{Code: http.StatusAccepted, Config: cfg}
-	return tunutil.WriteAuth(w, resp)
+	return tunopen.WriteAuth(w, resp)
 }

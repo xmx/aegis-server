@@ -1,0 +1,68 @@
+package serverd
+
+import (
+	"context"
+	"net"
+	"strings"
+
+	"github.com/xmx/aegis-common/tunnel/tundial"
+	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-control/linkhub"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+)
+
+func NewFindAgentDialer(suffix string, hub linkhub.Huber, repo repository.All) tundial.ContextDialer {
+	return &findAgentDialer{
+		repo:   repo,
+		huber:  hub,
+		suffix: suffix,
+	}
+}
+
+type findAgentDialer struct {
+	repo   repository.All
+	huber  linkhub.Huber
+	suffix string
+}
+
+func (fad *findAgentDialer) Dial(network, address string) (net.Conn, error) {
+	return fad.DialContext(context.Background(), network, address)
+}
+
+func (fad *findAgentDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	host, _, _ := net.SplitHostPort(address)
+	if host == "" {
+		return nil, nil
+	}
+	agentID, found := strings.CutSuffix(host, fad.suffix)
+	if !found {
+		return nil, nil
+	}
+
+	aid, err := bson.ObjectIDFromHex(agentID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := options.FindOne().SetProjection(bson.M{"broker": 1})
+	repo := fad.repo.Agent()
+	agt, err := repo.FindByID(ctx, aid, opt)
+	if err != nil {
+		return nil, err
+	}
+	if agt.Broker != nil {
+		bid := agt.Broker.ID
+		if peer := fad.huber.GetByID(bid); peer != nil {
+			mux := peer.Muxer()
+			return mux.Open(ctx)
+		}
+	}
+
+	return nil, &net.OpError{
+		Op:   "dial",
+		Net:  network,
+		Addr: &net.UnixAddr{Net: network, Name: address},
+		Err:  net.UnknownNetworkError("no route to host"),
+	}
+}
