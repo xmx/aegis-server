@@ -25,10 +25,7 @@ func (set *Setting) RegisterRoute(r *ship.RouteGroupBuilder) error {
 
 func (set *Setting) get(c *ship.Context) error {
 	ctx := c.Request().Context()
-	cfg, err := set.svc.Get(ctx)
-	if err != nil {
-		return err
-	}
+	cfg, _ := set.svc.Get(ctx)
 
 	return c.JSON(http.StatusOK, cfg)
 }
