@@ -79,11 +79,11 @@ func Run(ctx context.Context, cfgfile string) error {
 		return err
 	}
 
-	// 如没有指定监听端口，则会随机的监听一个端口。
-	// 但是在机房或者是限制环境中，网络只有部分端口可通，此时需要指定监听地址。
 	listen := os.Getenv(config.EnvKeyInitialAddr)
 	if listen == "" {
-		listen = ":8443"
+		// 如果没有指定初始化监听地址，就默认监听 443，如果端口冲突或受限的网络中，
+		// 需要指定特定的端口，请使用环境变量指明。
+		listen = ":443"
 		log.Info("如需指定监听地址，请设置环境变量", "env_key", config.EnvKeyInitialAddr)
 	}
 	lis, err := net.Listen("tcp", listen)
@@ -156,8 +156,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	log.Info("数据库连接成功")
 
 	if vc := cfg.Victoria; vc.Addr != "" {
-		opt := &metrics.PushOptions{Headers: vc.Header}
-
+		opt := &metrics.PushOptions{Headers: vc.Header, ExtraLabels: `instance="aegis-server"`}
 		if err = metrics.InitPushWithOptions(ctx, vc.Addr, 5*time.Second, true, opt); err != nil {
 			return err
 		}
