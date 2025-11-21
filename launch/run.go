@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/robfig/cron/v3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/jsos/jsmod"
@@ -153,6 +154,14 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	}
 	defer disconnectDB(db)
 	log.Info("数据库连接成功")
+
+	if vc := cfg.Victoria; vc.Addr != "" {
+		opt := &metrics.PushOptions{Headers: vc.Header}
+
+		if err = metrics.InitPushWithOptions(ctx, vc.Addr, 5*time.Second, true, opt); err != nil {
+			return err
+		}
+	}
 
 	log.Info("开始初始化数据库索引...")
 	repoAll := repository.NewAll(db)

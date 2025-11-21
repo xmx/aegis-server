@@ -18,6 +18,7 @@ type Config struct {
 	Server   Server   `json:"server"`
 	Database Database `json:"database"`
 	Logger   Logger   `json:"logger"`
+	Victoria Victoria `json:"victoria"` // 临时
 }
 
 type Database struct {
@@ -53,4 +54,9 @@ func (l Logger) Lumber() *lumberjack.Logger {
 	}
 
 	return nil
+}
+
+type Victoria struct {
+	Addr   string   `json:"addr"`
+	Header []string `json:"header"`
 }
