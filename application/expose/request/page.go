@@ -7,9 +7,23 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type Pages struct {
-	Page int64 `json:"page" query:"page" form:"page" validate:"gte=0"`
+type Sizes struct {
 	Size int64 `json:"size" query:"size" form:"size" validate:"gte=0,lte=1000"`
+}
+
+func (s Sizes) Limit() int64 {
+	if n := s.Size; n <= 0 {
+		return 10
+	} else if n > 1000 {
+		return 1000
+	} else {
+		return n
+	}
+}
+
+type Pages struct {
+	Sizes
+	Page int64 `json:"page" query:"page" form:"page" validate:"gte=0"`
 }
 
 type PageKeywords struct {

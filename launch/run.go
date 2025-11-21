@@ -156,7 +156,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	log.Info("数据库连接成功")
 
 	if vc := cfg.Victoria; vc.Addr != "" {
-		opt := &metrics.PushOptions{Headers: vc.Header, ExtraLabels: `instance="aegis-server"`}
+		opt := &metrics.PushOptions{Headers: vc.Header, ExtraLabels: `instance="aegis-server-dev"`}
 		if err = metrics.InitPushWithOptions(ctx, vc.Addr, 5*time.Second, true, opt); err != nil {
 			return err
 		}
@@ -188,6 +188,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	httpCli := httpkit.NewClient(&http.Client{Transport: httpTrip})
 	certificateSvc := expservice.NewCertificate(repoAll, certPool, log)
 	settingSvc := expservice.NewSetting(repoAll, log)
+	victoriaMetricsSvc := expservice.NewVictoriaMetrics(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
 	_ = httpCli
 
@@ -235,6 +236,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewPlay(jsmodules),
 		exprestapi.NewReverse(dualDialer, repoAll),
 		exprestapi.NewSetting(settingSvc),
+		exprestapi.NewVictoriaMetrics(victoriaMetricsSvc),
 		exprestapi.NewTunnel(brokerTunnelHandler),
 		exprestapi.NewDAV(apiPath, "/"),
 		exprestapi.NewSystem(cfg),
@@ -251,11 +253,17 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 
 	rootRGB := outSH.Group("/")
 	_ = exprestapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
-	apiRGB := rootRGB.Group(apiPath).Use(expmiddle.WAF(nil))
+	apiRGB := rootRGB.Group(apiPath).Use(expmiddle.NewWAF(nil))
 	if err = shipx.RegisterRoutes(apiRGB, routes); err != nil { // 注册路由
 		return err
 	}
 	log.Info("HTTP 路由注册完毕")
+
+	// 强制要求统一中间件路由信息。
+	//if err = expmiddle.CheckRouteInfo(outSH.Routes()); err != nil {
+	//	log.Error("路由信息不符合中间件记录格式", "error", err)
+	//	return err
+	//}
 
 	listenAddr := srvCfg.Addr
 	if listenAddr == "" {

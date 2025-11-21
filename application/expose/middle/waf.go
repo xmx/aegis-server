@@ -10,7 +10,7 @@ import (
 	"github.com/xmx/aegis-control/datalayer/model"
 )
 
-func WAF(writeLog func(context.Context, *model.Oplog) error) ship.Middleware {
+func NewWAF(writeLog func(context.Context, *model.Oplog) error) ship.Middleware {
 	waf := &wafMiddle{writeLog: writeLog}
 	return waf.middle
 }
@@ -40,7 +40,7 @@ func (wm *wafMiddle) middle(h ship.Handler) ship.Handler {
 
 		err := h(c)
 		if err != nil {
-			attrs = append(attrs, slog.String("error", err.Error()))
+			attrs = append(attrs, "error", err)
 			c.Warnf("访问接口出错", attrs...)
 		} else {
 			c.Infof("访问接口", attrs...)

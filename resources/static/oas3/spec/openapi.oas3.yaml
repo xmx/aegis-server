@@ -630,6 +630,68 @@ paths:
                       - addr
               required:
                 - exposes
+  /victoria-metrics:
+    get:
+      summary: 【VictoriaMetrics】配置列表
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VictoriaMetrics'
+                  x-stoplight:
+                    id: o18sn4x9dl4fq
+      operationId: get-victoria-metrics
+      description: 查询 VictoriaMetrics 配置列表
+    post:
+      summary: 【VictoriaMetrics】新增配置
+      operationId: post-victoria-metrics
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 添加 VictoriaMetrics 配置
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VictoriaMetrics'
+    put:
+      summary: 【VictoriaMetrics】修改配置
+      operationId: put-victoria-metrics
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 修改 VictoriaMetrics 配置
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VictoriaMetrics'
+    delete:
+      summary: 【VictoriaMetrics】删除配置
+      operationId: delete-victoria-metrics
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 删除 VictoriaMetrics 配置
+      parameters:
+        - schema:
+            type: string
+          in: query
+          description: 名字
+          required: true
+          name: name
 components:
   securitySchemes:
     Authorization:
@@ -827,6 +889,62 @@ components:
         - name
         - addr
       description: 服务暴露地址
+    VictoriaMetrics:
+      title: VictoriaMetrics
+      x-stoplight:
+        id: y32pshplwpk6t
+      type: object
+      properties:
+        name:
+          type: string
+          x-stoplight:
+            id: u0gwudeb5z7z5
+          description: 名字
+          example: 阿里云
+          minLength: 2
+          maxLength: 20
+        method:
+          type: string
+          x-stoplight:
+            id: upzd8n9z715vo
+          description: 请求方法
+          enum:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - PATCH
+          example: GET
+          default: GET
+        address:
+          type: string
+          x-stoplight:
+            id: ppcxk41znqx3h
+          description: 推送地址
+          example: 'https://vm.example.com/api/v1/import/prometheus'
+        header:
+          type: object
+          x-stoplight:
+            id: nzbo3vai95w22
+          description: 请求 Header
+          properties:
+            Authorization:
+              type: string
+              x-stoplight:
+                id: vsdzhaj0gtkmo
+              example: Basic xxx
+        enabled:
+          type: boolean
+          x-stoplight:
+            id: d4umlathfh6oc
+          description: 是否启用
+          default: false
+      required:
+        - name
+        - method
+        - address
+        - header
+        - enabled
   requestBodies: {}
 security:
   - Authorization: []

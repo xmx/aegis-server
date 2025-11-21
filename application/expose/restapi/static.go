@@ -11,6 +11,7 @@ type Static struct {
 }
 
 func (sta *Static) RegisterRoute(r *ship.RouteGroupBuilder) error {
+
 	for path, dir := range sta.sites {
 		if path == "" || dir == "" {
 			continue

@@ -1,0 +1,16 @@
+[Unit]
+Description=Aegis Broker
+After=network.target
+
+[Service]
+Type=simple
+LimitNOFILE=65535
+WorkingDirectory=/opt/aegis/broker
+ExecStart=/opt/aegis/broker/broker
+ExecStop=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=5
+Environment=TERM=xterm-256color
+
+[Install]
+WantedBy=multi-user.target
