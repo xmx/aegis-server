@@ -370,7 +370,7 @@
                 return;
             }
 
-            const res = await fetch("/api/v1/install", {
+            const res = await fetch("/api/install", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify(payload)

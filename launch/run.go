@@ -73,7 +73,7 @@ func Run(ctx context.Context, cfgfile string) error {
 	sh.Logger = logger.NewShip(logHandlers)
 
 	sh.Route("/").StaticFS(http.FS(initstatic.FS))
-	apiRBG := sh.Group("/api/v1")
+	apiRBG := sh.Group("/api")
 	if err := shipx.RegisterRoutes(apiRBG, routes); err != nil {
 		log.Error("注册初始化路由错误", "error", err)
 		return err

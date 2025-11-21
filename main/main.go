@@ -38,7 +38,7 @@ func main() {
 	defer cancel()
 
 	if err := launch.Run(ctx, *cfg); err != nil {
-		slog.Error("服务运行错误", slog.Any("error", err))
+		slog.Error("服务运行错误", "error", err)
 	} else {
 		slog.Info("服务停止运行")
 	}
