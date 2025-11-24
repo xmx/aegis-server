@@ -58,5 +58,4 @@ jobs:
           echo "上传 $BINARY 到服务器..."
           scp -i private.key "$BINARY" $SERVER_USER@$SERVER_HOST:/tmp/
 
-          ssh -i private.key $SERVER_USER@$SERVER_HOST "mv /tmp/$BINARY $DEPLOY_DIR"
-          ssh -i private.key $SERVER_USER@$SERVER_HOST "cd $DEPLOY_DIR && sudo rm server && sudo chmod +x $BINARY && sudo ln -s $BINARY server && sudo systemctl restart aegis-server.service"
+          ssh -i private.key $SERVER_USER@$SERVER_HOST "sudo mv /tmp/$BINARY $DEPLOY_DIR && cd $DEPLOY_DIR && sudo rm server && sudo chmod +x $BINARY && sudo ln -s $BINARY server && sudo systemctl restart aegis-server.service"
