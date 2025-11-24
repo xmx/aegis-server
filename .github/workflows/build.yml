@@ -44,6 +44,8 @@ jobs:
         run: |
           echo "$PRIVATE_KEY" > private.key
           chmod 600 private.key
+          ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
+          
           BINARY=$(ls aegis-server_linux-amd64_*)
           if [ -z "$BINARY" ]; then
             echo "没有找到编译产物"
