@@ -41,6 +41,7 @@ jobs:
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
+          DEPLOY_DIR: /opt/aegis/server
         run: |
           echo "$PRIVATE_KEY" > private.key
           chmod 600 private.key
@@ -56,3 +57,6 @@ jobs:
 
           echo "上传 $BINARY 到服务器..."
           scp -i private.key "$BINARY" $SERVER_USER@$SERVER_HOST:/tmp/
+
+          ssh -i private.key $SERVER_USER@$SERVER_HOST "mv /tmp/$BINARY $DEPLOY_DIR"
+          ssh -i private.key $SERVER_USER@$SERVER_HOST "cd $DEPLOY_DIR && sudo rm server && sudo chmod +x $BINARY && sudo ln -s $BINARY server && sudo systemctl restart aegis-server.service"
