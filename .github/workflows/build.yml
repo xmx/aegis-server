@@ -36,3 +36,19 @@ jobs:
           path: |
             aegis-server_*
             resources
+      - name: 部署
+        env:
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          echo "$PRIVATE_KEY" > private.key
+          chmod 600 private.key
+          BINARY=$(ls aegis-server_linux-amd64_*)
+          if [ -z "$BINARY" ]; then
+            echo "没有找到编译产物"
+            exit 1
+          fi
+
+          echo "上传 $BINARY 到服务器..."
+          scp -i private.key "$BINARY" $USER@$HOST:/tmp/
