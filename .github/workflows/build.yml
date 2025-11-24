@@ -44,6 +44,8 @@ jobs:
         run: |
           echo "$PRIVATE_KEY" > private.key
           chmod 600 private.key
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           ssh-keyscan -H "$SERVER_HOST" >> ~/.ssh/known_hosts
           
           BINARY=$(ls aegis-server_linux-amd64_*)
