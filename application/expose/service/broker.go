@@ -44,7 +44,7 @@ func (brk *Broker) Page(ctx context.Context, req *request.PageKeywords) (*reposi
 	return repo.FindPagination(ctx, bson.D{}, req.Page, req.Size)
 }
 
-func (brk *Broker) Create(ctx context.Context, req *request.BrokerCreate) error {
+func (brk *Broker) Create(ctx context.Context, req *request.BrokerUpsert) error {
 	now := time.Now()
 	buf := make([]byte, 50)
 	_, _ = rand.Read(buf)
@@ -62,6 +62,17 @@ func (brk *Broker) Create(ctx context.Context, req *request.BrokerCreate) error 
 
 	repo := brk.repo.Broker()
 	_, err := repo.InsertOne(ctx, dat)
+
+	return err
+}
+
+func (brk *Broker) Update(ctx context.Context, req *request.BrokerUpsert) error {
+	now := time.Now()
+	filter := bson.D{{"name", req.Name}}
+	update := bson.M{"$set": bson.M{"updated_at": now, "config": req.Config, "exposes": req.Exposes}}
+
+	repo := brk.repo.Broker()
+	_, err := repo.UpdateOne(ctx, filter, update)
 
 	return err
 }

@@ -20,7 +20,7 @@ type Broker struct {
 
 func (bk *Broker) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/brokers").GET(bk.page)
-	r.Route("/broker").POST(bk.create)
+	r.Route("/broker").POST(bk.create).PUT(bk.update)
 
 	return nil
 }
@@ -41,7 +41,7 @@ func (bk *Broker) page(c *ship.Context) error {
 }
 
 func (bk *Broker) create(c *ship.Context) error {
-	req := new(request.BrokerCreate)
+	req := new(request.BrokerUpsert)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
@@ -50,11 +50,12 @@ func (bk *Broker) create(c *ship.Context) error {
 	return bk.svc.Create(ctx, req)
 }
 
-func (bk *Broker) kickout(c *ship.Context) error {
-	req := new(request.ObjectID)
-	if err := c.BindQuery(req); err != nil {
+func (bk *Broker) update(c *ship.Context) error {
+	req := new(request.BrokerUpsert)
+	if err := c.Bind(req); err != nil {
 		return err
 	}
+	ctx := c.Request().Context()
 
-	return bk.svc.Kickout(req.OID())
+	return bk.svc.Update(ctx, req)
 }
