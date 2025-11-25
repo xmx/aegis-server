@@ -8,7 +8,9 @@ import (
 
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
+	"github.com/xmx/aegis-control/library/memoize"
 	"github.com/xmx/aegis-server/application/expose/request"
+	"github.com/xmx/metrics"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -16,6 +18,7 @@ func NewVictoriaMetrics(repo repository.All, log *slog.Logger) *VictoriaMetrics 
 	return &VictoriaMetrics{
 		repo: repo,
 		log:  log,
+		cfg:  memoize.NewCache2(repo.VictoriaMetrics().Enabled),
 	}
 }
 
@@ -23,6 +26,7 @@ type VictoriaMetrics struct {
 	repo repository.All
 	log  *slog.Logger
 	mtx  sync.Mutex
+	cfg  memoize.Cache2[*model.VictoriaMetrics, error]
 }
 
 func (vm *VictoriaMetrics) List(ctx context.Context) ([]*model.VictoriaMetrics, error) {
@@ -115,6 +119,26 @@ func (vm *VictoriaMetrics) Delete(ctx context.Context, name string) error {
 	return nil
 }
 
+func (vm *VictoriaMetrics) PushConfig(ctx context.Context) (string, *metrics.PushOptions, error) {
+	cfg, err := vm.cfg.Load(ctx)
+	if err != nil {
+		return "", nil, err
+	}
+
+	headers := make([]string, 0, len(cfg.Header))
+	for k, v := range cfg.Header {
+		headers = append(headers, k+": "+v)
+	}
+
+	opts := &metrics.PushOptions{
+		Headers: headers,
+		Method:  cfg.Method,
+		Client:  nil,
+	}
+
+	return cfg.Address, opts, nil
+}
+
 func (vm *VictoriaMetrics) Reset() {
 	vm.mtx.Lock()
 	defer vm.mtx.Unlock()
@@ -122,5 +146,5 @@ func (vm *VictoriaMetrics) Reset() {
 }
 
 func (vm *VictoriaMetrics) reset() {
-
+	_, _ = vm.cfg.Forget()
 }

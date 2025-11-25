@@ -9,22 +9,22 @@ import (
 
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
-	"github.com/xmx/aegis-control/linkhub"
 	"github.com/xmx/aegis-server/application/expose/request"
+	"github.com/xmx/aegis-server/application/peerpc/sbrpc"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func NewBroker(repo repository.All, hub linkhub.Huber, log *slog.Logger) *Broker {
+func NewBroker(repo repository.All, rpc sbrpc.Client, log *slog.Logger) *Broker {
 	return &Broker{
 		repo: repo,
-		hub:  hub,
+		rpc:  rpc,
 		log:  log,
 	}
 }
 
 type Broker struct {
 	repo repository.All
-	hub  linkhub.Huber
+	rpc  sbrpc.Client
 	log  *slog.Logger
 }
 
@@ -77,19 +77,13 @@ func (brk *Broker) Update(ctx context.Context, req *request.BrokerUpsert) error 
 	return err
 }
 
-func (brk *Broker) Kickout(id bson.ObjectID) error {
-	peer := brk.hub.GetByID(id)
-	if peer == nil {
-		return nil
-	}
-	mux := peer.Muxer()
-	_ = mux.Close()
-
-	return nil
-}
-
 func (brk *Broker) GetByName(ctx context.Context, name string) (*model.Broker, error) {
 	filter := bson.D{{"name", name}}
 	repo := brk.repo.Broker()
 	return repo.FindOne(ctx, filter)
+}
+
+func (brk *Broker) Exit(ctx context.Context, id bson.ObjectID) error {
+	hand := brk.rpc.NewHandler(id)
+	return hand.SystemExit(ctx)
 }

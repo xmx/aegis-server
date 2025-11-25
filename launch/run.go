@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/VictoriaMetrics/metrics"
 	"github.com/robfig/cron/v3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/jsos/jsmod"
@@ -28,11 +27,13 @@ import (
 	"github.com/xmx/aegis-control/mongodb"
 	"github.com/xmx/aegis-control/quick"
 	"github.com/xmx/aegis-control/tlscert"
+	"github.com/xmx/aegis-server/application/crontab"
 	expmiddle "github.com/xmx/aegis-server/application/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/application/expose/restapi"
 	expservice "github.com/xmx/aegis-server/application/expose/service"
 	initrestapi "github.com/xmx/aegis-server/application/initialize/restapi"
 	initstatic "github.com/xmx/aegis-server/application/initialize/static"
+	"github.com/xmx/aegis-server/application/peerpc/sbrpc"
 	"github.com/xmx/aegis-server/application/serverd"
 	"github.com/xmx/aegis-server/application/validext"
 	"github.com/xmx/aegis-server/config"
@@ -155,13 +156,6 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	defer disconnectDB(db)
 	log.Info("数据库连接成功")
 
-	if vc := cfg.Victoria; vc.Addr != "" {
-		opt := &metrics.PushOptions{Headers: vc.Header, ExtraLabels: `instance="aegis-server-dev"`}
-		if err = metrics.InitPushWithOptions(ctx, vc.Addr, 5*time.Second, true, opt); err != nil {
-			return err
-		}
-	}
-
 	log.Info("开始初始化数据库索引...")
 	repoAll := repository.NewAll(db)
 	if err = repoAll.CreateIndex(ctx); err != nil {
@@ -185,12 +179,13 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	certPool := tlscert.NewCertPool(loadCert, log)
 
 	httpTrip := &http.Transport{DialContext: dualDialer.DialContext}
-	httpCli := httpkit.NewClient(&http.Client{Transport: httpTrip})
+	httpClient := &http.Client{Transport: httpTrip}
+	httpkitCli := httpkit.NewClient(httpClient)
 	certificateSvc := expservice.NewCertificate(repoAll, certPool, log)
 	settingSvc := expservice.NewSetting(repoAll, log)
 	victoriaMetricsSvc := expservice.NewVictoriaMetrics(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
-	_ = httpCli
+	sbRPC := sbrpc.NewClient(httpkitCli)
 
 	shipLog := logger.NewShip(logh)
 	brokSH := ship.Default()
@@ -212,7 +207,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 
 	agentSvc := expservice.NewAgent(repoAll, log)
 	agentReleaseSvc := expservice.NewAgentRelease(repoAll, log)
-	brokerSvc := expservice.NewBroker(repoAll, hub, log)
+	brokerSvc := expservice.NewBroker(repoAll, sbRPC, log)
 	brokerReleaseSvc := expservice.NewBrokerRelease(repoAll, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
@@ -264,6 +259,15 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	//	log.Error("路由信息不符合中间件记录格式", "error", err)
 	//	return err
 	//}
+
+	cronTasks := []cronv3.Tasker{
+		crontab.NewMetrics(victoriaMetricsSvc.PushConfig),
+	}
+	for _, task := range cronTasks {
+		if _, err = crond.AddTask(task); err != nil {
+			return err
+		}
+	}
 
 	listenAddr := srvCfg.Addr
 	if listenAddr == "" {
