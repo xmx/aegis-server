@@ -6,7 +6,7 @@ import (
 	"github.com/xmx/aegis-common/library/validation"
 )
 
-func Customs() []validation.CustomValidatorFunc {
+func All() []validation.CustomValidatorFunc {
 	return []validation.CustomValidatorFunc{
 		mongoDB,
 	}

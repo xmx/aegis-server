@@ -1,39 +1,83 @@
 package restapi
 
 import (
+	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/library/httpkit"
+	"github.com/xmx/aegis-common/problem"
 	"github.com/xmx/aegis-common/tunnel/tunconst"
 	"github.com/xmx/aegis-common/tunnel/tundial"
-	"github.com/xmx/aegis-control/datalayer/repository"
-	"github.com/xmx/aegis-control/library/httpnet"
+	"github.com/xmx/aegis-server/application/errcode"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func NewReverse(dial tundial.ContextDialer, repo repository.All) *Reverse {
+func NewReverse(dial tundial.ContextDialer) *Reverse {
 	trip := &http.Transport{DialContext: dial.DialContext}
-	prx := httpnet.NewReverse(trip)
-	wsd := httpkit.NewWebsocketDialer(dial.DialContext)
+	resv := &httputil.ReverseProxy{
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetXForwarded()
+		},
+		Transport: trip,
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			host := r.Host
+			if host == "" {
+				host = r.URL.Host
+			}
+
+			prob := &problem.Details{
+				Host:     host,
+				Status:   http.StatusBadGateway,
+				Instance: r.URL.Path,
+				Method:   r.Method,
+				Datetime: time.Now().UTC(),
+			}
+
+			if ae, ok := err.(*net.OpError); ok {
+				addr := ae.Addr.String()
+				if brokID, _, found := strings.Cut(addr, tunconst.BrokerHostSuffix); found {
+					err = errcode.FmtBrokerDisconnect.Fmt(brokID)
+				} else if errors.Is(ae.Err, mongo.ErrNoDocuments) {
+					if agentID, _, exists := strings.Cut(addr, tunconst.AgentHostSuffix); exists {
+						err = errcode.FmtAgentNotExists.Fmt(agentID)
+					}
+				}
+			}
+			prob.Detail = err.Error()
+
+			_ = prob.JSON(w)
+		},
+	}
+	wsd := &websocket.Dialer{
+		NetDialContext:    dial.DialContext,
+		HandshakeTimeout:  10 * time.Second,
+		EnableCompression: true,
+	}
+	wsu := &websocket.Upgrader{
+		HandshakeTimeout:  10 * time.Second,
+		CheckOrigin:       func(*http.Request) bool { return true },
+		EnableCompression: true,
+	}
 
 	return &Reverse{
-		prx:  prx,
-		wsd:  wsd,
-		wsu:  httpkit.NewWebsocketUpgrader(),
-		repo: repo,
+		prx: resv,
+		wsd: wsd,
+		wsu: wsu,
 	}
 }
 
 type Reverse struct {
-	prx  *httputil.ReverseProxy
-	wsd  *websocket.Dialer
-	wsu  *websocket.Upgrader
-	repo repository.All
+	prx *httputil.ReverseProxy
+	wsd *websocket.Dialer
+	wsu *websocket.Upgrader
 }
 
 func (rvs *Reverse) RegisterRoute(r *ship.RouteGroupBuilder) error {

@@ -52,7 +52,9 @@ func (ob OptionBuilder) Server(s *http.Server) OptionBuilder {
 func (ob OptionBuilder) Handler(h http.Handler) OptionBuilder {
 	ob.opts = append(ob.opts, func(o option) option {
 		if o.server == nil {
-			o.server = &http.Server{}
+			srv := &http.Server{Protocols: new(http.Protocols)}
+			srv.Protocols.SetUnencryptedHTTP2(true)
+			o.server = srv
 		}
 		o.server.Handler = h
 

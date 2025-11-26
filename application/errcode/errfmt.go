@@ -6,7 +6,10 @@ import (
 	"github.com/xgfone/ship/v5"
 )
 
-var FmtExample = errorTemplate("这是样例数据：%d")
+var (
+	FmtBrokerDisconnect = errorTemplate("broker 节点离线：%s")
+	FmtAgentNotExists   = errorTemplate("agent 不存在：%s")
+)
 
 type errorTemplate string
 

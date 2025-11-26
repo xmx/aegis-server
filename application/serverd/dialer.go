@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/xmx/aegis-common/tunnel/tunconst"
 	"github.com/xmx/aegis-common/tunnel/tundial"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
@@ -42,27 +43,34 @@ func (fad *findAgentDialer) DialContext(ctx context.Context, network, address st
 
 	aid, err := bson.ObjectIDFromHex(agentID)
 	if err != nil {
-		return nil, err
+		return nil, net.InvalidAddrError("agent id 无效：" + agentID)
 	}
 
 	opt := options.FindOne().SetProjection(bson.M{"broker": 1})
 	repo := fad.repo.Agent()
 	agt, err := repo.FindByID(ctx, aid, opt)
-	if err != nil {
-		return nil, err
-	}
-	if agt.Broker != nil {
-		bid := agt.Broker.ID
-		if peer := fad.huber.GetByID(bid); peer != nil {
-			mux := peer.Muxer()
-			return mux.Open(ctx)
+	if err != nil || agt.Broker == nil {
+		return nil, &net.OpError{
+			Op:   "lookup",
+			Net:  network,
+			Addr: &net.UnixAddr{Net: network, Name: address},
+			Err:  err,
 		}
 	}
 
+	brok := agt.Broker
+	if peer := fad.huber.GetByID(brok.ID); peer != nil {
+		mux := peer.Muxer()
+		return mux.Open(ctx)
+	}
+
+	// 此时是 broker 节点不通，改写错误提示。
+	brokID := brok.ID.Hex()
+	brokHost := tunconst.ServerToBroker(brokID, "").Host
 	return nil, &net.OpError{
 		Op:   "dial",
 		Net:  network,
-		Addr: &net.UnixAddr{Net: network, Name: address},
+		Addr: &net.UnixAddr{Net: network, Name: brokHost},
 		Err:  net.UnknownNetworkError("no route to host"),
 	}
 }

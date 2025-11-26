@@ -43,8 +43,8 @@ import (
 
 func Run(ctx context.Context, cfgfile string) error {
 	valid := validation.New()
-	_ = valid.RegisterCustomValidations(validation.Customs())
-	_ = valid.RegisterCustomValidations(validext.Customs())
+	_ = valid.RegisterCustomValidations(validation.All())
+	_ = valid.RegisterCustomValidations(validext.All())
 
 	logHandlers := logger.NewHandler(logger.NewTint(os.Stdout, nil))
 	log := slog.New(logHandlers)
@@ -229,7 +229,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewFS(fsSvc),
 		exprestapi.NewLog(logh),
 		exprestapi.NewPlay(jsmodules),
-		exprestapi.NewReverse(dualDialer, repoAll),
+		exprestapi.NewReverse(dualDialer),
 		exprestapi.NewSetting(settingSvc),
 		exprestapi.NewVictoriaMetrics(victoriaMetricsSvc),
 		exprestapi.NewTunnel(brokerTunnelHandler),
