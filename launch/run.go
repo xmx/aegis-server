@@ -281,10 +281,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		Handler:   outSH,
 		TLSConfig: httpTLS,
 		ErrorLog:  httpLog,
-		Protocols: new(http.Protocols),
 	}
-	srv.Protocols.SetHTTP2(true)
-	log.Info("http 服务协议", "http_protocols", srv.Protocols.String())
 	quicSrv := &quick.QUICGo{
 		Addr:      listenAddr,
 		Handler:   brokerTunnelHandler,
