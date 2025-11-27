@@ -122,7 +122,8 @@ func (bs *brokerServer) authentication(mux tunopen.Muxer, timeout time.Duration)
 	}
 
 	brokerID := brok.ID
-	peer := linkhub.NewPeer(brokerID, mux)
+	pinf := linkhub.Info{Inet: req.Inet, Goos: req.Goos, Goarch: req.Goarch, Hostname: req.Hostname}
+	peer := linkhub.NewPeer(brokerID, mux, pinf)
 	if !bs.opt.huber.Put(peer) {
 		bs.log().Warn("节点重复上线（连接池检查）", attrs...)
 		_ = bs.writeError(sig, http.StatusConflict, nil)

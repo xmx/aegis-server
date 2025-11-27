@@ -3,6 +3,7 @@ package crontab
 import (
 	"context"
 	"io"
+	"os"
 	"time"
 
 	"github.com/xmx/aegis-common/library/cronv3"
@@ -10,13 +11,17 @@ import (
 )
 
 func NewMetrics(cfg func(ctx context.Context) (pushURL string, opts *metrics.PushOptions, err error)) cronv3.Tasker {
+	hostname, _ := os.Hostname()
+
 	return &metricsTask{
-		cfg: cfg,
+		cfg:   cfg,
+		label: `instance="` + hostname + `",instance_type="server"`,
 	}
 }
 
 type metricsTask struct {
-	cfg func(ctx context.Context) (pushURL string, opts *metrics.PushOptions, err error)
+	cfg   func(ctx context.Context) (pushURL string, opts *metrics.PushOptions, err error)
+	label string
 }
 
 func (mt *metricsTask) Info() cronv3.TaskInfo {
@@ -32,8 +37,7 @@ func (mt *metricsTask) Call(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	label := `instance_type="aegis-server"`
-	opts.ExtraLabels = label
+	opts.ExtraLabels = mt.label
 
 	return metrics.PushMetricsExt(ctx, pushURL, mt.defaultWrite, opts)
 }
