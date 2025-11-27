@@ -30,13 +30,14 @@ jobs:
         run: sh build.sh
 
       - name: 上传产物
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: aegis-server
           path: |
             aegis-server_*
             resources
       - name: 部署
+        timeout-minutes: 5
         env:
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
