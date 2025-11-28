@@ -57,6 +57,6 @@ jobs:
           fi
 
           echo "上传 $BINARY 到服务器..."
-          rsync -avz --partial --progress --rsh="ssh -i private.key" "$BINARY" $SERVER_USER@$SERVER_HOST:/tmp/
+          rsync -avz --partial --progress --rsh="ssh -i private.key" "$BINARY" $SERVER_USER@$SERVER_HOST:$DEPLOY_DIR
 
-          ssh -i private.key $SERVER_USER@$SERVER_HOST "sudo mv /tmp/$BINARY $DEPLOY_DIR && cd $DEPLOY_DIR && sudo rm server && sudo chmod +x $BINARY && sudo ln -s $BINARY server && sudo systemctl restart aegis-server.service"
+          ssh -i private.key $SERVER_USER@$SERVER_HOST "cd $DEPLOY_DIR && rm -rf aegis-server && chmod +x $BINARY && ln -s $BINARY aegis-server && systemctl restart aegis-server.service"

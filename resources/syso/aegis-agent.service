@@ -1,12 +1,12 @@
 [Unit]
-Description=Aegis Server
+Description=Aegis Agent
 After=network.target
 
 [Service]
 Type=simple
 LimitNOFILE=65535
-WorkingDirectory=/opt/aegis/server
-ExecStart=/opt/aegis/server/aegis-server
+WorkingDirectory=/opt/aegis/agent
+ExecStart=/opt/aegis/agent/aegis-agent
 ExecStop=/bin/kill -HUP $MAINPID
 Restart=always
 RestartSec=5
