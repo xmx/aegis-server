@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/grafana/sobek v0.0.0-20251124090928-9a028a30ff58
 	github.com/lmittmann/tint v1.1.2
+	github.com/oschwald/maxminddb-golang/v2 v2.1.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
 	github.com/xmx/aegis-common v0.0.0-20251126094553-533cd94c9558
