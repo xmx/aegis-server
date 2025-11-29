@@ -157,7 +157,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	log.Info("数据库连接成功")
 
 	log.Info("开始初始化数据库索引...")
-	repoAll := repository.NewAll(db)
+	repoAll := repository.NewAll(db, log)
 	if err = repoAll.CreateIndex(ctx); err != nil {
 		log.Error("索引创建错误", "error", err)
 		return err

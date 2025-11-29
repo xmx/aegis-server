@@ -15,6 +15,7 @@ func All() []validation.CustomValidatorFunc {
 	return []validation.CustomValidatorFunc{
 		mongoDB,
 		ipRange,
+		iso3166alpha2,
 	}
 }
 
@@ -51,4 +52,13 @@ func ipRange() (string, validator.FuncCtx, validator.RegisterTranslationsFunc) {
 	}
 
 	return tag, vFunc, regFunc
+}
+
+func iso3166alpha2() (string, validator.FuncCtx, validator.RegisterTranslationsFunc) {
+	const tag = "iso3166_1_alpha2"
+	regFunc := func(utt ut.Translator) error {
+		return utt.Add(tag, "{0}不是合法 ISO-3166 国家编码", true)
+	}
+
+	return tag, nil, regFunc
 }
