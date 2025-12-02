@@ -278,7 +278,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	if listenAddr == "" {
 		listenAddr = ":443"
 	}
-	httpTLS := &tls.Config{GetCertificate: certPool.Match, MinVersion: tls.VersionTLS13} // TLSv1.3 绕过阿里云未备案域名拦截。
+	httpTLS := &tls.Config{GetCertificate: certPool.Match}
 	quicTLS := &tls.Config{GetCertificate: certPool.Match, NextProtos: []string{"aegis"}, MinVersion: tls.VersionTLS13}
 	httpLog := logger.NewV1(slog.New(logger.Skip(logh, 8)))
 	srv := &http.Server{
