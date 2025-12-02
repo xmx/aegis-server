@@ -1,31 +1,25 @@
 package middle
 
 import (
-	"net/http"
-
 	"github.com/xgfone/ship/v5"
+	"github.com/xmx/aegis-server/application/expose/firewalld"
 )
 
-type Allower interface {
-	Allowed(*http.Request) bool
-}
-
-func NewFirewall(allow Allower) ship.Middleware {
-	fw := &firewall{allow: allow}
-	return fw.handle
+func NewFirewall(fw *firewalld.Firewalld) ship.Middleware {
+	f := &firewall{fw: fw}
+	return f.handle
 }
 
 type firewall struct {
-	allow Allower
+	fw *firewalld.Firewalld
 }
 
 func (f *firewall) handle(h ship.Handler) ship.Handler {
 	return func(c *ship.Context) error {
-		r := c.Request()
-		if f.allow.Allowed(r) {
+		if fw := f.fw; fw == nil || fw.Allow(c.Request()) {
 			return h(c)
 		}
 
-		return ship.ErrForbidden
+		return ship.ErrForbidden.Newf("禁止访问")
 	}
 }

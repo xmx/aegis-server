@@ -9,11 +9,11 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/grafana/sobek v0.0.0-20251124090928-9a028a30ff58
 	github.com/lmittmann/tint v1.1.2
-	github.com/oschwald/maxminddb-golang/v2 v2.1.1
+	github.com/oschwald/geoip2-golang/v2 v2.0.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
 	github.com/xmx/aegis-common v0.0.0-20251126094553-533cd94c9558
-	github.com/xmx/aegis-control v0.0.0-20251129124937-39c22f814cd1
+	github.com/xmx/aegis-control v0.0.0-20251202021740-7520bb0854dc
 	github.com/xmx/metrics v0.0.0-20251124113446-33b980340aea
 	go.mongodb.org/mongo-driver/v2 v2.4.0
 	golang.org/x/crypto v0.45.0
@@ -29,8 +29,9 @@ require (
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/pprof v0.0.0-20251114195745-4902fdda35c8 // indirect
-	github.com/klauspost/compress v1.18.1 // indirect
+	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
+	github.com/oschwald/maxminddb-golang/v2 v2.1.1 // indirect
 	github.com/quic-go/quic-go v0.57.1 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
 	github.com/valyala/histogram v1.2.0 // indirect

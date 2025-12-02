@@ -118,3 +118,4 @@ crash.txt
 *.cast
 *.upx
 *.jsonl
+*.mmdb

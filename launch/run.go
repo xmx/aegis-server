@@ -28,6 +28,7 @@ import (
 	"github.com/xmx/aegis-control/quick"
 	"github.com/xmx/aegis-control/tlscert"
 	"github.com/xmx/aegis-server/application/crontab"
+	"github.com/xmx/aegis-server/application/expose/firewalld"
 	expmiddle "github.com/xmx/aegis-server/application/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/application/expose/restapi"
 	expservice "github.com/xmx/aegis-server/application/expose/service"
@@ -182,6 +183,8 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	httpClient := &http.Client{Transport: httpTrip}
 	httpkitCli := httpkit.NewClient(httpClient)
 	certificateSvc := expservice.NewCertificate(repoAll, certPool, log)
+	maxmindSvc := expservice.NewMaxmind()
+	firewallSvc := expservice.NewFirewall(repoAll, maxmindSvc, log)
 	settingSvc := expservice.NewSetting(repoAll, log)
 	victoriaMetricsSvc := expservice.NewVictoriaMetrics(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
@@ -226,6 +229,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewBroker(brokerSvc),
 		exprestapi.NewBrokerRelease(brokerReleaseSvc, brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
+		exprestapi.NewFirewall(firewallSvc),
 		exprestapi.NewFS(fsSvc),
 		exprestapi.NewLog(logh),
 		exprestapi.NewPlay(jsmodules),
@@ -246,7 +250,8 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	outSH.HandleError = shipx.HandleError
 	outSH.Logger = shipLog
 
-	rootRGB := outSH.Group("/")
+	firewallMiddle := firewalld.New(firewallSvc, log)
+	rootRGB := outSH.Group("/").Use(expmiddle.NewFirewall(firewallMiddle))
 	_ = exprestapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
 	apiRGB := rootRGB.Group(apiPath).Use(expmiddle.NewWAF(nil))
 	if err = shipx.RegisterRoutes(apiRGB, routes); err != nil { // 注册路由

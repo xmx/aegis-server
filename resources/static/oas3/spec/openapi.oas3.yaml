@@ -692,6 +692,136 @@ paths:
           description: 名字
           required: true
           name: name
+  /firewalls:
+    get:
+      summary: 【防火墙】列表查询
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  x-stoplight:
+                    id: sa6842xx8iukd
+                  type: object
+                  properties:
+                    id:
+                      $ref: '#/components/schemas/ObjectID'
+                      x-stoplight:
+                        id: f450m08t6nt90
+                      description: ID
+                    name:
+                      type: string
+                      x-stoplight:
+                        id: vkgl3p2aenm6v
+                      description: 名字
+                      example: 亚太地区白名单
+                    enabled:
+                      type: boolean
+                      x-stoplight:
+                        id: ecvimcxzxwtrv
+                      description: 是否启用
+                    blacklist:
+                      type: boolean
+                      x-stoplight:
+                        id: jou3u277innjq
+                      description: 是否黑名单模式（反之为白名单模式）
+                    trust_headers:
+                      $ref: '#/components/schemas/TrustHeaders'
+                      x-stoplight:
+                        id: 551eaxtpo9jo9
+                      description: 可信网关 Header
+                    trust_proxies:
+                      $ref: '#/components/schemas/IPRanges'
+                      x-stoplight:
+                        id: jld34ucccqir2
+                      description: 可信网关 IP
+                    country_mode:
+                      type: boolean
+                      x-stoplight:
+                        id: im7r8rru2pepu
+                    ip_nets:
+                      $ref: '#/components/schemas/IPRanges'
+                      x-stoplight:
+                        id: ub26umxd4g86v
+                      description: IP 名单
+                    countries:
+                      $ref: '#/components/schemas/ISO3166s'
+                      x-stoplight:
+                        id: yjocpfcmww9dy
+                      description: 国家地区代码 ISO3166 Alpha 2
+                  required:
+                    - id
+                    - name
+                    - enabled
+                    - blacklist
+                    - country_mode
+      operationId: get-firewalls
+      description: 查询防火墙规则列表
+  /firewall:
+    post:
+      summary: 【防火墙】新增
+      operationId: post-firewall
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 新增防火墙规则
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FirewallUpsert'
+    put:
+      summary: 【防火墙】修改
+      operationId: put-firewall
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 修改防火墙规则
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FirewallUpsert'
+    delete:
+      summary: 【防火墙】删除
+      operationId: delete-firewall
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 删除防火墙规则
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: name
+          required: true
+          description: 配置名
+  /firewall/precheck:
+    post:
+      summary: 【防火墙】配置预检
+      operationId: post-firewall-precheck
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 提交规则前预检查，
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FirewallUpsert'
 components:
   securitySchemes:
     Authorization:
@@ -945,6 +1075,121 @@ components:
         - address
         - header
         - enabled
+    TrustHeaders:
+      title: TrustHeaders
+      x-stoplight:
+        id: eycp649v8mdd3
+      type: array
+      description: 可信网关 Header
+      items:
+        x-stoplight:
+          id: y4wdd69lxb43b
+        type: string
+        example: X-Forwarded-For
+    IPRanges:
+      title: IPRanges
+      x-stoplight:
+        id: o90yg0fwrl57i
+      type: array
+      uniqueItems: true
+      maxItems: 1000
+      examples:
+        - - 10.1.0.1-10.1.0.50
+          - 10.2.0.1/24
+          - 10.3.0.18
+          - '2404:6800::/32'
+      items:
+        x-stoplight:
+          id: ptyyxqggudapx
+        type: string
+        example: 10.10.10.1-10.10.10.50
+    ISO3166s:
+      title: ISO3166s
+      x-stoplight:
+        id: 7uannegii61yg
+      type: array
+      description: |-
+        ## ISO3166_1 Alpha 2
+
+        [维基百科](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2)
+
+        [标准文档（付费）](https://www.iso.org/standard/72483.html)
+      maxItems: 300
+      uniqueItems: true
+      items:
+        x-stoplight:
+          id: d9r8nn8yfm0fq
+        type: string
+        example: CN
+      examples:
+        - - CN
+          - HK
+          - MO
+          - TW
+    FirewallUpsert:
+      title: FirewallUpsert
+      x-stoplight:
+        id: yxjlyx91d6dlt
+      type: object
+      description: 防火墙配置
+      properties:
+        name:
+          type: string
+          x-stoplight:
+            id: ok6usbgnfkf9k
+          description: 配置名
+          minLength: 2
+          maxLength: 20
+          example: 亚太白名单
+        enabled:
+          type: boolean
+          x-stoplight:
+            id: p45dvunysndta
+          description: 是否启用该配置
+          default: true
+        blacklist:
+          type: boolean
+          x-stoplight:
+            id: d2t90w1jxx5ri
+          default: false
+          description: 是否启用黑名单模式（反之是白名单模式）
+        trust_headers:
+          x-stoplight:
+            id: 9y3clhj0sfams
+          type: array
+          uniqueItems: true
+          maxItems: 100
+          description: 可信 Header
+          items:
+            x-stoplight:
+              id: wecwjcei4xqgr
+            type: string
+            example: X-Forwarded-For
+        trust_proxies:
+          $ref: '#/components/schemas/IPRanges'
+          x-stoplight:
+            id: 3zuf0eikpkgt1
+          description: 可信网关 IP
+        country_mode:
+          type: boolean
+          x-stoplight:
+            id: 30b8ws41wfcl1
+          description: 国家地区模式
+        ip_nets:
+          $ref: '#/components/schemas/IPRanges'
+          x-stoplight:
+            id: 2fdylpkpsgi4d
+          description: IP 名单（`IP 模式` 时必填）
+        countries:
+          $ref: '#/components/schemas/ISO3166s'
+          x-stoplight:
+            id: 3be2kz4llcti2
+          description: 国家地区编码（`地区/国家模式` 必填）
+      required:
+        - name
+        - enabled
+        - blacklist
+        - country_mode
   requestBodies: {}
 security:
   - Authorization: []

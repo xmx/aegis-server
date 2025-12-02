@@ -7,4 +7,7 @@ var (
 	ErrCertificateInvalid     = ship.ErrBadRequest.Newf("无效证书")
 	ErrCertificateUnavailable = ship.ErrBadRequest.Newf("未配置任何的证书")
 	ErrInvalidBinaryRelease   = ship.ErrBadRequest.Newf("无效的二进制程序")
+	ErrTrustHeaderProxy       = ship.ErrBadRequest.Newf("可信 Header 与可信代理无效")
+	ErrIPNetsRequired         = ship.ErrBadRequest.Newf("IP 名单必须填写")
+	ErrISOCodeRequired        = ship.ErrBadRequest.Newf("国家代码必须填写")
 )
