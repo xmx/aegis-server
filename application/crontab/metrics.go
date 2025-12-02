@@ -2,8 +2,10 @@ package crontab
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/xmx/aegis-common/library/cronv3"
@@ -12,10 +14,13 @@ import (
 
 func NewMetrics(cfg func(ctx context.Context) (pushURL string, opts *metrics.PushOptions, err error)) cronv3.Tasker {
 	hostname, _ := os.Hostname()
+	goos := runtime.GOOS
+	goarch := runtime.GOARCH
+	label := fmt.Sprintf(`instance="%s",instance_type="server",goos="%s",goarch="%s"`, hostname, goos, goarch)
 
 	return &metricsTask{
 		cfg:   cfg,
-		label: `instance="` + hostname + `",instance_type="server"`,
+		label: label,
 	}
 }
 
