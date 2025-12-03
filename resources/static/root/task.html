@@ -202,12 +202,18 @@
             return;
         }
         records.forEach((r, idx) => {
-            const ip = pickFirstIp(r) || '(无 IP)';
-            const host = r.execute_stat?.hostname || '';
+            const attrs = []
+            const ip = pickFirstIp(r) || '未知IP';
+            attrs.push(ip)
+            const host = r.execute_stat?.hostname
+            if (host) {
+                attrs.push(host);
+            }
             const statusText = r.status ? '在线' : '离线';
+            attrs.push(statusText)
             const opt = document.createElement('option');
             opt.value = String(idx);
-            opt.text = `${ip} — ${host} — ${statusText}`;
+            opt.text = attrs.join(' - ');
             select.appendChild(opt);
         });
         select.selectedIndex = 0;
@@ -223,7 +229,7 @@
             return;
         }
         const r = agents[Number(idx)];
-        const ip = pickFirstIp(r) || '(无 IP)';
+        const ip = pickFirstIp(r) || '未知IP';
         const host = r.execute_stat?.hostname || '';
         const online = Boolean(r.status);
         const dot = document.createElement('span');
