@@ -10,7 +10,6 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/profile"
 	"github.com/xmx/aegis-control/mongodb"
-	"github.com/xmx/aegis-server/application/initialize/request"
 	"github.com/xmx/aegis-server/config"
 )
 
@@ -32,7 +31,7 @@ func (inst *Install) RegisterRoute(r *ship.RouteGroupBuilder) error {
 }
 
 func (inst *Install) setup(c *ship.Context) error {
-	req := new(request.InstallSetup)
+	req := new(config.Config)
 	if err := c.Bind(req); err != nil {
 		return err
 	}
@@ -79,6 +78,7 @@ func (inst *Install) setup(c *ship.Context) error {
 		return err
 	}
 	cli := db.Client()
+	//goland:noinspection GoUnhandledErrorResult
 	defer cli.Disconnect(parent)
 
 	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
@@ -88,13 +88,20 @@ func (inst *Install) setup(c *ship.Context) error {
 		return ship.ErrBadRequest.Newf("连接数据库错误：%s", err)
 	}
 
-	cfg := req.Config()
-	if err = profile.WriteFile(config.Filename, cfg); err != nil {
+	// 避免写入文件时出现 null
+	if req.Server.Vhosts == nil {
+		req.Server.Vhosts = []string{}
+	}
+	if req.Server.Static == nil {
+		req.Server.Static = map[string]string{}
+	}
+
+	if err = profile.WriteFile(config.Filename, req); err != nil {
 		return err
 	}
 	c.Infof("配置初始化并保存成功")
 	inst.done = true
-	inst.results <- cfg
+	inst.results <- req
 
 	return nil
 }

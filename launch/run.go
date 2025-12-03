@@ -136,6 +136,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	logOpts := &slog.HandlerOptions{AddSource: true, Level: logLevel}
 	logh.Replace() // reset 日志
 	if lumber := logCfg.Lumber(); lumber != nil {
+		//goland:noinspection GoUnhandledErrorResult
 		defer lumber.Close()
 		logh.Attach(slog.NewJSONHandler(lumber, logOpts))
 	}
@@ -264,6 +265,18 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	//	log.Error("路由信息不符合中间件记录格式", "error", err)
 	//	return err
 	//}
+	// 注册 vhost
+	var handler http.Handler = outSH
+	if len(srvCfg.Vhosts) != 0 {
+		hm := ship.NewHostManagerHandler(nil)
+		for _, vhost := range srvCfg.Vhosts {
+			if _, err = hm.AddHost(vhost, outSH); err != nil {
+				log.Error("添加虚拟主机错误", "error", err, "host", vhost)
+				return err
+			}
+		}
+		handler = hm
+	}
 
 	cronTasks := []cronv3.Tasker{
 		crontab.NewMetrics(victoriaMetricsSvc.PushConfig),
@@ -283,7 +296,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	httpLog := logger.NewV1(slog.New(logger.Skip(logh, 8)))
 	srv := &http.Server{
 		Addr:      listenAddr,
-		Handler:   outSH,
+		Handler:   handler,
 		TLSConfig: httpTLS,
 		ErrorLog:  httpLog,
 	}
