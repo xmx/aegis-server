@@ -35,7 +35,9 @@ jobs:
           name: aegis-server
           path: |
             aegis-server_*
-            resources
+            resources/mmdb
+            resources/static
+            resources/syso
       - name: 部署
         timeout-minutes: 5
         env:
@@ -58,5 +60,6 @@ jobs:
 
           echo "上传 $BINARY 到服务器..."
           rsync -avz --partial --progress --rsh="ssh -i private.key" "$BINARY" $SERVER_USER@$SERVER_HOST:$DEPLOY_DIR
+          rsync -avz --partial --progress --rsh="ssh -i private.key" resources/static $SERVER_USER@$SERVER_HOST:$DEPLOY_DIR/resources/static
 
           ssh -i private.key $SERVER_USER@$SERVER_HOST "cd $DEPLOY_DIR && rm -rf aegis-server && chmod +x $BINARY && ln -s $BINARY aegis-server && systemctl restart aegis-server.service"
