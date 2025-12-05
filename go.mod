@@ -13,7 +13,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
 	github.com/xmx/aegis-common v0.0.0-20251126094553-533cd94c9558
-	github.com/xmx/aegis-control v0.0.0-20251203021006-7dc903e3cfee
+	github.com/xmx/aegis-control v0.0.0-20251205124504-ecca26852851
 	github.com/xmx/metrics v0.0.0-20251124113446-33b980340aea
 	go.mongodb.org/mongo-driver/v2 v2.4.0
 	golang.org/x/crypto v0.45.0
@@ -23,7 +23,7 @@ require (
 
 require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
-	github.com/evanw/esbuild v0.27.0 // indirect
+	github.com/evanw/esbuild v0.27.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
