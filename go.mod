@@ -12,8 +12,8 @@ require (
 	github.com/oschwald/geoip2-golang/v2 v2.0.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20251126094553-533cd94c9558
-	github.com/xmx/aegis-control v0.0.0-20251205124504-ecca26852851
+	github.com/xmx/aegis-common v0.0.0-20251208100817-60c77decb67b
+	github.com/xmx/aegis-control v0.0.0-20251208101826-5fcaf60d6124
 	github.com/xmx/metrics v0.0.0-20251124113446-33b980340aea
 	go.mongodb.org/mongo-driver/v2 v2.4.0
 	golang.org/x/crypto v0.45.0
@@ -28,7 +28,7 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/pprof v0.0.0-20251114195745-4902fdda35c8 // indirect
+	github.com/google/pprof v0.0.0-20251208000136-3d256cb9ff16 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1 // indirect
