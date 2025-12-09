@@ -3,7 +3,6 @@ package launch
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"log/slog"
 	"net"
 	"net/http"
@@ -28,7 +27,6 @@ import (
 	"github.com/xmx/aegis-control/quick"
 	"github.com/xmx/aegis-control/tlscert"
 	"github.com/xmx/aegis-server/application/crontab"
-	"github.com/xmx/aegis-server/application/expose/firewalld"
 	expmiddle "github.com/xmx/aegis-server/application/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/application/expose/restapi"
 	expservice "github.com/xmx/aegis-server/application/expose/service"
@@ -38,6 +36,7 @@ import (
 	"github.com/xmx/aegis-server/application/serverd"
 	"github.com/xmx/aegis-server/application/validext"
 	"github.com/xmx/aegis-server/config"
+	"github.com/xmx/aegis-server/library/firewalld"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -252,7 +251,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	outSH.Logger = shipLog
 
 	firewallMiddle := firewalld.New(firewallSvc, log)
-	rootRGB := outSH.Group("/").Use(expmiddle.NewFirewall(firewallMiddle))
+	rootRGB := outSH.Group("/").Use(shipx.NewFirewall(firewallMiddle))
 	_ = exprestapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
 	apiRGB := rootRGB.Group(apiPath).Use(expmiddle.NewWAF(nil))
 	if err = shipx.RegisterRoutes(apiRGB, routes); err != nil { // 注册路由
@@ -342,11 +341,7 @@ func brokerReset(brk *expservice.Broker) error {
 }
 
 func serveHTTP(errs chan<- error, srv *http.Server, ln net.Listener) {
-	if err := srv.Serve(ln); errors.Is(err, http.ErrServerClosed) {
-		errs <- nil
-	} else {
-		errs <- err
-	}
+	errs <- srv.Serve(ln)
 }
 
 func listenQUIC(ctx context.Context, errs chan<- error, srv quick.Server) {

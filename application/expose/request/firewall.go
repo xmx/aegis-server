@@ -40,60 +40,58 @@ func (fu FirewallUpsert) Format() (FirewallUpsert, error) {
 		return ret, errcode.ErrIPNetsRequired
 	}
 
-	uniq := make(map[string]struct{}, 16)
-	proxies := make([]string, 0, len(fu.TrustProxies))
-	for _, inet := range fu.TrustProxies {
+	proxies, err := fu.deduplicationIP(fu.TrustProxies)
+	if err != nil {
+		return ret, err
+	}
+	ret.TrustProxies = proxies
+
+	inets, err := fu.deduplicationIP(fu.IPNets)
+	if err != nil {
+		return ret, err
+	}
+	ret.IPNets = inets
+
+	ret.TrustProxies = proxies
+	ret.IPNets = inets
+	ret.TrustHeaders = fu.deduplicationHeader(fu.TrustHeaders)
+
+	return ret, nil
+}
+
+func (fu FirewallUpsert) deduplicationIP(inets []string) ([]string, error) {
+	uniq := make(map[string]struct{}, len(inets))
+	result := make([]string, 0, len(inets))
+	for _, inet := range inets {
 		if strings.Contains(inet, "/") { // CIDR 归一化处理
 			pre, err := netip.ParsePrefix(inet)
 			if err != nil {
-				return ret, err
+				return nil, err
 			}
 			inet = pre.Masked().String()
 		}
 		if _, exists := uniq[inet]; !exists {
 			uniq[inet] = struct{}{}
-			proxies = append(proxies, inet)
+			result = append(result, inet)
 		}
 	}
-	if _, err := iplist.Parse(proxies); err != nil {
-		return ret, err
+	if _, err := iplist.Parse(result); err != nil {
+		return nil, err
 	}
 
-	clear(uniq)
-	inets := make([]string, 0, len(fu.IPNets))
-	for _, inet := range fu.IPNets {
-		if strings.Contains(inet, "/") { // CIDR 归一化处理
-			pre, err := netip.ParsePrefix(inet)
-			if err != nil {
-				return ret, err
-			}
-			inet = pre.Masked().String()
-		}
-		if _, exists := uniq[inet]; !exists {
-			uniq[inet] = struct{}{}
-			inets = append(inets, inet)
-		}
-	}
-	if _, err := iplist.Parse(inets); err != nil {
-		return ret, err
-	}
+	return result, nil
+}
 
-	clear(uniq)
-	headers := make([]string, 0, len(fu.TrustHeaders))
-	for _, header := range fu.TrustHeaders {
+func (fu FirewallUpsert) deduplicationHeader(headers []string) []string {
+	uniq := make(map[string]struct{}, len(headers))
+	result := make([]string, 0, len(headers))
+	for _, header := range headers {
 		header = http.CanonicalHeaderKey(header)
 		if _, exists := uniq[header]; !exists {
 			uniq[header] = struct{}{}
 			headers = append(headers, header)
 		}
 	}
-	if _, err := iplist.Parse(inets); err != nil {
-		return ret, err
-	}
 
-	ret.TrustProxies = proxies
-	ret.IPNets = inets
-	ret.TrustHeaders = headers
-
-	return ret, nil
+	return result
 }

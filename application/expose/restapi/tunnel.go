@@ -1,9 +1,13 @@
 package restapi
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/library/httpkit"
+	"github.com/xmx/aegis-common/shipx"
 	"github.com/xmx/aegis-common/tunnel/tunconst"
 	"github.com/xmx/aegis-common/tunnel/tunopen"
 )
@@ -21,12 +25,15 @@ type Tunnel struct {
 }
 
 func (tnl *Tunnel) RegisterRoute(r *ship.RouteGroupBuilder) error {
-	r.Route("/tunnel").GET(tnl.open)
+	data := shipx.NewRouteData("通道接入点（wss）").
+		SetAllower(shipx.AllowerFunc(tnl.allowed))
+	r.Route("/tunnel").Data(data).GET(tnl.open)
 
 	return nil
 }
 
 func (tnl *Tunnel) open(c *ship.Context) error {
+	c.IsWebSocket()
 	w, r := c.ResponseWriter(), c.Request()
 	ws, err := tnl.wsup.Upgrade(w, r, nil)
 	if err != nil {
@@ -42,4 +49,12 @@ func (tnl *Tunnel) open(c *ship.Context) error {
 	tnl.next.Handle(mux)
 
 	return nil
+}
+
+func (tnl *Tunnel) allowed(r *http.Request) (bool, error) {
+	allow := r.Method == http.MethodGet &&
+		strings.ToLower(r.Header.Get(ship.HeaderConnection)) == "upgrade" &&
+		strings.ToLower(r.Header.Get(ship.HeaderUpgrade)) == "websocket"
+
+	return allow, nil
 }

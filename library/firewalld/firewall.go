@@ -48,31 +48,31 @@ type Firewalld struct {
 	log *slog.Logger
 }
 
-func (fw *Firewalld) Allow(r *http.Request) bool {
+func (fw *Firewalld) Allowed(r *http.Request) (bool, error) {
 	ctx, remoteAddr := r.Context(), r.RemoteAddr
 	attrs := []any{"remote_addr", remoteAddr}
 	cfg, err := fw.cfg.Configure(ctx)
 	if err != nil {
 		attrs = append(attrs, "error", err)
 		fw.log.WarnContext(ctx, "加载防火墙配置出错", attrs...)
-		return false
+		return false, err
 	}
 	if cfg == nil {
 		fw.log.Debug("未启用防火墙策略")
-		return true
+		return true, nil
 	}
 
 	remoteIP, _, err := net.SplitHostPort(remoteAddr)
 	if err != nil {
 		attrs = append(attrs, "error", err)
 		fw.log.WarnContext(ctx, "解析远程地址错误", attrs...)
-		return false
+		return false, err
 	}
 	directIP, err := netip.ParseAddr(remoteIP)
 	if err != nil {
 		attrs = append(attrs, "error", err)
 		fw.log.WarnContext(ctx, "解析远程地址错误", attrs...)
-		return false
+		return false, err
 	}
 	attrs = append(attrs, "direct_ip", directIP)
 
@@ -81,7 +81,7 @@ func (fw *Firewalld) Allow(r *http.Request) bool {
 	if cfg.TrustProxies != nil && len(cfg.TrustHeaders) != 0 {
 		if !cfg.TrustProxies.Contains(directIP) {
 			fw.log.WarnContext(ctx, "来自不可信网关的请求", attrs...)
-			return false
+			return false, nil
 		}
 
 		var find bool
@@ -98,7 +98,7 @@ func (fw *Firewalld) Allow(r *http.Request) bool {
 		}
 		if !find {
 			fw.log.WarnContext(ctx, "从可信 Header 中没有找到客户端 IP", attrs...)
-			return false
+			return false, nil
 		}
 	}
 
@@ -108,13 +108,13 @@ func (fw *Firewalld) Allow(r *http.Request) bool {
 		if err != nil {
 			attrs = append(attrs, "error", err)
 			fw.log.WarnContext(ctx, "加载 IP 库出错", attrs...)
-			return false
+			return false, err
 		}
 		ret, err1 := mdb.Country(clientIP)
 		if err1 != nil {
 			attrs = append(attrs, "error", err1)
 			fw.log.WarnContext(ctx, "查询 IP 库出错", attrs...)
-			return false
+			return false, err
 		}
 		isoCode := ret.Country.ISOCode
 		if isoCode == "" {
@@ -130,8 +130,8 @@ func (fw *Firewalld) Allow(r *http.Request) bool {
 		allowed = cfg.IPNets.Contains(clientIP)
 	}
 	if cfg.Blacklist {
-		return !allowed
+		return !allowed, nil
 	}
 
-	return allowed
+	return allowed, nil
 }
