@@ -1,13 +1,15 @@
 [Unit]
-Description=Aegis Server
+Description=Aegis Server Service
 After=network.target
 
 [Service]
 Type=simple
+User=root
+Group=root
 LimitNOFILE=65535
 WorkingDirectory=/opt/aegis/server
 ExecStart=/opt/aegis/server/aegis-server
-ExecStop=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -TERM $MAINPID
 Restart=always
 RestartSec=5
 Environment=TERM=xterm-256color

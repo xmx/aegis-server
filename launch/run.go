@@ -177,7 +177,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	}
 	dualDialer := tundial.NewFirstMatchDialer(tunDialer, netDialer)
 	loadCert := repoAll.Certificate().Enables
-	certPool := tlscert.NewCertPool(loadCert, false, log)
+	certPool := tlscert.NewCertPool(loadCert, true, log)
 
 	httpTrip := &http.Transport{DialContext: dualDialer.DialContext}
 	httpClient := &http.Client{Transport: httpTrip}
