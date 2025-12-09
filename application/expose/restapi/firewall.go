@@ -96,7 +96,10 @@ func (fw *Firewall) precheck(c *ship.Context) error {
 	if err != nil {
 		return err
 	}
-	allowed := box.Allow(c.Request())
+	allowed, err := box.Allowed(c.Request())
+	if err != nil {
+		return err
+	}
 	ret := &response.FirewallPrecheck{Allowed: allowed}
 
 	return c.JSON(http.StatusOK, ret)

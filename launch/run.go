@@ -87,26 +87,23 @@ func Run(ctx context.Context, cfgfile string) error {
 		listen = ":443"
 		log.Info("如需指定监听地址，请设置环境变量", "env_key", config.EnvKeyInitialAddr)
 	}
-	lis, err := net.Listen("tcp", listen)
-	if err != nil {
-		log.Error("初始化程序监听网络失败", "error", err)
-		return err
-	}
-	errs := make(chan error, 1)
+
+	loadFunc := func(context.Context) ([]*tls.Certificate, error) { return nil, nil }
+	tempTLS := tlscert.NewCertPool(loadFunc, true, log)
 	srv := &http.Server{
+		Addr:           listen,
 		Handler:        sh,
 		MaxHeaderBytes: 10 * 1024,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
+		TLSConfig:      &tls.Config{GetCertificate: tempTLS.Match},
 	}
-	go serveHTTP(errs, srv, lis)
 
-	var port int
-	if laddr, _ := lis.Addr().(*net.TCPAddr); laddr != nil {
-		port = laddr.Port
-	}
-	log.Info("请打开浏览器进行初始化配置", "scheme", "http", "port", port)
+	log.Info("请打开浏览器进行初始化配置", "scheme", "https", "listen", listen)
+	errs := make(chan error, 1)
+	go listenHTTPS(errs, srv)
 
+	var err error
 	select {
 	case <-ctx.Done():
 		err = ctx.Err()
@@ -118,7 +115,6 @@ func Run(ctx context.Context, cfgfile string) error {
 		log.Warn("程序初始化完毕")
 		return run(ctx, cfg, valid, logHandlers, log)
 	}
-	_ = srv.Close()
 
 	return err
 }
@@ -148,7 +144,9 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	mongoLogOpt := options.Logger().
 		SetSink(logger.NewSink(logh, 13)).
 		SetComponentLevel(options.LogComponentCommand, options.LogLevelDebug)
-	mongoOpt := options.Client().SetLoggerOptions(mongoLogOpt)
+	mongoOpt := options.Client().
+		SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
+		SetLoggerOptions(mongoLogOpt)
 	db, err := mongodb.Open(cfg.Database.URI, mongoOpt)
 	if err != nil {
 		log.Error("数据库连接错误", "error", err)
@@ -338,10 +336,6 @@ func brokerReset(brk *expservice.Broker) error {
 	defer cancel()
 
 	return brk.Reset(ctx)
-}
-
-func serveHTTP(errs chan<- error, srv *http.Server, ln net.Listener) {
-	errs <- srv.Serve(ln)
 }
 
 func listenQUIC(ctx context.Context, errs chan<- error, srv quick.Server) {
