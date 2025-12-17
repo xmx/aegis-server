@@ -46,7 +46,7 @@ func Run(ctx context.Context, cfgfile string) error {
 	_ = valid.RegisterCustomValidations(validation.All())
 	_ = valid.RegisterCustomValidations(validext.All())
 
-	logHandlers := logger.NewHandler(logger.NewTint(os.Stdout, nil))
+	logHandlers := logger.NewMultiHandler(logger.NewTint(os.Stdout, nil))
 	log := slog.New(logHandlers)
 	log.Info("程序正在启动...")
 

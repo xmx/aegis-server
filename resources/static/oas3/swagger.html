@@ -4,27 +4,19 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <meta name="description" content="SwaggerUI"/>
-    <title>Swagger UI</title>
+    <title>SwaggerUI</title>
     <!-- https://github.com/swagger-api/swagger-ui/blob/master/docs/usage/installation.md#unpkg -->
-    <link rel="stylesheet" href="css/v5.29.0@swagger-ui.css"/>
+    <!-- https://www.jsdelivr.com/package/npm/swagger-ui-dist -->
+    <link rel="stylesheet" href="swagger-ui-dist@5.30.3/swagger-ui.min.css"/>
+    <script src="js/utils.js"></script>
 </head>
 <body>
 <div id="swagger-ui"></div>
-<script src="js/v5.29.0@swagger-ui-bundle.js"></script>
-<script src="js/v5.29.0@swagger-ui-standalone-preset.js"></script>
-<script src="js/utils.js"></script>
+<script src="swagger-ui-dist@5.30.3/swagger-ui-bundle.min.js" crossorigin></script>
+<script src="swagger-ui-dist@5.30.3/swagger-ui-standalone-preset.js" crossorigin></script>
 <script>
-    function init() {
+    window.onload = () => {
         const name = Utils.oas3();
-        if (!name) {
-            const warning = document.createElement('a')
-            warning.href = './'
-            warning.innerText = '未找到接口文档，点击跳转至接口文档主页'
-            document.body.appendChild(warning)
-
-            return
-        }
-
         window.ui = SwaggerUIBundle({
             url: name,
             dom_id: '#swagger-ui',
@@ -32,11 +24,9 @@
                 SwaggerUIBundle.presets.apis,
                 SwaggerUIStandalonePreset
             ],
-            layout: "BaseLayout",
-        })
-    }
-
-    init()
+            layout: "BaseLayout", // StandaloneLayout
+        });
+    };
 </script>
 </body>
 </html>

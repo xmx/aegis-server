@@ -10,8 +10,8 @@ type ConfigCertificateCreate struct {
 type ConfigCertificateUpdate struct {
 	ObjectID
 	Name       string `json:"name"        validate:"required,lte=20"`
-	PublicKey  string `json:"public_key"  validate:"required"`
-	PrivateKey string `json:"private_key" validate:"required"`
+	PublicKey  string `json:"public_key"`
+	PrivateKey string `json:"private_key"`
 	Enabled    bool   `json:"enabled"`
 }
 
