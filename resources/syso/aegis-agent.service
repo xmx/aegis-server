@@ -14,6 +14,8 @@ Restart=always
 RestartSec=5
 MemoryMax=100M
 CPUQuota=10%
+LimitCORE=infinity
+Environment=GOTRACEBACK=crash
 Environment=TERM=xterm-256color
 
 [Install]
