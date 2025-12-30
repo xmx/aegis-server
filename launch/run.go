@@ -11,7 +11,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-common/jsos/jsmod"
+	"github.com/xmx/aegis-common/jsos/jsstd"
 	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/cronv3"
 	"github.com/xmx/aegis-common/library/httpkit"
@@ -218,7 +218,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	brokerTunnelHandler := serverd.New(repoAll, cfg, serverdOpt)
 
 	jsmodules := []jsvm.Module{
-		jsmod.NewCrontab(crond),
+		jsstd.NewCrontab(crond),
 	}
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{

@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/grafana/sobek"
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-common/jsos/jsmod"
+	"github.com/xmx/aegis-common/jsos/jsstd"
 	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/httpkit"
 	"github.com/xmx/aegis-server/application/expose/request"
@@ -60,7 +60,7 @@ func (p *Play) js(c *ship.Context) error {
 		return nil
 	}
 
-	mods := append(p.mods, jsmod.All()...)
+	mods := append(p.mods, jsstd.All()...)
 	vm := jsvm.New(context.Background())
 	require := vm.Require()
 	require.Registers(mods)
