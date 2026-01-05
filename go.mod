@@ -12,8 +12,8 @@ require (
 	github.com/oschwald/geoip2-golang/v2 v2.1.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20251231011330-256dcb87d59b
-	github.com/xmx/aegis-control v0.0.0-20251230014141-53254b01a261
+	github.com/xmx/aegis-common v0.0.0-20260105102527-ed5e0c5f9650
+	github.com/xmx/aegis-control v0.0.0-20260105102526-bed2cd8dae22
 	github.com/xmx/metrics v0.0.0-20251124113446-33b980340aea
 	go.mongodb.org/mongo-driver/v2 v2.4.1
 	golang.org/x/crypto v0.46.0
