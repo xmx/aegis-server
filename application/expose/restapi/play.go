@@ -1,18 +1,13 @@
 package restapi
 
 import (
-	"context"
 	"io"
 	"net"
-	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/grafana/sobek"
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-common/jsos/jsstd"
 	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/httpkit"
-	"github.com/xmx/aegis-server/application/expose/request"
 )
 
 func NewPlay(mods []jsvm.Module) *Play {
@@ -34,61 +29,61 @@ func (p *Play) RegisterRoute(r *ship.RouteGroupBuilder) error {
 }
 
 func (p *Play) js(c *ship.Context) error {
-	w, r := c.Response(), c.Request()
-	ws, err := p.wsu.Upgrade(w, r, nil)
-	if err != nil {
-		return err
-	}
-	defer ws.Close()
-
-	wsout := &playWriter{channel: "stdout", socket: ws}
-	wserr := &playWriter{channel: "stderr", socket: ws}
-	req := new(request.PlayJS)
-	now := time.Now()
-	_ = ws.SetReadDeadline(now.Add(10 * time.Second))
-	if err = ws.ReadJSON(req); err != nil {
-		p.writeError(wserr, err)
-		return err
-	}
-	if err = c.Validator.Validate(req); err != nil {
-		p.writeError(wserr, err)
-		return err
-	}
-	ch, msg := req.Channel, req.Message
-	if ch != "stdin" {
-		p.writeText(wserr, "当前仅允许 channel 为 stdin 的消息")
-		return nil
-	}
-
-	mods := append(p.mods, jsstd.All()...)
-	vm := jsvm.New(context.Background())
-	require := vm.Require()
-	require.Registers(mods)
-	stdout, stderr := vm.Output()
-	stdout.Attach(wsout)
-	stderr.Attach(wserr)
-	defer func() {
-		stdout.Detach(wsout)
-		stderr.Detach(wserr)
-	}()
-
-	wait := make(chan struct{})
-	go func() {
-		defer func() {
-			_ = ws.Close()
-			vm.Kill(net.ErrClosed)
-			close(wait)
-		}()
-		val, exx := vm.RunScript(ch, msg)
-		if exx != nil {
-			_, _ = wsout.Write([]byte(exx.Error()))
-		} else if val != nil && sobek.IsUndefined(val) {
-			_, _ = wserr.Write([]byte(val.String()))
-		}
-	}()
-	p.read(ws, vm)
-
-	<-wait
+	//w, r := c.Response(), c.Request()
+	//ws, err := p.wsu.Upgrade(w, r, nil)
+	//if err != nil {
+	//	return err
+	//}
+	//defer ws.Close()
+	//
+	//wsout := &playWriter{channel: "stdout", socket: ws}
+	//wserr := &playWriter{channel: "stderr", socket: ws}
+	//req := new(request.PlayJS)
+	//now := time.Now()
+	//_ = ws.SetReadDeadline(now.Add(10 * time.Second))
+	//if err = ws.ReadJSON(req); err != nil {
+	//	p.writeError(wserr, err)
+	//	return err
+	//}
+	//if err = c.Validator.Validate(req); err != nil {
+	//	p.writeError(wserr, err)
+	//	return err
+	//}
+	//ch, msg := req.Channel, req.Message
+	//if ch != "stdin" {
+	//	p.writeText(wserr, "当前仅允许 channel 为 stdin 的消息")
+	//	return nil
+	//}
+	//
+	//mods := append(p.mods, jsstd.All()...)
+	//vm := jsvm.NewVM(context.Background(), slog.Default())
+	//require := vm.Require()
+	//require.Registers(mods)
+	//stdout, stderr := vm.Output()
+	//stdout.Attach(wsout)
+	//stderr.Attach(wserr)
+	//defer func() {
+	//	stdout.Detach(wsout)
+	//	stderr.Detach(wserr)
+	//}()
+	//
+	//wait := make(chan struct{})
+	//go func() {
+	//	defer func() {
+	//		_ = ws.Close()
+	//		vm.Kill(net.ErrClosed)
+	//		close(wait)
+	//	}()
+	//	val, exx := vm.RunScript(ch, msg)
+	//	if exx != nil {
+	//		_, _ = wsout.Write([]byte(exx.Error()))
+	//	} else if val != nil && sobek.IsUndefined(val) {
+	//		_, _ = wserr.Write([]byte(val.String()))
+	//	}
+	//}()
+	//p.read(ws, vm)
+	//
+	//<-wait
 
 	return nil
 }
