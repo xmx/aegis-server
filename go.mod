@@ -7,12 +7,11 @@ require (
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/gorilla/websocket v1.5.3
-	github.com/grafana/sobek v0.0.0-20251209155516-22d1085c20a8
 	github.com/lmittmann/tint v1.1.2
 	github.com/oschwald/geoip2-golang/v2 v2.1.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20260105125533-654843d09daf
+	github.com/xmx/aegis-common v0.0.0-20260107103218-cb68cb5646c6
 	github.com/xmx/aegis-control v0.0.0-20260105130828-237058765efc
 	github.com/xmx/metrics v0.0.0-20251124113446-33b980340aea
 	go.mongodb.org/mongo-driver/v2 v2.4.1
@@ -28,7 +27,8 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/pprof v0.0.0-20251213031049-b05bdaca462f // indirect
+	github.com/google/pprof v0.0.0-20260106004452-d7df1bf2cac7 // indirect
+	github.com/grafana/sobek v0.0.0-20251209155516-22d1085c20a8 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1 // indirect

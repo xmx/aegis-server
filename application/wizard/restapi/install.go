@@ -13,13 +13,15 @@ import (
 	"github.com/xmx/aegis-server/config"
 )
 
-func NewInstall(results chan<- *config.Config) *Install {
+func NewInstall(file string, results chan<- *config.Config) *Install {
 	return &Install{
+		file:    file,
 		results: results,
 	}
 }
 
 type Install struct {
+	file    string
 	results chan<- *config.Config
 	doing   atomic.Bool
 	done    bool
@@ -88,15 +90,7 @@ func (inst *Install) setup(c *ship.Context) error {
 		return ship.ErrBadRequest.Newf("连接数据库错误：%s", err)
 	}
 
-	// 避免写入文件时出现 null
-	if req.Server.Vhosts == nil {
-		req.Server.Vhosts = []string{}
-	}
-	if req.Server.Static == nil {
-		req.Server.Static = map[string]string{}
-	}
-
-	if err = profile.WriteFile(config.Filename, req); err != nil {
+	if err = profile.WriteFile(inst.file, req); err != nil {
 		return err
 	}
 	c.Infof("配置初始化并保存成功")

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -122,7 +123,7 @@ func (vm *VictoriaMetrics) Delete(ctx context.Context, name string) error {
 func (vm *VictoriaMetrics) PushConfig(ctx context.Context) (string, *metrics.PushOptions, error) {
 	cfg, err := vm.cfg.Load(ctx)
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("获取 VictoriaMetrics 服务配置出错：%w", err)
 	}
 
 	headers := make([]string, 0, len(cfg.Header))
@@ -133,7 +134,6 @@ func (vm *VictoriaMetrics) PushConfig(ctx context.Context) (string, *metrics.Pus
 	opts := &metrics.PushOptions{
 		Headers: headers,
 		Method:  cfg.Method,
-		Client:  nil,
 	}
 
 	return cfg.Address, opts, nil

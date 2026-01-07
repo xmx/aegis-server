@@ -29,32 +29,30 @@ import (
 	expmiddle "github.com/xmx/aegis-server/application/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/application/expose/restapi"
 	expservice "github.com/xmx/aegis-server/application/expose/service"
-	initrestapi "github.com/xmx/aegis-server/application/initialize/restapi"
-	initstatic "github.com/xmx/aegis-server/application/initialize/static"
 	"github.com/xmx/aegis-server/application/peerpc/sbrpc"
 	"github.com/xmx/aegis-server/application/serverd"
 	"github.com/xmx/aegis-server/application/validext"
+	wizrestapi "github.com/xmx/aegis-server/application/wizard/restapi"
+	wizstatic "github.com/xmx/aegis-server/application/wizard/static"
 	"github.com/xmx/aegis-server/config"
 	"github.com/xmx/aegis-server/library/firewalld"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func Run(ctx context.Context, cfgfile string) error {
+func Run(ctx context.Context, cfgFile string) error {
 	valid := validation.New()
 	_ = valid.RegisterCustomValidations(validation.All())
 	_ = valid.RegisterCustomValidations(validext.All())
 
-	logHandlers := logger.NewMultiHandler(logger.NewTint(os.Stdout, nil))
-	log := slog.New(logHandlers)
+	logOpts := &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}
+	logh := logger.NewMultiHandler(logger.NewTint(os.Stdout, logOpts))
+	log := slog.New(logh)
 	log.Info("程序正在启动...")
 
-	if cfgfile == "" {
-		cfgfile = config.Filename
-	}
-	cfr := profile.File[config.Config](cfgfile)
+	cfr := profile.File[config.Config](cfgFile)
 	if cfg, err := cfr.Read(); err == nil {
-		return run(ctx, cfg, valid, logHandlers, log)
+		return run(ctx, cfg, valid, logh, log)
 	} else if !os.IsNotExist(err) {
 		log.Error("读取配置文件出错", "error", err)
 		return err
@@ -63,32 +61,33 @@ func Run(ctx context.Context, cfgfile string) error {
 	log.Warn("程序等待初始化")
 	results := make(chan *config.Config, 1)
 	routes := []shipx.RouteRegister{
-		initrestapi.NewInstall(results),
+		wizrestapi.NewInstall(cfgFile, results),
 	}
 
 	sh := ship.Default()
 	sh.Validator = valid
 	sh.NotFound = shipx.NotFound
 	sh.HandleError = shipx.HandleError
-	sh.Logger = logger.NewShip(logHandlers)
+	sh.Logger = logger.NewShip(logh)
 
-	sh.Route("/").StaticFS(http.FS(initstatic.FS))
+	sh.Route("/").StaticFS(http.FS(wizstatic.FS))
 	apiRBG := sh.Group("/api")
 	if err := shipx.RegisterRoutes(apiRBG, routes); err != nil {
 		log.Error("注册初始化路由错误", "error", err)
 		return err
 	}
 
-	listen := os.Getenv(config.EnvKeyInitialAddr)
+	const envKey = "AEGIS_INIT_ADDR"
+	listen := os.Getenv(envKey)
 	if listen == "" {
 		// 如果没有指定初始化监听地址，就默认监听 443，如果端口冲突或受限的网络中，
 		// 需要指定特定的端口，请使用环境变量指明。
 		listen = ":443"
-		log.Info("如需指定监听地址，请设置环境变量", "env_key", config.EnvKeyInitialAddr)
+		log.Info("如需指定监听地址，请设置环境变量", "env_key", envKey)
 	}
 
-	loadFunc := func(context.Context) ([]*tls.Certificate, error) { return nil, nil }
-	tempTLS := tlscert.NewCertPool(loadFunc, true, log)
+	noneTLS := func(context.Context) ([]*tls.Certificate, error) { return nil, nil }
+	tempTLS := tlscert.NewCertPool(noneTLS, true, log)
 	srv := &http.Server{
 		Addr:           listen,
 		Handler:        sh,
@@ -112,12 +111,13 @@ func Run(ctx context.Context, cfgfile string) error {
 		_ = srv.Shutdown(cctx)
 		cancel()
 		log.Warn("程序初始化完毕")
-		return run(ctx, cfg, valid, logHandlers, log)
+		return run(ctx, cfg, valid, logh, log)
 	}
 
 	return err
 }
 
+//goland:noinspection GoUnhandledErrorResult
 func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, logh logger.Handler, log *slog.Logger) error {
 	if err := valid.Validate(cfg); err != nil {
 		log.Error("配置文件校验错误", "error", err)
@@ -130,7 +130,6 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	logOpts := &slog.HandlerOptions{AddSource: true, Level: logLevel}
 	logh.Replace() // reset 日志
 	if lumber := logCfg.Lumber(); lumber != nil {
-		//goland:noinspection GoUnhandledErrorResult
 		defer lumber.Close()
 		logh.Attach(slog.NewJSONHandler(lumber, logOpts))
 	}
@@ -174,7 +173,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	}
 	dualDialer := tundial.NewFirstMatchDialer(tunDialer, netDialer)
 	loadCert := repoAll.Certificate().Enables
-	certPool := tlscert.NewCertPool(loadCert, false, log)
+	certPool := tlscert.NewCertPool(loadCert, true, log)
 
 	httpTrip := &http.Transport{DialContext: dualDialer.DialContext}
 	httpClient := &http.Client{Transport: httpTrip}
@@ -261,18 +260,6 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	//	log.Error("路由信息不符合中间件记录格式", "error", err)
 	//	return err
 	//}
-	// 注册 vhost
-	var handler http.Handler = outSH
-	if len(srvCfg.Vhosts) != 0 {
-		hm := ship.NewHostManagerHandler(nil)
-		for _, vhost := range srvCfg.Vhosts {
-			if _, err = hm.AddHost(vhost, outSH); err != nil {
-				log.Error("添加虚拟主机错误", "error", err, "host", vhost)
-				return err
-			}
-		}
-		handler = hm
-	}
 
 	cronTasks := []cronv3.Tasker{
 		crontab.NewMetrics(victoriaMetricsSvc.PushConfig),
@@ -292,7 +279,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	httpLog := logger.NewV1(slog.New(logger.Skip(logh, 8)))
 	srv := &http.Server{
 		Addr:      listenAddr,
-		Handler:   handler,
+		Handler:   outSH,
 		TLSConfig: httpTLS,
 		ErrorLog:  httpLog,
 	}
@@ -313,12 +300,6 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	_ = srv.Close()
 	_ = quicSrv.Close()
 	_ = brokerReset(brokerSvc)
-
-	if err != nil {
-		log.Error("程序运行错误", slog.Any("error", err))
-	} else {
-		log.Warn("程序结束运行")
-	}
 
 	return err
 }

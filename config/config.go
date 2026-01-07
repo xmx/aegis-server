@@ -7,12 +7,6 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-const (
-	// Filename 默认配置文件位置。
-	Filename          = "resources/config/application.jsonc"
-	EnvKeyInitialAddr = "AEGIS_INIT_ADDR"
-)
-
 type Config struct {
 	Server   Server   `json:"server"`
 	Database Database `json:"database"`
@@ -31,7 +25,6 @@ type Server struct {
 	IdleTimeout       model.Duration    `json:"idle_timeout"        validate:"gte=0"`
 	MaxHeaderBytes    int               `json:"max_header_bytes"    validate:"gte=0"`
 	Static            map[string]string `json:"static"              validate:"lte=255"`
-	Vhosts            []string          `json:"vhosts"              validate:"lte=255,unique,dive,required"`
 }
 
 type Logger struct {
