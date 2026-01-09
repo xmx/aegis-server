@@ -2,7 +2,6 @@ package serverd
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -10,120 +9,33 @@ import (
 	"github.com/xmx/aegis-control/linkhub"
 )
 
-type option struct {
-	server  *http.Server
-	logger  *slog.Logger
-	huber   linkhub.Huber
-	allow   func() bool
-	valid   func(req any) error
-	parent  context.Context
-	timeout time.Duration // 每台节点的处理超时时间。
+// AuthConfigLoader broker 上线认证通过后需要加载基础的启动配置。
+type AuthConfigLoader interface {
+
+	// LoadAuthConfig 加载配置参数。
+	LoadAuthConfig(ctx context.Context) (*AuthConfig, error)
 }
 
-func NewOption() OptionBuilder {
-	return OptionBuilder{}
+type Options struct {
+	ConnectListener ConnectListener
+	ConfigLoader    AuthConfigLoader
+	Handler         http.Handler
+	Huber           linkhub.Huber
+	Validator       func(any) error // 认证报文参数校验器
+	Logger          *slog.Logger
+	Timeout         time.Duration
+	Context         context.Context
 }
 
-type OptionBuilder struct {
-	opts []func(option) option
-}
+// ConnectListener 节点上下线通知接口。
+type ConnectListener interface {
+	// OnConnection 节点上线事件通知。
+	//
+	// 该方法为同步阻塞方法。
+	OnConnection(now time.Time, peer linkhub.Peer)
 
-func (ob OptionBuilder) List() []func(option) option {
-	return ob.opts
-}
-
-func (ob OptionBuilder) Logger(log *slog.Logger) OptionBuilder {
-	ob.opts = append(ob.opts, func(o option) option {
-		o.logger = log
-		return o
-	})
-	return ob
-}
-
-func (ob OptionBuilder) Server(s *http.Server) OptionBuilder {
-	ob.opts = append(ob.opts, func(o option) option {
-		o.server = s
-		return o
-	})
-
-	return ob
-}
-
-func (ob OptionBuilder) Handler(h http.Handler) OptionBuilder {
-	ob.opts = append(ob.opts, func(o option) option {
-		if o.server == nil {
-			srv := &http.Server{Protocols: new(http.Protocols)}
-			srv.Protocols.SetUnencryptedHTTP2(true)
-			o.server = srv
-		}
-		o.server.Handler = h
-
-		return o
-	})
-	return ob
-}
-
-func (ob OptionBuilder) Valid(v func(any) error) OptionBuilder {
-	ob.opts = append(ob.opts, func(o option) option {
-		o.valid = v
-		return o
-	})
-	return ob
-}
-
-func (ob OptionBuilder) Allow(v func() bool) OptionBuilder {
-	ob.opts = append(ob.opts, func(o option) option {
-		o.allow = v
-		return o
-	})
-	return ob
-}
-
-func (ob OptionBuilder) Huber(h linkhub.Huber) OptionBuilder {
-	ob.opts = append(ob.opts, func(o option) option {
-		o.huber = h
-		return o
-	})
-	return ob
-}
-
-func defaultValid(v any) error {
-	req, ok := v.(*authRequest)
-	if !ok {
-		return errors.New("无效的认证结构体类型")
-	}
-	if req.Secret == "" {
-		return errors.New("密钥不能为空")
-	}
-	if req.Goos == "" {
-		return errors.New("系统类型不能为空")
-	}
-	if req.Goarch == "" {
-		return errors.New("系统类型不能为空")
-	}
-
-	return nil
-}
-
-func fallbackOptions() OptionBuilder {
-	return OptionBuilder{
-		opts: []func(option) option{
-			func(o option) option {
-				if o.parent == nil {
-					o.parent = context.Background()
-				}
-				if o.valid == nil {
-					o.valid = defaultValid
-				}
-				if o.huber == nil {
-					o.huber = linkhub.NewHub(8)
-				}
-				if o.allow == nil {
-					o.allow = func() bool { return true }
-				}
-
-				return o
-			},
-		},
-	}
+	// OnDisconnection 节点下线事件通知。
+	//
+	// 该方法为同步阻塞方法。
+	OnDisconnection(now time.Time, info linkhub.Info)
 }

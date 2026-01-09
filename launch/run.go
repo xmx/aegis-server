@@ -16,10 +16,9 @@ import (
 	"github.com/xmx/aegis-common/library/httpkit"
 	"github.com/xmx/aegis-common/library/validation"
 	"github.com/xmx/aegis-common/logger"
+	"github.com/xmx/aegis-common/muxlink/muxproto"
 	"github.com/xmx/aegis-common/profile"
 	"github.com/xmx/aegis-common/shipx"
-	"github.com/xmx/aegis-common/tunnel/tunconst"
-	"github.com/xmx/aegis-common/tunnel/tundial"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
 	"github.com/xmx/aegis-control/mongodb"
@@ -29,8 +28,8 @@ import (
 	expmiddle "github.com/xmx/aegis-server/application/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/application/expose/restapi"
 	expservice "github.com/xmx/aegis-server/application/expose/service"
-	"github.com/xmx/aegis-server/application/peerpc/sbrpc"
 	"github.com/xmx/aegis-server/application/serverd"
+	"github.com/xmx/aegis-server/application/tunutil"
 	"github.com/xmx/aegis-server/application/validext"
 	wizrestapi "github.com/xmx/aegis-server/application/wizard/restapi"
 	wizstatic "github.com/xmx/aegis-server/application/wizard/static"
@@ -38,6 +37,7 @@ import (
 	"github.com/xmx/aegis-server/library/firewalld"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"golang.org/x/net/quic"
 )
 
 func Run(ctx context.Context, cfgFile string) error {
@@ -167,24 +167,23 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 
 	hub := linkhub.NewHub(32)
 	netDialer := &net.Dialer{Timeout: 30 * time.Second}
-	tunDialer := []tundial.ContextDialer{
-		linkhub.NewSuffixDialer(tunconst.BrokerHostSuffix, hub),
-		serverd.NewFindAgentDialer(tunconst.AgentHostSuffix, hub, repoAll),
+	tunDialer := []muxproto.Dialer{
+		linkhub.NewSuffixDialer(muxproto.BrokerHostSuffix, hub),
+		serverd.NewFindAgentDialer(muxproto.AgentHostSuffix, hub, repoAll),
 	}
-	dualDialer := tundial.NewFirstMatchDialer(tunDialer, netDialer)
+	dualDialer := muxproto.NewFirstMatchDialer(tunDialer, netDialer)
 	loadCert := repoAll.Certificate().Enables
 	certPool := tlscert.NewCertPool(loadCert, true, log)
 
 	httpTrip := &http.Transport{DialContext: dualDialer.DialContext}
 	httpClient := &http.Client{Transport: httpTrip}
-	httpkitCli := httpkit.NewClient(httpClient)
+	_ = httpkit.NewClient(httpClient)
 	certificateSvc := expservice.NewCertificate(repoAll, certPool, log)
 	maxmindSvc := expservice.NewMaxmind()
 	firewallSvc := expservice.NewFirewall(repoAll, maxmindSvc, log)
 	settingSvc := expservice.NewSetting(repoAll, log)
 	victoriaMetricsSvc := expservice.NewVictoriaMetrics(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
-	sbRPC := sbrpc.NewClient(httpkitCli)
 
 	shipLog := logger.NewShip(logh)
 	brokSH := ship.Default()
@@ -206,14 +205,23 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 
 	agentSvc := expservice.NewAgent(repoAll, log)
 	agentReleaseSvc := expservice.NewAgentRelease(repoAll, log)
-	brokerSvc := expservice.NewBroker(repoAll, sbRPC, log)
+	brokerSvc := expservice.NewBroker(repoAll, log)
 	brokerReleaseSvc := expservice.NewBrokerRelease(repoAll, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
 	}
 
-	serverdOpt := serverd.NewOption().Handler(brokSH).Logger(log).Huber(hub)
-	brokerTunnelHandler := serverd.New(repoAll, cfg, serverdOpt)
+	tunSrvOpts := serverd.Options{
+		ConnectListener: tunutil.NewConnectListener(log),
+		ConfigLoader:    tunutil.NewAuthConfig(cfg.Database),
+		Handler:         brokSH,
+		Huber:           hub,
+		Validator:       valid.Validate,
+		Logger:          log,
+		Timeout:         30 * time.Second,
+		Context:         ctx,
+	}
+	brokerTunnelHandler := serverd.NewServer(repoAll, tunSrvOpts)
 
 	jsmodules := []jsvm.Module{
 		// jsstd.NewCrontab(crond),
@@ -283,10 +291,10 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		TLSConfig: httpTLS,
 		ErrorLog:  httpLog,
 	}
-	quicSrv := &quick.QUICGo{
-		Addr:      listenAddr,
-		Handler:   brokerTunnelHandler,
-		TLSConfig: quicTLS,
+	quicSrv := &quick.QUICx{
+		Addr:       listenAddr,
+		Accept:     brokerTunnelHandler,
+		QUICConfig: &quic.Config{TLSConfig: quicTLS},
 	}
 	log.Info("监听地址", "listen_addr", listenAddr)
 

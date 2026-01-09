@@ -3,142 +3,304 @@ package serverd
 import (
 	"context"
 	"errors"
-	"io"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"time"
 
-	"github.com/xmx/aegis-common/options"
-	"github.com/xmx/aegis-common/tunnel/tunconst"
-	"github.com/xmx/aegis-common/tunnel/tunopen"
+	"github.com/xmx/aegis-common/muxlink/muxconn"
+	"github.com/xmx/aegis-common/muxlink/muxproto"
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
-	"github.com/xmx/aegis-server/config"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func New(repo repository.All, cfg *config.Config, opts ...options.Lister[option]) tunconst.Handler {
-	opts = append(opts, fallbackOptions())
-	opt := options.Eval[option](opts...)
-
-	return &brokerServer{
-		repo: repo,
-		cfg:  cfg,
-		opt:  opt,
-	}
+func NewServer(repo repository.All, opts Options) muxproto.MUXAccepter {
+	return &centralServer{repo: repo, opts: opts}
 }
 
-type brokerServer struct {
+type centralServer struct {
 	repo repository.All
-	cfg  *config.Config
-	opt  option
+	opts Options
 }
 
-func (bs *brokerServer) Handle(mux tunopen.Muxer) {
-	//goland:noinspection GoUnhandledErrorResult
+// AcceptMUX 接受 broker 节点建立的连接。
+//
+//goland:noinspection GoUnhandledErrorResult
+func (ctl *centralServer) AcceptMUX(mux muxconn.Muxer) {
 	defer mux.Close()
 
-	if !bs.opt.allow() {
-		bs.log().Warn("限流器抑制 broker 上线")
+	now := time.Now()
+	peer, err := ctl.authentication(mux)
+	if err != nil {
+		raddr := mux.RemoteAddr()
+		ctl.log().Warn("节点上线失败", "remote_addr", raddr, "error", err)
 		return
 	}
 
-	timeout := bs.opt.timeout
-	if timeout <= 0 {
-		timeout = 30 * time.Second
+	info := peer.Info()
+	ctl.log().Info("节点上线成功", "info", info)
+	if l := ctl.opts.ConnectListener; l != nil {
+		l.OnConnection(now, peer)
 	}
 
-	peer, succeed := bs.authentication(mux, timeout)
-	if !succeed {
-		return
-	}
-	defer bs.disconnected(peer, timeout)
+	err = ctl.serveHTTP(peer)
+	ctl.log().Warn("节点下线了", "info", info, "error", err)
 
-	srv := bs.getServer(peer)
-	_ = srv.Serve(mux)
+	ctl.disconnection(peer)
 }
 
-// authentication 节点认证。
-// 客户端主动建立一条虚拟子流连接用于交换认证信息，认证后改子流关闭，后续子流即为业务流。
-func (bs *brokerServer) authentication(mux tunopen.Muxer, timeout time.Duration) (linkhub.Peer, bool) {
-	protocol, subprotocol := mux.Protocol()
-	laddr, raddr := mux.Addr(), mux.RemoteAddr()
-	attrs := []any{
-		slog.String("protocol", protocol), slog.String("subprotocol", subprotocol),
-		slog.Any("local_addr", laddr), slog.Any("remote_addr", raddr),
-	}
+//goland:noinspection GoUnhandledErrorResult
+func (ctl *centralServer) authentication(mux muxconn.Muxer) (linkhub.Peer, error) {
+	timeout := ctl.timeout()
 
-	// 设置超时主动断开，防止恶意客户端一直不建立认证连接。
-	timer := time.AfterFunc(timeout, func() { _ = mux.Close() })
-	defer timer.Stop()
-
-	sig, err := mux.Accept()
+	fc := muxproto.NewFlagClose(mux)
+	timer := time.AfterFunc(timeout, fc.Close)
+	conn, err := mux.Accept()
 	timer.Stop()
 	if err != nil {
-		bs.log().Error("等待客户端建立认证连接出错", "error", err)
-		return nil, false
+		return nil, err
 	}
-	//goland:noinspection GoUnhandledErrorResult
-	defer sig.Close()
-
-	// 读取数据
-	now := time.Now()
-	_ = sig.SetDeadline(now.Add(timeout))
-	req := new(authRequest)
-	if err = tunopen.ReadAuth(sig, req); err != nil {
-		attrs = append(attrs, slog.Any("error", err))
-		bs.log().Error("读取请求信息错误", attrs...)
-		return nil, false
+	defer conn.Close()
+	if fc.Closed() {
+		return nil, net.ErrClosed
 	}
 
-	attrs = append(attrs, slog.Any("auth_request", req))
-	if err = bs.opt.valid(req); err != nil {
-		attrs = append(attrs, slog.Any("error", err))
-		bs.log().Error("读取请求信息校验错误", attrs...)
-		_ = bs.writeError(sig, http.StatusBadRequest, err)
-		return nil, false
+	req := new(AuthRequest)
+	_ = conn.SetReadDeadline(time.Now().Add(timeout))
+	if err = muxproto.ReadJSON(conn, req); err != nil {
+		ctl.log().Warn("读取认证报文错误", "error", err)
+		return nil, err
 	}
-	brok, err := bs.findBroker(req.Secret, timeout)
-	if err != nil {
-		code := http.StatusInternalServerError
+	if err = ctl.validAuthRequest(req); err != nil {
+		ctl.log().Warn("认证报文参数校验错误", "error", err)
+		ctl.responseError(conn, err, 0)
+		return nil, err
+	}
+
+	secret := req.Secret
+	req.Secret = "******" // 防止打印日志时泄露
+	attrs := []any{"request", req}
+	brok, err1 := ctl.findBrokerBySecret(secret)
+	if err1 != nil {
+		var code int
 		if errors.Is(err, mongo.ErrNilDocument) {
-			bs.log().Warn("broker 节点不存在")
 			code = http.StatusNotFound
+			err1 = errors.New("此节点尚未注册")
 		} else {
-			attrs = append(attrs, slog.Any("error", err))
-			bs.log().Error("查询 broker 节点错误", attrs...)
+			err1 = fmt.Errorf("查询节点出错：%w", err1)
 		}
 
-		_ = bs.writeError(sig, code, err)
-		return nil, false
-	}
-	if brok.Status { // 节点已经在线了
-		bs.log().Warn("节点重复上线（数据库检查）", attrs...)
-		_ = bs.writeError(sig, http.StatusConflict, nil)
-		return nil, false
+		attrs = append(attrs, "error", err1)
+		ctl.log().Warn("认证报文参数校验错误", attrs...)
+		ctl.responseError(conn, err1, code)
+
+		return nil, err
 	}
 
-	brokerID := brok.ID
-	pinf := linkhub.Info{Inet: req.Inet, Goos: req.Goos, Goarch: req.Goarch, Hostname: req.Hostname}
-	peer := linkhub.NewPeer(brokerID, mux, pinf)
-	if !bs.opt.huber.Put(peer) {
-		bs.log().Warn("节点重复上线（连接池检查）", attrs...)
-		_ = bs.writeError(sig, http.StatusConflict, nil)
-		return nil, false
+	// 在线状态检查
+	if brok.Status {
+		err = errors.New("此节点已经在线了（数据库）")
+		ctl.log().Warn("节点重复上线（数据库）", attrs...)
+		ctl.responseError(conn, err, http.StatusConflict)
+
+		return nil, err
 	}
 
-	authCfg := authConfig{URI: bs.cfg.Database.URI}
-	if err = bs.writeSucceed(sig, authCfg); err != nil {
-		bs.opt.huber.DelByID(brokerID)
-		attrs = append(attrs, slog.Any("error", err))
-		bs.log().Warn("响应报文写入失败", attrs...)
-		return nil, false
+	brokID := brok.ID
+	info := linkhub.Info{
+		Name: brok.Name, Inet: req.Inet, Goos: req.Goos, Goarch: req.Goarch,
+		Hostname: req.Hostname, Semver: req.Semver,
+	}
+	peer := linkhub.NewPeer(brokID, mux, info)
+	if succeed := ctl.putHuber(peer); !succeed {
+		err = errors.New("此节点已经在线了（连接池）")
+		ctl.log().Warn("节点重复上线（连接池）", attrs...)
+		ctl.responseError(conn, err, http.StatusConflict)
+
+		return nil, err
 	}
 
-	// 修改数据库在线状态
+	cfg, err := ctl.loadAuthConfig()
+	if err != nil {
+		ctl.removeHuber(brokID) // 获取配置错误，从连接池中删除并返回错误。
+
+		attrs = append(attrs, "error", err)
+		ctl.log().Error("加载初始配置文件出错", attrs...)
+		ctl.responseError(conn, err, 0)
+		return nil, err
+	}
+
+	if err = ctl.responseConfig(conn, cfg); err != nil {
+		ctl.removeHuber(brokID) // 返回消息出错，从连接池中删除并返回错误。
+
+		attrs = append(attrs, "error", err)
+		ctl.log().Error("认证响应消息返回出错", attrs...)
+
+		return nil, err
+	}
+
+	if ret, err2 := ctl.updateBrokerOnline(mux, req, brok); err2 != nil || ret.ModifiedCount == 0 {
+		ctl.removeHuber(brokID) // 修改数据库状态失败，从连接池中删除并返回错误。
+
+		if err2 == nil {
+			err2 = errors.New("没有找到该节点（修改在线状态）")
+		}
+		attrs = append(attrs, "error", err)
+		ctl.log().Error("节点重复上线（连接池）", attrs...)
+		ctl.responseError(conn, err2, http.StatusConflict)
+
+		return nil, err
+	}
+
+	return peer, nil
+}
+
+func (ctl *centralServer) log() *slog.Logger {
+	if l := ctl.opts.Logger; l != nil {
+		return l
+	}
+	return slog.Default()
+}
+
+func (ctl *centralServer) serveHTTP(peer linkhub.Peer) error {
+	h := ctl.opts.Handler
+	if h == nil {
+		h = http.NotFoundHandler()
+	}
+
+	srv := &http.Server{
+		Handler: h,
+		BaseContext: func(net.Listener) context.Context {
+			return linkhub.WithValue(context.Background(), peer)
+		},
+	}
+	mux := peer.Muxer()
+
+	return srv.Serve(mux)
+}
+
+func (ctl *centralServer) disconnection(peer linkhub.Peer) {
+	now := time.Now()
+	id := peer.ID()
+	info := peer.Info()
+	mux := peer.Muxer()
+	rx, tx := mux.Traffic()
+
+	attrs := []any{"info", info}
+	filter := bson.D{{"_id", id}, {"status", true}}
+	update := bson.M{"$set": bson.M{
+		"status": false, "tunnel_stat.disconnected_at": now,
+		"tunnel_stat.receive_bytes": tx, "tunnel_stat.transmit_bytes": rx,
+		// 注意：此时是站在 broker 视角统计的流量，所以 rx tx 要互换一下。
+	}}
+
+	ctx, cancel := ctl.perContext()
+	defer cancel()
+
+	repo := ctl.repo.Broker()
+	if ret, err := repo.UpdateOne(ctx, filter, update); err != nil {
+		attrs = append(attrs, "error", err)
+		ctl.log().Error("修改数据库节点下线状态错误", attrs...)
+	} else if ret.ModifiedCount == 0 {
+		ctl.log().Error("修改数据库节点下线状态无修改", attrs...)
+	}
+
+	ctl.removeHuber(id)
+	ctl.log().Info("节点下线处理完毕", attrs...)
+
+	if l := ctl.opts.ConnectListener; l != nil {
+		l.OnDisconnection(now, info)
+	}
+}
+
+func (ctl *centralServer) timeout() time.Duration {
+	if du := ctl.opts.Timeout; du > 0 {
+		return du
+	}
+
+	return time.Minute
+}
+
+func (ctl *centralServer) perContext() (context.Context, context.CancelFunc) {
+	d := ctl.timeout()
+	return context.WithTimeout(ctl.opts.Context, d)
+}
+
+func (ctl *centralServer) loadAuthConfig() (*AuthConfig, error) {
+	cl := ctl.opts.ConfigLoader
+	ctx, cancel := ctl.perContext()
+	defer cancel()
+
+	return cl.LoadAuthConfig(ctx)
+}
+
+func (ctl *centralServer) validAuthRequest(req *AuthRequest) error {
+	if f := ctl.opts.Validator; f != nil {
+		return f(req)
+	}
+
+	var errs []error
+	if req.Secret == "" {
+		errs = append(errs, errors.New("连接密钥必须填写 (secret)"))
+	}
+	if _, err := netip.ParseAddr(req.Inet); err != nil {
+		errs = append(errs, errors.New("出口网卡地址必须填写 (inet)"))
+	}
+	if req.Goos == "" {
+		errs = append(errs, errors.New("操作系统类型必须填写 (goos)"))
+	}
+	if req.Goarch == "" {
+		errs = append(errs, errors.New("架构必须填写 (goarch)"))
+	}
+	if req.Semver == "" {
+		errs = append(errs, errors.New("版本号必须填写 (semver)"))
+	}
+
+	return errors.Join(errs...)
+}
+
+func (ctl *centralServer) responseError(conn net.Conn, err error, code int) error {
+	if code < http.StatusBadRequest {
+		code = http.StatusBadRequest
+	}
+	dat := &authResponse{Code: code, Message: err.Error()}
+
+	d := ctl.timeout()
+	_ = conn.SetWriteDeadline(time.Now().Add(d))
+
+	return muxproto.WriteJSON(conn, dat)
+}
+
+func (ctl *centralServer) responseConfig(conn net.Conn, cfg *AuthConfig) error {
+	dat := &authResponse{Code: http.StatusAccepted, Config: cfg}
+
+	d := ctl.timeout()
+	_ = conn.SetWriteDeadline(time.Now().Add(d))
+
+	return muxproto.WriteJSON(conn, dat)
+}
+
+func (ctl *centralServer) findBrokerBySecret(secret string) (*model.Broker, error) {
+	d := ctl.timeout()
+	ctx, cancel := context.WithTimeout(ctl.opts.Context, d)
+	defer cancel()
+
+	repo := ctl.repo.Broker()
+	opt := options.FindOne().SetProjection(bson.M{"_id": 1, "status": 1, "name": 1})
+
+	return repo.FindOne(ctx, bson.D{{"secret", secret}}, opt)
+}
+
+func (ctl *centralServer) updateBrokerOnline(mux muxconn.Muxer, req *AuthRequest, before *model.Broker) (*mongo.UpdateResult, error) {
+	now := time.Now()
+	protocol, subprotocol := mux.Protocol()
+	laddr, raddr := mux.Addr(), mux.RemoteAddr()
 	tunStat := &model.TunnelStat{
 		ConnectedAt: now,
 		KeepaliveAt: now,
@@ -148,6 +310,7 @@ func (bs *brokerServer) authentication(mux tunopen.Muxer, timeout time.Duration)
 		RemoteAddr:  laddr.String(),
 	}
 	exeStat := &model.ExecuteStat{
+		Inet:       req.Inet,
 		Goos:       req.Goos,
 		Goarch:     req.Goarch,
 		PID:        req.PID,
@@ -155,96 +318,26 @@ func (bs *brokerServer) authentication(mux tunopen.Muxer, timeout time.Duration)
 		Hostname:   req.Hostname,
 		Workdir:    req.Workdir,
 		Executable: req.Executable,
-		Username:   req.Username,
 	}
+
 	update := bson.M{"$set": bson.M{
 		"status": true, "tunnel_stat": tunStat, "execute_stat": exeStat,
 	}}
-	filter := bson.D{{"_id", brokerID}, {"status", false}}
-	brokerRepo := bs.repo.Broker()
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	filter := bson.D{{"_id", before.ID}, {"status", false}}
+
+	d := ctl.timeout()
+	ctx, cancel := context.WithTimeout(ctl.opts.Context, d)
 	defer cancel()
 
-	ret, err1 := brokerRepo.UpdateOne(ctx, filter, update)
-	if err1 == nil && ret.ModifiedCount != 0 {
-		bs.log().Info("节点上线成功", attrs...)
-		return peer, true
-	}
+	repo := ctl.repo.Broker()
 
-	bs.opt.huber.DelByID(brokerID)
-	_ = bs.writeError(sig, http.StatusInternalServerError, err1)
-
-	if err1 != nil {
-		attrs = append(attrs, slog.Any("error", err1))
-	}
-	bs.log().Error("节点上线失败", attrs...)
-
-	return nil, false
+	return repo.UpdateOne(ctx, filter, update)
 }
 
-func (bs *brokerServer) findBroker(secret string, timeout time.Duration) (*model.Broker, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	repo := bs.repo.Broker()
-
-	return repo.FindOne(ctx, bson.M{"secret": secret})
+func (ctl *centralServer) putHuber(peer linkhub.Peer) (succeed bool) {
+	return ctl.opts.Huber.Put(peer)
 }
 
-func (bs *brokerServer) disconnected(peer linkhub.Peer, timeout time.Duration) {
-	now := time.Now()
-	id := peer.ID()
-	rx, tx := peer.Muxer().Traffic()
-	update := bson.M{"$set": bson.M{
-		"status": false, "tunnel_stat.disconnected_at": now,
-		"tunnel_stat.receive_bytes": tx, "tunnel_stat.transmit_bytes": rx,
-		// 注意：此时是站在 broker 视角统计的流量，所以 rx tx 要互换一下。
-	}}
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	brokerRepo := bs.repo.Broker()
-	_, _ = brokerRepo.UpdateByID(ctx, id, update)
-	bs.opt.huber.DelByID(id)
-}
-
-func (bs *brokerServer) log() *slog.Logger {
-	if l := bs.opt.logger; l != nil {
-		return l
-	}
-
-	return slog.Default()
-}
-
-func (bs *brokerServer) getServer(p linkhub.Peer) *http.Server {
-	srv := bs.opt.server
-	if srv == nil {
-		srv = &http.Server{Handler: http.NotFoundHandler()}
-	}
-	baseCtxFunc := srv.BaseContext
-	srv.BaseContext = func(ln net.Listener) context.Context {
-		ctx := context.Background()
-		if baseCtxFunc != nil {
-			ctx = baseCtxFunc(ln)
-		}
-
-		return linkhub.WithValue(ctx, p)
-	}
-
-	return srv
-}
-
-func (bs *brokerServer) writeError(w io.Writer, code int, err error) error {
-	resp := &authResponse{Code: code}
-	if err != nil {
-		resp.Message = err.Error()
-	}
-
-	return tunopen.WriteAuth(w, resp)
-}
-
-func (bs *brokerServer) writeSucceed(w io.Writer, cfg authConfig) error {
-	resp := &authResponse{Code: http.StatusAccepted, Config: cfg}
-	return tunopen.WriteAuth(w, resp)
+func (ctl *centralServer) removeHuber(id bson.ObjectID) {
+	ctl.opts.Huber.DelByID(id)
 }

@@ -21,7 +21,6 @@ type Broker struct {
 func (bk *Broker) RegisterRoute(r *ship.RouteGroupBuilder) error {
 	r.Route("/brokers").GET(bk.page)
 	r.Route("/broker").POST(bk.create).PUT(bk.update)
-	r.Route("/broker/exit").GET(bk.exit)
 
 	return nil
 }
@@ -59,14 +58,4 @@ func (bk *Broker) update(c *ship.Context) error {
 	ctx := c.Request().Context()
 
 	return bk.svc.Update(ctx, req)
-}
-
-func (bk *Broker) exit(c *ship.Context) error {
-	req := new(request.ObjectID)
-	if err := c.BindQuery(req); err != nil {
-		return err
-	}
-	ctx := c.Request().Context()
-
-	return bk.svc.Exit(ctx, req.OID())
 }

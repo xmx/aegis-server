@@ -5,15 +5,14 @@ import (
 	"net"
 	"strings"
 
-	"github.com/xmx/aegis-common/tunnel/tunconst"
-	"github.com/xmx/aegis-common/tunnel/tundial"
+	"github.com/xmx/aegis-common/muxlink/muxproto"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func NewFindAgentDialer(suffix string, hub linkhub.Huber, repo repository.All) tundial.ContextDialer {
+func NewFindAgentDialer(suffix string, hub linkhub.Huber, repo repository.All) muxproto.Dialer {
 	return &findAgentDialer{
 		repo:   repo,
 		huber:  hub,
@@ -66,7 +65,7 @@ func (fad *findAgentDialer) DialContext(ctx context.Context, network, address st
 
 	// 此时是 broker 节点不通，改写错误提示。
 	brokID := brok.ID.Hex()
-	brokHost := tunconst.ServerToBroker(brokID, "").Host
+	brokHost := muxproto.ServerToBrokerURL(brokID, "").Host
 	return nil, &net.OpError{
 		Op:   "dial",
 		Net:  network,

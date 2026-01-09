@@ -13,14 +13,13 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/library/httpkit"
+	"github.com/xmx/aegis-common/muxlink/muxproto"
 	"github.com/xmx/aegis-common/problem"
-	"github.com/xmx/aegis-common/tunnel/tunconst"
-	"github.com/xmx/aegis-common/tunnel/tundial"
 	"github.com/xmx/aegis-server/application/errcode"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
-func NewReverse(dial tundial.ContextDialer) *Reverse {
+func NewReverse(dial muxproto.Dialer) *Reverse {
 	trip := &http.Transport{DialContext: dial.DialContext}
 	resv := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
@@ -43,10 +42,10 @@ func NewReverse(dial tundial.ContextDialer) *Reverse {
 
 			if ae, ok := err.(*net.OpError); ok {
 				addr := ae.Addr.String()
-				if brokID, _, found := strings.Cut(addr, tunconst.BrokerHostSuffix); found {
+				if brokID, _, found := strings.Cut(addr, muxproto.BrokerHostSuffix); found {
 					err = errcode.FmtBrokerDisconnect.Fmt(brokID)
 				} else if errors.Is(ae.Err, mongo.ErrNoDocuments) {
-					if agentID, _, exists := strings.Cut(addr, tunconst.AgentHostSuffix); exists {
+					if agentID, _, exists := strings.Cut(addr, muxproto.AgentHostSuffix); exists {
 						err = errcode.FmtAgentNotExists.Fmt(agentID)
 					}
 				}
@@ -97,7 +96,7 @@ func (rvs *Reverse) agent(c *ship.Context) error {
 		pth += "/"
 	}
 
-	reqURL := tunconst.ServerToAgent(id, "/api/reverse/")
+	reqURL := muxproto.ServerToAgentURL(id, "/api/reverse/")
 	reqURL = reqURL.JoinPath(id, pth)
 	reqURL.RawQuery = r.URL.RawQuery
 	r.URL = reqURL
@@ -117,7 +116,7 @@ func (rvs *Reverse) broker(c *ship.Context) error {
 		path += "/"
 	}
 
-	destURL := tunconst.ServerToBroker(id, path)
+	destURL := muxproto.ServerToBrokerURL(id, path)
 	destURL.RawQuery = reqURL.RawQuery
 
 	if c.IsWebSocket() {

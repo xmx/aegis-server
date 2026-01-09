@@ -10,21 +10,18 @@ import (
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-server/application/expose/request"
-	"github.com/xmx/aegis-server/application/peerpc/sbrpc"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func NewBroker(repo repository.All, rpc sbrpc.Client, log *slog.Logger) *Broker {
+func NewBroker(repo repository.All, log *slog.Logger) *Broker {
 	return &Broker{
 		repo: repo,
-		rpc:  rpc,
 		log:  log,
 	}
 }
 
 type Broker struct {
 	repo repository.All
-	rpc  sbrpc.Client
 	log  *slog.Logger
 }
 
@@ -81,9 +78,4 @@ func (brk *Broker) GetByName(ctx context.Context, name string) (*model.Broker, e
 	filter := bson.D{{"name", name}}
 	repo := brk.repo.Broker()
 	return repo.FindOne(ctx, filter)
-}
-
-func (brk *Broker) Exit(ctx context.Context, id bson.ObjectID) error {
-	hand := brk.rpc.NewHandler(id)
-	return hand.SystemExit(ctx)
 }
