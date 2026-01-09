@@ -17,7 +17,7 @@ type AuthConfigLoader interface {
 }
 
 type Options struct {
-	ConnectListener ConnectListener
+	ConnectListener linkhub.ConnectListener
 	ConfigLoader    AuthConfigLoader
 	Handler         http.Handler
 	Huber           linkhub.Huber
@@ -25,17 +25,4 @@ type Options struct {
 	Logger          *slog.Logger
 	Timeout         time.Duration
 	Context         context.Context
-}
-
-// ConnectListener 节点上下线通知接口。
-type ConnectListener interface {
-	// OnConnection 节点上线事件通知。
-	//
-	// 该方法为同步阻塞方法。
-	OnConnection(now time.Time, peer linkhub.Peer)
-
-	// OnDisconnection 节点下线事件通知。
-	//
-	// 该方法为同步阻塞方法。
-	OnDisconnection(now time.Time, info linkhub.Info)
 }

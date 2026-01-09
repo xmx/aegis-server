@@ -5,10 +5,9 @@ import (
 	"time"
 
 	"github.com/xmx/aegis-control/linkhub"
-	"github.com/xmx/aegis-server/application/serverd"
 )
 
-func NewConnectListener(log *slog.Logger) serverd.ConnectListener {
+func NewConnectListener(log *slog.Logger) linkhub.ConnectListener {
 	return &connectListener{log: log}
 }
 

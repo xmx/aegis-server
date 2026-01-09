@@ -24,6 +24,8 @@ import (
 	"github.com/xmx/aegis-control/mongodb"
 	"github.com/xmx/aegis-control/quick"
 	"github.com/xmx/aegis-control/tlscert"
+	brkrestapi "github.com/xmx/aegis-server/application/broker/restapi"
+	brkservice "github.com/xmx/aegis-server/application/broker/service"
 	"github.com/xmx/aegis-server/application/crontab"
 	expmiddle "github.com/xmx/aegis-server/application/expose/middle"
 	exprestapi "github.com/xmx/aegis-server/application/expose/restapi"
@@ -193,9 +195,9 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	brokSH.Logger = shipLog
 
 	{
-		// aliveSvc := bservice.NewAlive(repoAll, log)
+		healthSvc := brkservice.NewHealth(repoAll, log)
 		routes := []shipx.RouteRegister{
-			// brkrestapi.NewAlive(aliveSvc),
+			brkrestapi.NewHealth(healthSvc),
 		}
 		brokRGB := brokSH.Group("/api")
 		if err = shipx.RegisterRoutes(brokRGB, routes); err != nil {
