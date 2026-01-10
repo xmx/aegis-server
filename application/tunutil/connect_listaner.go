@@ -15,8 +15,8 @@ type connectListener struct {
 	log *slog.Logger
 }
 
-func (cl *connectListener) OnConnection(now time.Time, peer linkhub.Peer) {
+func (cl *connectListener) OnConnection(peer linkhub.Peer, connectAt time.Time) {
 }
 
-func (cl *connectListener) OnDisconnection(now time.Time, info linkhub.Info) {
+func (cl *connectListener) OnDisconnection(info linkhub.Info, connectAt, disconnectAt time.Time) {
 }

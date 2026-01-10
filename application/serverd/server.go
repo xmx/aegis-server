@@ -35,7 +35,7 @@ type centralServer struct {
 func (ctl *centralServer) AcceptMUX(mux muxconn.Muxer) {
 	defer mux.Close()
 
-	now := time.Now()
+	connectAt := time.Now()
 	peer, err := ctl.authentication(mux)
 	if err != nil {
 		raddr := mux.RemoteAddr()
@@ -46,13 +46,13 @@ func (ctl *centralServer) AcceptMUX(mux muxconn.Muxer) {
 	info := peer.Info()
 	ctl.log().Info("节点上线成功", "info", info)
 	if l := ctl.opts.ConnectListener; l != nil {
-		l.OnConnection(now, peer)
+		l.OnConnection(peer, connectAt)
 	}
 
 	err = ctl.serveHTTP(peer)
 	ctl.log().Warn("节点下线了", "info", info, "error", err)
 
-	ctl.disconnection(peer)
+	ctl.disconnection(peer, connectAt)
 }
 
 //goland:noinspection GoUnhandledErrorResult
@@ -185,18 +185,18 @@ func (ctl *centralServer) serveHTTP(peer linkhub.Peer) error {
 	return srv.Serve(mux)
 }
 
-func (ctl *centralServer) disconnection(peer linkhub.Peer) {
-	now := time.Now()
+func (ctl *centralServer) disconnection(peer linkhub.Peer, connectAt time.Time) {
+	disconnectAt := time.Now()
 	id := peer.ID()
 	info := peer.Info()
 	mux := peer.Muxer()
-	rx, tx := mux.Traffic()
+	tx, rx := mux.Traffic() // 互换
 
 	attrs := []any{"info", info}
 	filter := bson.D{{"_id", id}, {"status", true}}
 	update := bson.M{"$set": bson.M{
-		"status": false, "tunnel_stat.disconnected_at": now,
-		"tunnel_stat.receive_bytes": tx, "tunnel_stat.transmit_bytes": rx,
+		"status": false, "tunnel_stat.disconnected_at": disconnectAt,
+		"tunnel_stat.receive_bytes": rx, "tunnel_stat.transmit_bytes": tx,
 		// 注意：此时是站在 broker 视角统计的流量，所以 rx tx 要互换一下。
 	}}
 
@@ -212,10 +212,37 @@ func (ctl *centralServer) disconnection(peer linkhub.Peer) {
 	}
 
 	ctl.removeHuber(id)
+
+	protocol, subprotocol := mux.Protocol()
+	raddr, laddr := mux.Addr(), mux.RemoteAddr() // 互换
+	history := &model.BrokerConnectHistory{
+		Broker: id,
+		Name:   info.Name,
+		Semver: info.Semver,
+		Inet:   info.Inet,
+		Goos:   info.Goos,
+		Goarch: info.Goarch,
+		TunnelStat: model.TunnelStatHistory{
+			ConnectedAt:    connectAt,
+			DisconnectedAt: disconnectAt,
+			Protocol:       protocol,
+			Subprotocol:    subprotocol,
+			LocalAddr:      laddr.String(),
+			RemoteAddr:     raddr.String(),
+			ReceiveBytes:   rx,
+			TransmitBytes:  tx,
+		},
+	}
+	hisRepo := ctl.repo.BrokerConnectHistory()
+	if _, err := hisRepo.InsertOne(ctx, history); err != nil {
+		attrs = append(attrs, "save_history_error", err)
+		ctl.log().Error("保存连接历史记录错误", attrs...)
+	}
+
 	ctl.log().Info("节点下线处理完毕", attrs...)
 
 	if l := ctl.opts.ConnectListener; l != nil {
-		l.OnDisconnection(now, info)
+		l.OnDisconnection(info, connectAt, disconnectAt)
 	}
 }
 
