@@ -19,7 +19,7 @@ type BrokerConnectHistory struct {
 }
 
 func (bch *BrokerConnectHistory) RegisterRoute(r *ship.RouteGroupBuilder) error {
-	r.Route("/agent/connect/histories").GET(bch.page)
+	r.Route("/broker/connect/histories").GET(bch.page)
 
 	return nil
 }
