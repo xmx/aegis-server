@@ -206,8 +206,10 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	}
 
 	agentSvc := expservice.NewAgent(repoAll, log)
+	agentConnectHistorysvc := expservice.NewAgentConnectHistory(repoAll, log)
 	agentReleaseSvc := expservice.NewAgentRelease(repoAll, log)
 	brokerSvc := expservice.NewBroker(repoAll, log)
+	brokerConnectHistorySvc := expservice.NewBrokerConnectHistory(repoAll, log)
 	brokerReleaseSvc := expservice.NewBrokerRelease(repoAll, log)
 	if err = brokerReset(brokerSvc); err != nil {
 		return err
@@ -231,8 +233,10 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	const apiPath = "/api"
 	routes := []shipx.RouteRegister{
 		exprestapi.NewAgent(agentSvc),
+		exprestapi.NewAgentConnectHistory(agentConnectHistorysvc),
 		exprestapi.NewAgentRelease(agentReleaseSvc, brokerSvc),
 		exprestapi.NewBroker(brokerSvc),
+		exprestapi.NewBrokerConnectHistory(brokerConnectHistorySvc),
 		exprestapi.NewBrokerRelease(brokerReleaseSvc, brokerSvc),
 		exprestapi.NewCertificate(certificateSvc),
 		exprestapi.NewFirewall(firewallSvc),

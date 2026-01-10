@@ -225,6 +225,7 @@ func (ctl *centralServer) disconnection(peer linkhub.Peer, connectAt time.Time) 
 		TunnelStat: model.TunnelStatHistory{
 			ConnectedAt:    connectAt,
 			DisconnectedAt: disconnectAt,
+			Duration:       disconnectAt.Sub(connectAt),
 			Protocol:       protocol,
 			Subprotocol:    subprotocol,
 			LocalAddr:      laddr.String(),
