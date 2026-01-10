@@ -77,8 +77,10 @@ func (ctl *centralServer) authentication(mux muxconn.Muxer) (linkhub.Peer, error
 		ctl.log().Warn("读取认证报文错误", "error", err)
 		return nil, err
 	}
+
 	if err = ctl.validAuthRequest(req); err != nil {
-		ctl.log().Warn("认证报文参数校验错误", "error", err)
+		req.Secret = "******" // 防止打印日志时泄露
+		ctl.log().Warn("认证报文参数校验错误", "request", req, "error", err)
 		ctl.responseError(conn, err, 0)
 		return nil, err
 	}
@@ -86,6 +88,7 @@ func (ctl *centralServer) authentication(mux muxconn.Muxer) (linkhub.Peer, error
 	secret := req.Secret
 	req.Secret = "******" // 防止打印日志时泄露
 	attrs := []any{"request", req}
+	ctl.log().Debug("收到认证消息", attrs...)
 	brok, err1 := ctl.findBrokerBySecret(secret)
 	if err1 != nil {
 		var code int
