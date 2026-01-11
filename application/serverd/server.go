@@ -344,6 +344,7 @@ func (ctl *centralServer) updateBrokerOnline(mux muxconn.Muxer, req *AuthRequest
 		Inet:       req.Inet,
 		Goos:       req.Goos,
 		Goarch:     req.Goarch,
+		Semver:     req.Semver,
 		PID:        req.PID,
 		Args:       req.Args,
 		Hostname:   req.Hostname,
