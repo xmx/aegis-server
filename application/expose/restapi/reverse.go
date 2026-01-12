@@ -12,9 +12,9 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-common/library/httpkit"
 	"github.com/xmx/aegis-common/muxlink/muxproto"
 	"github.com/xmx/aegis-common/problem"
+	"github.com/xmx/aegis-common/wsocket"
 	"github.com/xmx/aegis-server/application/errcode"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -56,9 +56,8 @@ func NewReverse(dial muxproto.Dialer) *Reverse {
 		},
 	}
 	wsd := &websocket.Dialer{
-		NetDialContext:    dial.DialContext,
-		HandshakeTimeout:  10 * time.Second,
-		EnableCompression: true,
+		NetDialContext:   dial.DialContext,
+		HandshakeTimeout: 10 * time.Second,
 	}
 	wsu := &websocket.Upgrader{
 		HandshakeTimeout:  10 * time.Second,
@@ -151,7 +150,7 @@ func (rvs *Reverse) serveWebsocket(c *ship.Context, destURL *url.URL) {
 	}
 	defer srv.Close()
 
-	ret := httpkit.ExchangeWebsocket(cli, srv)
+	ret := wsocket.Exchange(cli, srv)
 	c.Infof("websocket 连接结束", slog.Any("result", ret))
 }
 

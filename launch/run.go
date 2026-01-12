@@ -298,9 +298,12 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		ErrorLog:  httpLog,
 	}
 	quicSrv := &quick.QUICx{
-		Addr:       listenAddr,
-		Accept:     brokerTunnelHandler,
-		QUICConfig: &quic.Config{TLSConfig: quicTLS},
+		Addr:   listenAddr,
+		Accept: brokerTunnelHandler,
+		QUICConfig: &quic.Config{
+			TLSConfig:       quicTLS,
+			KeepAlivePeriod: 10 * time.Second,
+		},
 	}
 	log.Info("监听地址", "listen_addr", listenAddr)
 
