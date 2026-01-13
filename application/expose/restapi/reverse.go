@@ -95,7 +95,7 @@ func (rvs *Reverse) agent(c *ship.Context) error {
 		pth += "/"
 	}
 
-	reqURL := muxproto.ServerToAgentURL(id, "/api/reverse/")
+	reqURL := muxproto.ToAgentURL(id, "/api/reverse/")
 	reqURL = reqURL.JoinPath(id, pth)
 	reqURL.RawQuery = r.URL.RawQuery
 	r.URL = reqURL
@@ -145,15 +145,11 @@ func (rvs *Reverse) serveWebsocket(c *ship.Context, destURL *url.URL) {
 	srv, _, err := rvs.wsd.DialContext(ctx, destURL.String(), nil)
 	if err != nil {
 		c.Errorf("websocket 后端连接失败", "error", err)
-		_ = rvs.writeClose(cli, err)
+		_ = wsocket.CloseControl(cli, err)
 		return
 	}
 	defer srv.Close()
 
 	ret := wsocket.Exchange(cli, srv)
 	c.Infof("websocket 连接结束", slog.Any("result", ret))
-}
-
-func (rvs *Reverse) writeClose(cli *websocket.Conn, err error) error {
-	return cli.WriteMessage(websocket.CloseMessage, []byte(err.Error()))
 }
