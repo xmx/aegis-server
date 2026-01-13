@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	quicgo "github.com/quic-go/quic-go"
 	"github.com/robfig/cron/v3"
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/jsos/jsvm"
@@ -297,25 +298,38 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		TLSConfig: httpTLS,
 		ErrorLog:  httpLog,
 	}
-	quicSrv := &quick.QUICx{
-		Addr:   listenAddr,
-		Accept: brokerTunnelHandler,
-		QUICConfig: &quic.Config{
-			TLSConfig:       quicTLS,
-			KeepAlivePeriod: 10 * time.Second,
-		},
+
+	var quicsrv quick.Server
+	if true {
+		quicsrv = &quick.QUICx{
+			Addr:   listenAddr,
+			Accept: brokerTunnelHandler,
+			QUICConfig: &quic.Config{
+				TLSConfig:       quicTLS,
+				KeepAlivePeriod: 10 * time.Second,
+			},
+		}
+	} else {
+		quicsrv = &quick.QUICgo{
+			Addr:      listenAddr,
+			Handler:   brokerTunnelHandler,
+			TLSConfig: quicTLS,
+			QUICConfig: &quicgo.Config{
+				KeepAlivePeriod: 10 * time.Second,
+			},
+		}
 	}
 	log.Info("监听地址", "listen_addr", listenAddr)
 
 	errs := make(chan error)
-	go listenQUIC(ctx, errs, quicSrv)
+	go listenQUIC(ctx, errs, quicsrv)
 	go listenHTTPS(errs, srv)
 	select {
 	case err = <-errs:
 	case <-ctx.Done():
 	}
 	_ = srv.Close()
-	_ = quicSrv.Close()
+	_ = quicsrv.Close()
 	_ = brokerReset(brokerSvc)
 
 	return err
