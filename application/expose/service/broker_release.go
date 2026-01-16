@@ -77,7 +77,7 @@ func (br *BrokerRelease) Upload(ctx context.Context, req *request.BrokerReleaseU
 	}
 
 	build := model.FormatBuildInfo(bi)
-	semver := model.ParseSemver(meta.Version)
+	semver := model.ParseSemver(meta.Semver)
 	data := &model.BrokerRelease{
 		FileID:    info.FileID,
 		Filename:  filename,

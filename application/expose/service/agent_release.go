@@ -76,7 +76,7 @@ func (ar *AgentRelease) Upload(ctx context.Context, req *request.AgentReleaseUpl
 		return err
 	}
 
-	semver := model.ParseSemver(meta.Version)
+	semver := model.ParseSemver(meta.Semver)
 	data := &model.AgentRelease{
 		FileID:    info.FileID,
 		Filename:  filename,

@@ -12,9 +12,9 @@ require (
 	github.com/quic-go/quic-go v0.59.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/xgfone/ship/v5 v5.3.2
-	github.com/xmx/aegis-common v0.0.0-20260113114909-6a181fb8bf43
-	github.com/xmx/aegis-control v0.0.0-20260114011124-3c039fc29278
-	github.com/xmx/metrics v0.0.0-20251124113446-33b980340aea
+	github.com/xmx/aegis-common v0.0.0-20260116110754-213badd18af9
+	github.com/xmx/aegis-control v0.0.0-20260116113046-b29ab82d2da5
+	github.com/xmx/metrics v0.0.0-20260116025626-8ee725bd7622
 	go.mongodb.org/mongo-driver/v2 v2.4.1
 	golang.org/x/crypto v0.47.0
 	golang.org/x/net v0.49.0
@@ -28,9 +28,10 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
 	github.com/golang/snappy v1.0.0 // indirect
-	github.com/google/pprof v0.0.0-20260111202518-71be6bfdd440 // indirect
+	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83 // indirect
 	github.com/grafana/sobek v0.0.0-20251209155516-22d1085c20a8 // indirect
-	github.com/klauspost/compress v1.18.2 // indirect
+	github.com/hashicorp/yamux v0.1.2 // indirect
+	github.com/klauspost/compress v1.18.3 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect

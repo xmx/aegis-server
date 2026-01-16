@@ -216,8 +216,9 @@ func (ctl *centralServer) disconnection(peer linkhub.Peer, connectAt time.Time) 
 
 	ctl.removeHuber(id)
 
-	protocol, subprotocol := mux.Protocol()
+	libName, libModule := mux.Library()
 	raddr, laddr := mux.Addr(), mux.RemoteAddr() // 互换
+	second := int64(disconnectAt.Sub(connectAt).Seconds())
 	history := &model.BrokerConnectHistory{
 		Broker: id,
 		Name:   info.Name,
@@ -228,9 +229,8 @@ func (ctl *centralServer) disconnection(peer linkhub.Peer, connectAt time.Time) 
 		TunnelStat: model.TunnelStatHistory{
 			ConnectedAt:    connectAt,
 			DisconnectedAt: disconnectAt,
-			Duration:       disconnectAt.Sub(connectAt),
-			Protocol:       protocol,
-			Subprotocol:    subprotocol,
+			Second:         second,
+			Library:        model.TunnelLibrary{Name: libName, Module: libModule},
 			LocalAddr:      laddr.String(),
 			RemoteAddr:     raddr.String(),
 			ReceiveBytes:   rx,
@@ -330,14 +330,13 @@ func (ctl *centralServer) findBrokerBySecret(secret string) (*model.Broker, erro
 
 func (ctl *centralServer) updateBrokerOnline(mux muxconn.Muxer, req *AuthRequest, before *model.Broker) (*mongo.UpdateResult, error) {
 	now := time.Now()
-	protocol, subprotocol := mux.Protocol()
-	laddr, raddr := mux.Addr(), mux.RemoteAddr()
+	libName, libModule := mux.Library()
+	raddr, laddr := mux.Addr(), mux.RemoteAddr() // 位置互换
 	tunStat := &model.TunnelStat{
 		ConnectedAt: now,
 		KeepaliveAt: now,
-		Protocol:    protocol,
-		Subprotocol: subprotocol,
-		LocalAddr:   raddr.String(), // 位置互换
+		Library:     model.TunnelLibrary{Name: libName, Module: libModule},
+		LocalAddr:   raddr.String(),
 		RemoteAddr:  laddr.String(),
 	}
 	exeStat := &model.ExecuteStat{
