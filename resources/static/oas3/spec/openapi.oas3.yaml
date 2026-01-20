@@ -28,7 +28,7 @@ paths:
         - ⚙️ 系统设置
       responses:
         '200':
-          $ref: '#/components/responses/GetConfigCertificates'
+          description: OK
       operationId: get-certificates
       description: TLS证书-分页查询
       parameters:
@@ -150,7 +150,7 @@ paths:
         - "\U0001F680 发布部署"
       description: 删除 agent 发行包。
       parameters:
-        - $ref: '#/components/parameters/ObjectID'
+        - $ref: '#/components/parameters/name'
   /agent-releases:
     get:
       summary: 【Agent】列表
@@ -297,7 +297,7 @@ paths:
       tags:
         - "\U0001F680 发布部署"
       parameters:
-        - $ref: '#/components/parameters/ObjectID'
+        - $ref: '#/components/parameters/id'
   /broker-releases:
     get:
       summary: 【Broker】列表
@@ -686,12 +686,7 @@ paths:
         - ⚙️ 系统设置
       description: 删除 VictoriaMetrics 配置
       parameters:
-        - schema:
-            type: string
-          in: query
-          description: 名字
-          required: true
-          name: name
+        - $ref: '#/components/parameters/name'
   /firewalls:
     get:
       summary: 【防火墙】列表查询
@@ -822,6 +817,66 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/FirewallUpsert'
+  /pyroscope:
+    get:
+      summary: 【Pyroscope】列表
+      tags:
+        - ⚙️ 系统设置
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pyroscope'
+                  x-stoplight:
+                    id: 4fuqqpokdr7ps
+      operationId: get-pyroscope
+      description: 获取配置列表
+      requestBody:
+        content: {}
+    post:
+      summary: 【Pyroscope】新增
+      operationId: post-pyroscope
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 新增配置
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pyroscope'
+    put:
+      summary: 【Pyroscope】修改
+      operationId: put-pyroscope
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 修改配置
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pyroscope'
+    delete:
+      summary: 【Pyroscope】删除
+      operationId: delete-pyroscope
+      responses:
+        '200':
+          description: OK
+      tags:
+        - ⚙️ 系统设置
+      description: 删除配置
+      parameters:
+        - $ref: '#/components/parameters/name'
+    parameters: []
 components:
   securitySchemes:
     Authorization:
@@ -872,23 +927,23 @@ components:
         minItems: 1
         maxItems: 1000
       description: '允许传入多个ID，ElementsUI 中输入示例：["1","2"] 或 [1,2]。'
-    ObjectID:
+    name:
+      name: name
+      in: query
+      required: true
+      schema:
+        type: string
+        example: exmaple-name
+      description: 名字
+    id:
       name: id
       in: query
       required: true
       schema:
         type: string
-        example: 68f7502cc628b9e207f564d6
-        minLength: 24
-        maxLength: 24
+        example: 6f10b89ca37a4990c39f1012
       description: ID
-  responses:
-    GetConfigCertificates:
-      description: Example response
-      content:
-        application/json:
-          schema:
-            type: object
+  responses: {}
   schemas:
     CreateCertificate:
       title: CreateCertificate
@@ -1190,6 +1245,45 @@ components:
         - enabled
         - blacklist
         - country_mode
+    Pyroscope:
+      title: Pyroscope
+      x-stoplight:
+        id: rlkd5cdxt5eue
+      type: object
+      properties:
+        name:
+          type: string
+          x-stoplight:
+            id: rmrg90e716th0
+          description: 配置名称（唯一）
+          example: example-name
+        address:
+          type: string
+          x-stoplight:
+            id: hclu6qrlcbj68
+          description: 服务地址
+          example: 'https://pyroscope.example.com'
+        username:
+          type: string
+          x-stoplight:
+            id: 2do6iyikcvf65
+          description: 认证用户名
+          example: admin
+        password:
+          type: string
+          x-stoplight:
+            id: 8gmd9zj0wwayn
+          description: 密码
+          example: W12s3A45.6
+        enabled:
+          type: boolean
+          x-stoplight:
+            id: ufzmcjqb4trbw
+          description: 是否启用该配置
+      required:
+        - name
+        - address
+        - enabled
   requestBodies: {}
 security:
   - Authorization: []

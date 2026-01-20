@@ -14,7 +14,6 @@ import (
 	"github.com/xgfone/ship/v5"
 	"github.com/xmx/aegis-common/jsos/jsvm"
 	"github.com/xmx/aegis-common/library/cronv3"
-	"github.com/xmx/aegis-common/library/httpkit"
 	"github.com/xmx/aegis-common/library/validation"
 	"github.com/xmx/aegis-common/logger"
 	"github.com/xmx/aegis-common/muxlink/muxproto"
@@ -175,15 +174,15 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		serverd.NewFindAgentDialer(muxproto.AgentHostSuffix, hub, repoAll),
 	}
 	dualDialer := muxproto.NewFirstMatchDialer(tunDialer, netDialer)
+	_ = muxproto.NewClient(dualDialer, log)
+
 	loadCert := repoAll.Certificate().Enables
 	certPool := tlscert.NewCertPool(loadCert, true, log)
 
-	httpTrip := &http.Transport{DialContext: dualDialer.DialContext}
-	httpClient := &http.Client{Transport: httpTrip}
-	_ = httpkit.NewClient(httpClient)
 	certificateSvc := expservice.NewCertificate(repoAll, certPool, log)
 	maxmindSvc := expservice.NewMaxmind()
 	firewallSvc := expservice.NewFirewall(repoAll, maxmindSvc, log)
+	pyroscopeSvc := expservice.NewPyroscope(repoAll, log)
 	settingSvc := expservice.NewSetting(repoAll, log)
 	victoriaMetricsSvc := expservice.NewVictoriaMetrics(repoAll, log)
 	fsSvc := expservice.NewFS(repoAll, log)
@@ -244,6 +243,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewFS(fsSvc),
 		exprestapi.NewLog(logh),
 		exprestapi.NewPlay(jsmodules),
+		exprestapi.NewPyroscope(pyroscopeSvc),
 		exprestapi.NewReverse(dualDialer),
 		exprestapi.NewSetting(settingSvc),
 		exprestapi.NewVictoriaMetrics(victoriaMetricsSvc),
