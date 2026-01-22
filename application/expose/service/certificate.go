@@ -21,7 +21,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
-func NewCertificate(repo repository.All, pool tlscert.Certifier, log *slog.Logger) *Certificate {
+func NewCertificate(repo repository.All, pool tlscert.Matcher, log *slog.Logger) *Certificate {
 	return &Certificate{
 		repo: repo,
 		pool: pool,
@@ -31,7 +31,7 @@ func NewCertificate(repo repository.All, pool tlscert.Certifier, log *slog.Logge
 
 type Certificate struct {
 	repo  repository.All
-	pool  tlscert.Certifier
+	pool  tlscert.Matcher
 	log   *slog.Logger
 	mutex sync.Mutex
 }

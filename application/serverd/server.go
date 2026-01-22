@@ -12,6 +12,7 @@ import (
 
 	"github.com/xmx/aegis-common/muxlink/muxconn"
 	"github.com/xmx/aegis-common/muxlink/muxproto"
+	"github.com/xmx/aegis-common/muxlink/muxtool"
 	"github.com/xmx/aegis-control/datalayer/model"
 	"github.com/xmx/aegis-control/datalayer/repository"
 	"github.com/xmx/aegis-control/linkhub"
@@ -45,8 +46,8 @@ func (ctl *centralServer) AcceptMUX(mux muxconn.Muxer) {
 
 	info := peer.Info()
 	ctl.log().Info("节点上线成功", "info", info)
-	if l := ctl.opts.ConnectListener; l != nil {
-		l.OnConnection(peer, connectAt)
+	if sh := ctl.opts.ServerHooker; sh != nil {
+		sh.OnConnected(info, connectAt)
 	}
 
 	err = ctl.serveHTTP(peer)
@@ -59,7 +60,7 @@ func (ctl *centralServer) AcceptMUX(mux muxconn.Muxer) {
 func (ctl *centralServer) authentication(mux muxconn.Muxer) (linkhub.Peer, error) {
 	timeout := ctl.timeout()
 
-	fc := muxproto.NewFlagClose(mux)
+	fc := muxtool.NewFlagCloser(mux)
 	timer := time.AfterFunc(timeout, fc.Close)
 	conn, err := mux.Accept()
 	timer.Stop()
@@ -73,7 +74,7 @@ func (ctl *centralServer) authentication(mux muxconn.Muxer) (linkhub.Peer, error
 
 	req := new(AuthRequest)
 	_ = conn.SetReadDeadline(time.Now().Add(timeout))
-	if err = muxproto.ReadJSON(conn, req); err != nil {
+	if err = muxtool.ReadAuth(conn, req); err != nil {
 		ctl.log().Warn("读取认证报文错误", "error", err)
 		return nil, err
 	}
@@ -120,8 +121,8 @@ func (ctl *centralServer) authentication(mux muxconn.Muxer) (linkhub.Peer, error
 		Name: brok.Name, Inet: req.Inet, Goos: req.Goos, Goarch: req.Goarch,
 		Hostname: req.Hostname, Semver: req.Semver,
 	}
-	peer := linkhub.NewPeer(brokID, mux, info)
-	if succeed := ctl.putHuber(peer); !succeed {
+	peer := ctl.putHuber(brokID, mux, info)
+	if peer == nil {
 		err = errors.New("此节点已经在线了（连接池）")
 		ctl.log().Warn("节点重复上线（连接池）", attrs...)
 		ctl.responseError(conn, err, http.StatusConflict)
@@ -245,8 +246,8 @@ func (ctl *centralServer) disconnection(peer linkhub.Peer, connectAt time.Time) 
 
 	ctl.log().Info("节点下线处理完毕", attrs...)
 
-	if l := ctl.opts.ConnectListener; l != nil {
-		l.OnDisconnection(info, connectAt, disconnectAt)
+	if sh := ctl.opts.ServerHooker; sh != nil {
+		sh.OnDisconnected(info, connectAt, disconnectAt)
 	}
 }
 
@@ -305,7 +306,7 @@ func (ctl *centralServer) responseError(conn net.Conn, err error, code int) erro
 	d := ctl.timeout()
 	_ = conn.SetWriteDeadline(time.Now().Add(d))
 
-	return muxproto.WriteJSON(conn, dat)
+	return muxtool.WriteAuth(conn, dat)
 }
 
 func (ctl *centralServer) responseConfig(conn net.Conn, cfg *AuthConfig) error {
@@ -314,7 +315,7 @@ func (ctl *centralServer) responseConfig(conn net.Conn, cfg *AuthConfig) error {
 	d := ctl.timeout()
 	_ = conn.SetWriteDeadline(time.Now().Add(d))
 
-	return muxproto.WriteJSON(conn, dat)
+	return muxtool.WriteAuth(conn, dat)
 }
 
 func (ctl *centralServer) findBrokerBySecret(secret string) (*model.Broker, error) {
@@ -365,10 +366,10 @@ func (ctl *centralServer) updateBrokerOnline(mux muxconn.Muxer, req *AuthRequest
 	return repo.UpdateOne(ctx, filter, update)
 }
 
-func (ctl *centralServer) putHuber(peer linkhub.Peer) (succeed bool) {
-	return ctl.opts.Huber.Put(peer)
+func (ctl *centralServer) putHuber(id bson.ObjectID, mux muxconn.Muxer, inf linkhub.Info) linkhub.Peer {
+	return ctl.opts.Huber.Put(id, mux, inf)
 }
 
 func (ctl *centralServer) removeHuber(id bson.ObjectID) {
-	ctl.opts.Huber.DelByID(id)
+	ctl.opts.Huber.DelID(id)
 }

@@ -89,14 +89,14 @@ func Run(ctx context.Context, cfgFile string) error {
 	}
 
 	noneTLS := func(context.Context) ([]*tls.Certificate, error) { return nil, nil }
-	tempTLS := tlscert.NewCertPool(noneTLS, true, log)
+	tempTLS := tlscert.NewMatch(noneTLS, log)
 	srv := &http.Server{
 		Addr:           listen,
 		Handler:        sh,
 		MaxHeaderBytes: 10 * 1024,
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
-		TLSConfig:      &tls.Config{GetCertificate: tempTLS.Match},
+		TLSConfig:      &tls.Config{GetCertificate: tempTLS.GetCertificate},
 	}
 
 	log.Info("请打开浏览器进行初始化配置", "scheme", "https", "listen", listen)
@@ -167,17 +167,20 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	crond.Start()
 	defer crond.Stop()
 
-	hub := linkhub.NewHub(32)
-	netDialer := &net.Dialer{Timeout: 30 * time.Second}
-	tunDialer := []muxproto.Dialer{
-		linkhub.NewSuffixDialer(muxproto.BrokerHostSuffix, hub),
-		serverd.NewFindAgentDialer(muxproto.AgentHostSuffix, hub, repoAll),
-	}
-	dualDialer := muxproto.NewFirstMatchDialer(tunDialer, netDialer)
-	_ = muxproto.NewClient(dualDialer, log)
+	hub := linkhub.NewHub(muxproto.BrokerHostSuffix)
+	sysdial := &net.Dialer{Timeout: 30 * time.Second}
+	mixdial := linkhub.NewMixedDialer(nil, hub, sysdial)
+
+	_ = mixdial
+
+	// TODO
+	//tunDialer := []muxproto.Dialer{
+	//	linkhub.NewSuffixDialer(muxproto.BrokerHostSuffix, hub),
+	//	serverd.NewFindAgentDialer(muxproto.AgentHostSuffix, hub, repoAll),
+	//}
 
 	loadCert := repoAll.Certificate().Enables
-	certPool := tlscert.NewCertPool(loadCert, true, log)
+	certPool := tlscert.NewMatch(loadCert, log)
 
 	certificateSvc := expservice.NewCertificate(repoAll, certPool, log)
 	maxmindSvc := expservice.NewMaxmind()
@@ -216,14 +219,14 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	}
 
 	tunSrvOpts := serverd.Options{
-		ConnectListener: tunutil.NewConnectListener(log),
-		ConfigLoader:    tunutil.NewAuthConfig(cfg.Database),
-		Handler:         brokSH,
-		Huber:           hub,
-		Validator:       valid.Validate,
-		Logger:          log,
-		Timeout:         30 * time.Second,
-		Context:         ctx,
+		ServerHooker: tunutil.NewConnectListener(log),
+		ConfigLoader: tunutil.NewAuthConfig(cfg.Database),
+		Handler:      brokSH,
+		Huber:        hub,
+		Validator:    valid.Validate,
+		Logger:       log,
+		Timeout:      30 * time.Second,
+		Context:      ctx,
 	}
 	brokerTunnelHandler := serverd.NewServer(repoAll, tunSrvOpts)
 
@@ -244,7 +247,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 		exprestapi.NewLog(logh),
 		exprestapi.NewPlay(jsmodules),
 		exprestapi.NewPyroscope(pyroscopeSvc),
-		exprestapi.NewReverse(dualDialer),
+		exprestapi.NewReverse(mixdial),
 		exprestapi.NewSetting(settingSvc),
 		exprestapi.NewVictoriaMetrics(victoriaMetricsSvc),
 		exprestapi.NewTunnel(brokerTunnelHandler),
@@ -289,8 +292,8 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	if listenAddr == "" {
 		listenAddr = ":443"
 	}
-	httpTLS := &tls.Config{GetCertificate: certPool.Match}
-	quicTLS := &tls.Config{GetCertificate: certPool.Match, NextProtos: []string{"aegis"}, MinVersion: tls.VersionTLS13}
+	httpTLS := &tls.Config{GetCertificate: certPool.GetCertificate}
+	quicTLS := &tls.Config{GetCertificate: certPool.GetCertificate, NextProtos: []string{"aegis"}, MinVersion: tls.VersionTLS13}
 	httpLog := logger.NewV1(slog.New(logger.Skip(logh, 8)))
 	srv := &http.Server{
 		Addr:      listenAddr,

@@ -17,12 +17,12 @@ type AuthConfigLoader interface {
 }
 
 type Options struct {
-	ConnectListener linkhub.ConnectListener
-	ConfigLoader    AuthConfigLoader
-	Handler         http.Handler
-	Huber           linkhub.Huber
-	Validator       func(any) error // 认证报文参数校验器
-	Logger          *slog.Logger
-	Timeout         time.Duration
-	Context         context.Context
+	ServerHooker linkhub.ServerHooker
+	ConfigLoader AuthConfigLoader
+	Handler      http.Handler
+	Huber        linkhub.Huber
+	Validator    func(any) error // 认证报文参数校验器
+	Logger       *slog.Logger
+	Timeout      time.Duration
+	Context      context.Context
 }

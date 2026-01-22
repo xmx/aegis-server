@@ -58,7 +58,7 @@ func (fad *findAgentDialer) DialContext(ctx context.Context, network, address st
 	}
 
 	brok := agt.Broker
-	if peer := fad.huber.GetByID(brok.ID); peer != nil {
+	if peer := fad.huber.GetID(brok.ID); peer != nil {
 		mux := peer.Muxer()
 		return mux.Open(ctx)
 	}
