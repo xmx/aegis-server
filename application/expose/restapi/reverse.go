@@ -17,12 +17,16 @@ import (
 	"github.com/xmx/aegis-common/wsocket"
 	"github.com/xmx/aegis-server/application/errcode"
 	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 func NewReverse(dial muxproto.Dialer) *Reverse {
 	trip := &http.Transport{DialContext: dial.DialContext}
 	resv := &httputil.ReverseProxy{
 		Rewrite: func(pr *httputil.ProxyRequest) {
+			inctx := pr.In.Context()
+			otel.GetTextMapPropagator().Inject(inctx, propagation.HeaderCarrier(pr.Out.Header))
 			pr.SetXForwarded()
 		},
 		Transport: trip,

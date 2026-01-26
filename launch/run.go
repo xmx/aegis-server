@@ -39,6 +39,12 @@ import (
 	"github.com/xmx/aegis-server/library/firewalld"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.38.0"
 	"golang.org/x/net/quic"
 )
 
@@ -163,14 +169,14 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	}
 	log.Info("数据库索引建立完毕")
 
-	crond := cronv3.New(ctx, log, cron.WithSeconds())
+	crond := cronv3.New(log, cron.WithSeconds())
 	crond.Start()
 	defer crond.Stop()
 
 	hub := linkhub.NewHub(muxproto.BrokerHostSuffix)
 	sysdial := &net.Dialer{Timeout: 30 * time.Second}
-	mixdial := linkhub.NewMixedDialer(nil, hub, sysdial)
-
+	agtdial := serverd.NewAgentOpener(repoAll, hub, muxproto.AgentHost)
+	mixdial := serverd.NewMixedDialer(hub, agtdial, sysdial)
 	_ = mixdial
 
 	// TODO
@@ -267,7 +273,7 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	firewallMiddle := firewalld.New(firewallSvc, log)
 	rootRGB := outSH.Group("/").Use(shipx.NewFirewall(firewallMiddle))
 	_ = exprestapi.NewStatic(srvCfg.Static).RegisterRoute(rootRGB)
-	apiRGB := rootRGB.Group(apiPath).Use(expmiddle.NewWAF(nil))
+	apiRGB := rootRGB.Group(apiPath).Use(expmiddle.NewWAF(nil), expmiddle.NewOtel())
 	if err = shipx.RegisterRoutes(apiRGB, routes); err != nil { // 注册路由
 		return err
 	}
@@ -279,11 +285,17 @@ func run(ctx context.Context, cfg *config.Config, valid *validation.Validate, lo
 	//	return err
 	//}
 
+	tracer, err := initTracer(ctx)
+	if err != nil {
+		return err
+	}
+	defer tracer.Shutdown(ctx)
+
 	cronTasks := []cronv3.Tasker{
 		crontab.NewMetrics(victoriaMetricsSvc.PushConfig),
 	}
 	for _, task := range cronTasks {
-		if _, err = crond.AddTask(task); err != nil {
+		if err = crond.AddTask(task); err != nil {
 			return err
 		}
 	}
@@ -358,4 +370,29 @@ func listenQUIC(ctx context.Context, errs chan<- error, srv quick.Server) {
 
 func listenHTTPS(errs chan<- error, srv *http.Server) {
 	errs <- srv.ListenAndServeTLS("", "")
+}
+
+func initTracer(ctx context.Context) (*sdktrace.TracerProvider, error) {
+	exp, err := otlptracehttp.New(
+		ctx,
+		otlptracehttp.WithEndpointURL("https://tempo.example.com/v1/traces"),
+		otlptracehttp.WithHeaders(map[string]string{
+			"X-Scope-OrgID": "aegis",
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName("aegis-server"),
+		)),
+	)
+
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+	return tp, nil
 }
