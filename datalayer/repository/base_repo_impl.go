@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"iter"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -65,9 +64,8 @@ func (bc *BaseCollection[T]) ReplaceOne(ctx context.Context, filter, replacement
 	return bc.coll.ReplaceOne(ctx, filter, replacement, opts...)
 }
 
-func (bc *BaseCollection[T]) Aggregate(ctx context.Context, pipe any, opts ...options.Lister[options.AggregateOptions]) ([]*T, error) {
-	//TODO implement me
-	panic("implement me")
+func (bc *BaseCollection[T]) Aggregate(ctx context.Context, pipe any, opts ...options.Lister[options.AggregateOptions]) (*mongo.Cursor, error) {
+	return bc.coll.Aggregate(ctx, pipe, opts...)
 }
 
 func (bc *BaseCollection[T]) CountDocuments(ctx context.Context, filter any, opts ...options.Lister[options.CountOptions]) (int64, error) {
@@ -83,13 +81,22 @@ func (bc *BaseCollection[T]) Distinct(ctx context.Context, fieldName string, fil
 }
 
 func (bc *BaseCollection[T]) Find(ctx context.Context, filter any, opts ...options.Lister[options.FindOptions]) ([]*T, error) {
-	//TODO implement me
-	panic("implement me")
+	cur, err := bc.coll.Find(ctx, filter, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return bc.cursorTS(ctx, cur)
 }
 
 func (bc *BaseCollection[T]) FindOne(ctx context.Context, filter any, opts ...options.Lister[options.FindOneOptions]) (*T, error) {
-	//TODO implement me
-	panic("implement me")
+	t := new(T)
+	dec := bc.coll.FindOne(ctx, filter, opts...)
+	if err := dec.Decode(t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }
 
 func (bc *BaseCollection[T]) FindOneAndDelete(ctx context.Context, filter any, opts ...options.Lister[options.FindOneAndDeleteOptions]) (*T, error) {
@@ -108,13 +115,16 @@ func (bc *BaseCollection[T]) FindOneAndUpdate(ctx context.Context, filter, updat
 }
 
 func (bc *BaseCollection[T]) FindTo(ctx context.Context, filter, result any, opts ...options.Lister[options.FindOptions]) error {
-	//TODO implement me
-	panic("implement me")
+	cur, err := bc.coll.Find(ctx, filter, opts...)
+	if err != nil {
+		return err
+	}
+
+	return bc.cursorAll(ctx, cur, result)
 }
 
 func (bc *BaseCollection[T]) Watch(ctx context.Context, pipeline any, opts ...options.Lister[options.ChangeStreamOptions]) (*mongo.ChangeStream, error) {
-	//TODO implement me
-	panic("implement me")
+	return bc.coll.Watch(ctx, pipeline, opts...)
 }
 
 func (bc *BaseCollection[T]) Indexes() mongo.IndexView {
@@ -122,23 +132,25 @@ func (bc *BaseCollection[T]) Indexes() mongo.IndexView {
 }
 
 func (bc *BaseCollection[T]) SearchIndexes() mongo.SearchIndexView {
-	//TODO implement me
-	panic("implement me")
+	return bc.coll.SearchIndexes()
 }
 
 func (bc *BaseCollection[T]) Drop(ctx context.Context, opts ...options.Lister[options.DropCollectionOptions]) error {
-	//TODO implement me
-	panic("implement me")
+	return bc.coll.Drop(ctx)
 }
 
 func (bc *BaseCollection[T]) FindByID(ctx context.Context, id any, opts ...options.Lister[options.FindOneOptions]) (*T, error) {
-	//TODO implement me
-	panic("implement me")
+	t := new(T)
+	dec := bc.coll.FindOne(ctx, bson.D{{Key: "_id", Value: id}}, opts...)
+	if err := dec.Decode(t); err != nil {
+		return nil, err
+	}
+
+	return t, nil
 }
 
 func (bc *BaseCollection[T]) DeleteByID(ctx context.Context, id any, opts ...options.Lister[options.DeleteOneOptions]) (*mongo.DeleteResult, error) {
-	//TODO implement me
-	panic("implement me")
+	return bc.coll.DeleteOne(ctx, bson.D{{Key: "_id", Value: id}}, opts...)
 }
 
 func (bc *BaseCollection[T]) DistinctString(ctx context.Context, fieldName string, filter any, opts ...options.Lister[options.DistinctOptions]) ([]string, error) {
@@ -161,7 +173,17 @@ func (bc *BaseCollection[T]) Page(ctx context.Context, filter any, page, size in
 	panic("implement me")
 }
 
-func (bc *BaseCollection[T]) All(ctx context.Context, filter any, opts ...options.Lister[options.FindOptions]) iter.Seq2[*T, error] {
-	//TODO implement me
-	panic("implement me")
+func (bc *BaseCollection[T]) cursorTS(ctx context.Context, cur *mongo.Cursor) ([]*T, error) {
+	var ret []*T
+	if err := bc.cursorAll(ctx, cur, &ret); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
+//goland:noinspection GoUnhandledErrorResult
+func (bc *BaseCollection[T]) cursorAll(ctx context.Context, cur *mongo.Cursor, result any) error {
+	defer cur.Close(ctx)
+	return cur.All(ctx, result)
 }

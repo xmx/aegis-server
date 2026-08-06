@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"iter"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -27,7 +26,7 @@ type Collection[T any] interface {
 	UpdateOne(ctx context.Context, filter, update any, opts ...options.Lister[options.UpdateOneOptions]) (*mongo.UpdateResult, error)
 	UpdateMany(ctx context.Context, filter, update any, opts ...options.Lister[options.UpdateManyOptions]) (*mongo.UpdateResult, error)
 	ReplaceOne(ctx context.Context, filter, replacement any, opts ...options.Lister[options.ReplaceOptions]) (*mongo.UpdateResult, error)
-	Aggregate(ctx context.Context, pipe any, opts ...options.Lister[options.AggregateOptions]) ([]*T, error)
+	Aggregate(ctx context.Context, pipe any, opts ...options.Lister[options.AggregateOptions]) (*mongo.Cursor, error)
 	CountDocuments(ctx context.Context, filter any, opts ...options.Lister[options.CountOptions]) (int64, error)
 	EstimatedDocumentCount(ctx context.Context, opts ...options.Lister[options.EstimatedDocumentCountOptions]) (int64, error)
 	Distinct(ctx context.Context, fieldName string, filter any, opts ...options.Lister[options.DistinctOptions]) *mongo.DistinctResult
@@ -47,7 +46,6 @@ type Collection[T any] interface {
 	DistinctObjectID(ctx context.Context, fieldName string, filter any, opts ...options.Lister[options.DistinctOptions]) ([]bson.ObjectID, error)
 	AggregateTo(ctx context.Context, pipe, result any, opts ...options.Lister[options.AggregateOptions]) error
 	Page(ctx context.Context, filter any, page, size int64, opts ...options.Lister[options.FindOptions]) (*Pages[T], error)
-	All(ctx context.Context, filter any, opts ...options.Lister[options.FindOptions]) iter.Seq2[*T, error]
 }
 
 type Pages[T any] struct {
