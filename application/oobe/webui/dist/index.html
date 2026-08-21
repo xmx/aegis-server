@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIEM | 初始化</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --card-bg: #0a0a0a;
+            --input-bg: #121212;
+            --text-p: #ffffff;
+            --text-s: #71717a;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.4);
+            --danger: #ef4444;
+            --success: #10b981;
+            --border: #27272a;
+            /* 定义等宽字体序列 */
+            --font-mono: Consolas, 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+        }
+
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: -apple-system, "PingFang SC", sans-serif;
+            background-color: var(--bg);
+            color: var(--text-p);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 强制等宽字体应用 */
+        input, select, button, .mono {
+            font-family: var(--font-mono) !important;
+        }
+
+        .flex-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.9);
+        }
+
+        /* 认证卡片特定布局 */
+        .auth-card {
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+
+        /* Token 输入框美化 */
+        .token-field {
+            width: 100%;
+            padding: 20px;
+            background: var(--input-bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-p);
+            font-size: 16px;
+            text-align: center;
+            letter-spacing: 6px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .token-field:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px var(--accent-glow);
+            background: #161616;
+        }
+
+        /* 配置页布局 */
+        .config-container {
+            max-width: 850px;
+            margin: 60px auto;
+            display: none;
+            padding: 0 20px;
+        }
+
+        h1 {
+            font-size: 26px;
+            margin-bottom: 12px;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-s);
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 14px;
+        }
+
+        h2 {
+            font-size: 13px;
+            color: var(--accent);
+            margin: 36px 0 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-s);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-p);
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        /* Switch 开关 */
+        .bool-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 12px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #27272a;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--accent);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 18px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 24px;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary:hover {
+            opacity: 0.95;
+        }
+
+        /* Toast 通知 */
+        #notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            z-index: 9999;
+            padding: 20px 28px;
+            border-radius: 14px;
+            min-width: 320px;
+            display: none;
+            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .notif-error {
+            background: rgba(220, 38, 38, 0.95);
+            color: white;
+        }
+
+        .notif-success {
+            background: rgba(5, 150, 105, 0.95);
+            color: white;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .list-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-icon {
+            padding: 0 14px;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            color: var(--text-s);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn-icon:hover {
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="notification">
+    <strong id="notif-title" style="display: block; margin-bottom: 4px; font-size: 15px;"></strong>
+    <div id="notif-detail" style="font-size: 13px; opacity: 0.9; line-height: 1.5;"></div>
+</div>
+
+<!-- 认证阶段 -->
+<div id="auth-view" class="flex-center">
+    <div class="auth-card">
+        <div class="card">
+            <h1>身份验证</h1>
+            <div class="form-group" style="margin-bottom: 30px;">
+                <input type="password" id="token-input" class="token-field" placeholder="········" autofocus>
+                <div id="auth-error"
+                     style="color: var(--danger); font-size: 12px; text-align: center; margin-top: 16px; display: none; font-weight: 500;">
+                    无效的身份令牌
+                </div>
+            </div>
+            <button class="btn-primary" onclick="doAuth()">验证</button>
+        </div>
+    </div>
+</div>
+
+<!-- 配置页 -->
+<div id="config-view" class="config-container">
+    <div class="card" style="padding: 50px;">
+        <h1>初始化配置</h1>
+        <p class="subtitle">请检查并确认以下服务运行参数</p>
+
+        <h2>[01] 服务器设置 / SERVER</h2>
+        <div class="grid-2">
+            <div class="form-group"><label>监听地址 (ADDR)</label><input type="text" id="conf-addr"></div>
+            <div class="form-group"><label>会话有效期 (SESSION)</label><input type="text" id="conf-session"></div>
+        </div>
+        <div class="form-group">
+            <label>虚拟主机列表 (VHOSTS)</label>
+            <div id="vhosts-list"></div>
+            <button style="background:none; border:1px dashed var(--border); color:var(--text-s); width:100%; padding:12px; border-radius:8px; cursor:pointer; font-size: 13px;"
+                    onclick="addVHostInput('')">+ 新增虚拟主机记录
+            </button>
+        </div>
+
+        <h2>[02] 数据库连接 / DATABASE</h2>
+        <div class="form-group"><label>MONGODB URI</label><input type="text" id="conf-db-uri"
+                                                                 placeholder="mongodb://admin:password@10.0.0.123/siem?authSource=admin">
+        </div>
+
+        <h2>[03] 日志输出 / LOGGER</h2>
+        <div class="grid-2">
+            <div class="form-group">
+                <label>日志级别 (LEVEL)</label>
+                <select id="conf-log-level">
+                    <option value="DEBUG">DEBUG</option>
+                    <option value="INFO" selected>INFO</option>
+                    <option value="WARN">WARN</option>
+                    <option value="ERROR">ERROR</option>
+                </select>
+            </div>
+            <div class="form-group"><label>输出文件名 (FILENAME)</label><input type="text" id="conf-log-filename"></div>
+        </div>
+
+        <div class="grid-3">
+            <div class="form-group"><label>MAX SIZE (MB)</label><input type="number" id="conf-log-maxsize"></div>
+            <div class="form-group"><label>MAX AGE (DAYS)</label><input type="number" id="conf-log-maxage"></div>
+            <div class="form-group"><label>MAX BACKUPS</label><input type="number" id="conf-log-maxbackups"></div>
+        </div>
+
+        <div class="grid-3" style="margin-top: 10px;">
+            <div class="bool-row"><span>输出到终端</span><label class="switch"><input type="checkbox"
+                                                                                      id="conf-log-console"><span
+                    class="slider"></span></label></div>
+            <div class="bool-row"><span>文件名本地时区</span><label class="switch"><input type="checkbox"
+                                                                                                      id="conf-log-localtime"><span
+                    class="slider"></span></label></div>
+            <div class="bool-row"><span>日志文件压缩</span><label class="switch"><input type="checkbox"
+                                                                                        id="conf-log-compress"><span
+                    class="slider"></span></label></div>
+        </div>
+
+        <button class="btn-primary" style="margin-top: 50px;" onclick="doSubmit()"
+                id="submit-btn">提交
+        </button>
+    </div>
+</div>
+
+<script>
+    let rawConfig = null;
+    let authToken = "";
+
+    function showToast(title, detail, isError = true) {
+        const el = document.getElementById('notification');
+        el.className = isError ? 'notif-error' : 'notif-success';
+        document.getElementById('notif-title').innerText = title;
+        document.getElementById('notif-detail').innerText = detail;
+        el.style.display = 'block';
+        setTimeout(() => {
+            el.style.display = 'none';
+        }, 10000);
+    }
+
+    async function doAuth() {
+        const token = document.getElementById('token-input').value;
+        const errorEl = document.getElementById('auth-error');
+        try {
+            const res = await fetch(`api/oobe`, {
+                headers: {'Accept': 'application/json', 'Authorization': token},
+            });
+            if (res.status === 401) {
+                errorEl.style.display = 'block';
+                return;
+            }
+            rawConfig = await res.json();
+            authToken = token;
+            renderForm();
+        } catch (err) {
+            showToast("通信异常", "请检查后端服务状态。");
+        }
+    }
+
+    function renderForm() {
+        document.getElementById('auth-view').style.display = 'none';
+        document.getElementById('config-view').style.display = 'block';
+        document.getElementById('conf-addr').value = rawConfig.server?.addr || "";
+        document.getElementById('conf-session').value = rawConfig.server?.session || "";
+        const container = document.getElementById('vhosts-list');
+        container.innerHTML = '';
+        (rawConfig.server?.vhosts || []).forEach(v => addVHostInput(v));
+        document.getElementById('conf-db-uri').value = rawConfig.database?.uri || "";
+        const log = rawConfig.logger || {};
+        document.getElementById('conf-log-level').value = log.level || "INFO";
+        document.getElementById('conf-log-filename').value = log.filename || "";
+        document.getElementById('conf-log-maxsize').value = log.maxsize || 0;
+        document.getElementById('conf-log-maxage').value = log.maxage || 0;
+        document.getElementById('conf-log-maxbackups').value = log.maxbackups || 0;
+        document.getElementById('conf-log-console').checked = log.console !== false;
+        document.getElementById('conf-log-localtime').checked = !!log.localtime;
+        document.getElementById('conf-log-compress').checked = !!log.compress;
+    }
+
+    function addVHostInput(value) {
+        const div = document.createElement('div');
+        div.className = 'list-item';
+        div.innerHTML = `<input type="text" class="vhost-item" value="${value}" style="flex:1" placeholder="siem.example.local"><button class="btn-icon" onclick="this.parentElement.remove()">✕</button>`;
+        document.getElementById('vhosts-list').appendChild(div);
+    }
+
+    async function doSubmit() {
+        const btn = document.getElementById('submit-btn');
+        const originalText = btn.innerText;
+        btn.innerText = "PROCCESSING...";
+        btn.disabled = true;
+
+        const payload = {
+            server: {
+                ...rawConfig.server,
+                addr: document.getElementById('conf-addr').value,
+                session: document.getElementById('conf-session').value,
+                vhosts: Array.from(document.querySelectorAll('.vhost-item')).map(i => i.value).filter(v => v)
+            },
+            database: {uri: document.getElementById('conf-db-uri').value},
+            logger: {
+                level: document.getElementById('conf-log-level').value,
+                console: document.getElementById('conf-log-console').checked,
+                filename: document.getElementById('conf-log-filename').value,
+                maxsize: parseInt(document.getElementById('conf-log-maxsize').value) || 0,
+                maxage: parseInt(document.getElementById('conf-log-maxage').value) || 0,
+                maxbackups: parseInt(document.getElementById('conf-log-maxbackups').value) || 0,
+                localtime: document.getElementById('conf-log-localtime').checked,
+                compress: document.getElementById('conf-log-compress').checked
+            }
+        };
+
+        try {
+            const res = await fetch('api/oobe', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': authToken},
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                showToast("配置已提交", "请自行刷新页面打开项目...", false);
+            } else {
+                const errData = await res.json();
+                showToast(`提交失败 (${errData.status})`, `${errData.title}: ${errData.detail}`);
+            }
+        } catch (err) {
+            showToast("通信异常", "请检查后端服务状态。");
+        } finally {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>

@@ -18,6 +18,4 @@ type OAuthClient struct {
 	UpdatedAt    time.Time     `bson:"updated_at,omitempty" json:"updated_at"`
 }
 
-func (OAuthClient) CollectionInfo() (string, string) {
-	return "oauth_client", "OAuth 客户端凭证"
-}
+func (OAuthClient) CollectionInfo() (string, string) { return "oauth_client", "OAuth 客户端凭证" }
