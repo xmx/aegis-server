@@ -10,7 +10,7 @@ SHORT_SHA=$(git rev-parse --short HEAD)
 BINARY_NAME="${BASE_NAME}_$(go env GOOS)-$(go env GOARCH)@${VERSION}+${SHORT_SHA}$(go env GOEXE)"
 CURRENT_TIME=$(date --rfc-email)
 LD_FLAGS="-s -w -extldflags=-static -X '$(go list -m)/buildinfo.compileTime=${CURRENT_TIME}'"
-CGO_ENABLED=0 go build -o "${BINARY_NAME}" -tags=osusergo,netgo -trimpath -ldflags "${LD_FLAGS}" ./cmd/aegis-server
+CGO_ENABLED=0 go build -o "${BINARY_NAME}" -tags=osusergo,netgo -trimpath -ldflags "${LD_FLAGS}" ./main
 
 BINARY_MD5=$(md5sum "${BINARY_NAME}" | awk '{print $1}')
 BINARY_SHA1=$(sha1sum "${BINARY_NAME}" | awk '{print $1}')
