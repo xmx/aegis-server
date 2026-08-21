@@ -7,7 +7,7 @@ BASE_NAME="aegis-server"
 TIME_VERSION=$(TZ=UTC git log -1 --format="%cd" --date=format-local:"%y.%m.%d" | awk -F. '{printf "%d.%d.%d\n", $1, $2, $3}')
 VERSION="v${TIME_VERSION}"
 SHORT_SHA=$(git rev-parse --short HEAD)
-BINARY_NAME="${BASE_NAME}_$(go env GOOS)-$(go env GOARCH)_${VERSION}+${SHORT_SHA}$(go env GOEXE)"
+BINARY_NAME="${BASE_NAME}_$(go env GOOS)-$(go env GOARCH)@${VERSION}+${SHORT_SHA}$(go env GOEXE)"
 CURRENT_TIME=$(date --rfc-email)
 LD_FLAGS="-s -w -extldflags=-static -X '$(go list -m)/buildinfo.compileTime=${CURRENT_TIME}'"
 CGO_ENABLED=0 go build -o "${BINARY_NAME}" -tags=osusergo,netgo -trimpath -ldflags "${LD_FLAGS}" ./cmd/aegis-server
