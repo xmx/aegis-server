@@ -19,8 +19,10 @@ type oauthClient struct {
 }
 
 func NewOAuthClient(db *mongo.Database, opts ...options.Lister[options.CollectionOptions]) OAuthClient {
+	coll := NewCollection[model.OAuthClient](db, opts...)
+
 	return &oauthClient{
-		Collection: NewCollection[model.OAuthClient](db, opts...),
+		Collection: coll,
 	}
 }
 

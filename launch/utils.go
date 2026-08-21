@@ -50,11 +50,12 @@ func shutdownHTTPS(parent context.Context, srv *http.Server, timeout time.Durati
 	return srv.Shutdown(ctx)
 }
 
-func oobeLog() (*slog.Logger, io.Closer) {
+func initLog() (*logger.MultiHandler, io.Closer) {
 	opts := &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}
-	lum := &lumberjack.Logger{Filename: config.DefaultLogFilename}
-	h := slog.NewMultiHandler(logger.NewTint(os.Stdout, opts), slog.NewJSONHandler(lum, opts))
-	log := slog.New(h)
+	file := &lumberjack.Logger{Filename: config.DefaultLogFilename}
 
-	return log, lum
+	return logger.NewMultiHandler(
+		logger.NewTint(os.Stdout, opts),
+		slog.NewJSONHandler(file, opts),
+	), file
 }

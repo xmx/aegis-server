@@ -23,7 +23,7 @@ type Collection[T any] interface {
 	CreateIndexer
 	CollectionInfer
 	Database() *mongo.Database
-	Collection() *mongo.Collection
+	RawCollection() *mongo.Collection
 	BulkWrite(ctx context.Context, models []mongo.WriteModel, opts ...options.Lister[options.BulkWriteOptions]) (*mongo.BulkWriteResult, error)
 	InsertOne(ctx context.Context, doc *T, opts ...options.Lister[options.InsertOneOptions]) (*mongo.InsertOneResult, error)
 	InsertMany(ctx context.Context, docs []*T, opts ...options.Lister[options.InsertManyOptions]) (*mongo.InsertManyResult, error)

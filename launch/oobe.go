@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/hex"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,9 +27,10 @@ import (
 //
 //goland:noinspection GoUnhandledErrorResult
 func runOOBE(ctx context.Context, file string) (*config.Config, error) {
-	log, cls := oobeLog()
+	lmh, cls := initLog()
 	defer cls.Close()
 
+	log := slog.New(lmh)
 	tmp := make([]byte, 10)
 	if _, err := rand.Read(tmp); err != nil {
 		log.Error("生成访问凭证错误", "err", err)

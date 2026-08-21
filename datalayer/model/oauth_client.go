@@ -6,6 +6,10 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
+const (
+	OAuthGithub = "github"
+)
+
 type OAuthClient struct {
 	ID           bson.ObjectID `bson:"_id,omitempty"        json:"-"`
 	Provider     string        `bson:"provider"             json:"provider"`

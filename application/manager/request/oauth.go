@@ -1,7 +1,8 @@
 package request
 
 type OAuthCode struct {
-	Code string `json:"code" validate:"required,lte=500"`
+	Code        string `json:"code"         validate:"required,lte=500"`
+	RedirectURI string `json:"redirect_uri" validate:"required,http_url"`
 }
 
 type OAuthProvider struct {

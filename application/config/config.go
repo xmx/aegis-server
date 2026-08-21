@@ -16,7 +16,7 @@ const (
 	EnvironOOBEDist = "SIEM_OOBE_DIST"
 
 	// DefaultLogFilename 默认日志输出位置。
-	DefaultLogFilename = "resources/log/siem.jsonl"
+	DefaultLogFilename = "resources/log/application.jsonl"
 )
 
 type Config struct {

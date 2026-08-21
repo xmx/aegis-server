@@ -13,23 +13,27 @@ type BaseDB struct {
 	log *slog.Logger
 
 	oauthClient OAuthClient
+	user        User
 }
 
 func NewBaseDB(db *mongo.Database, log *slog.Logger) *BaseDB {
 	return &BaseDB{
 		db:  db,
 		log: log,
+
+		oauthClient: NewOAuthClient(db),
+		user:        NewUser(db),
 	}
 }
 
 func (b *BaseDB) Database() *mongo.Database { return b.db }
 func (b *BaseDB) OAuthClient() OAuthClient  { return b.oauthClient }
+func (b *BaseDB) User() User                { return b.user }
 
 func (b *BaseDB) CreateIndex(ctx context.Context) error {
 	rv := reflect.ValueOf(b)
-	for i := range rv.NumMethod() {
-		mv := rv.Method(i)
-		idx, inf := b.reflectCall(mv, mv.Type())
+	for _, mv := range rv.Methods() {
+		idx, inf := b.reflectCall(mv)
 		if idx == nil {
 			continue
 		}
@@ -56,8 +60,8 @@ func (b *BaseDB) CreateIndex(ctx context.Context) error {
 	return nil
 }
 
-func (b *BaseDB) reflectCall(mv reflect.Value, mt reflect.Type) (CreateIndexer, CollectionInfer) {
-	if mt.NumIn() != 0 || mt.NumOut() != 1 {
+func (b *BaseDB) reflectCall(mv reflect.Value) (CreateIndexer, CollectionInfer) {
+	if mt := mv.Type(); mt.NumIn() != 0 || mt.NumOut() != 1 {
 		return nil, nil
 	}
 

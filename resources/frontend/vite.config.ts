@@ -6,7 +6,14 @@ import path from 'path'
 export default defineConfig({
     plugins: [react(), tailwindcss()],
     server: {
-        allowedHosts: ['dev.zhaoyun.wang']
+        allowedHosts: ['dev.zhaoyun.wang', 'lo.zhaoyun.wang'],
+        proxy: {
+            '/api': {
+                target: 'https://127.0.0.1:8060',
+                changeOrigin: true,
+                secure: false,
+            },
+        },
     },
     resolve: {
         alias: {

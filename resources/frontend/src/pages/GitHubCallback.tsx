@@ -1,49 +1,39 @@
-import { useSearchParams } from "react-router-dom"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { useEffect, useRef } from "react"
+import { useSearchParams, useNavigate } from "react-router-dom"
+import { api } from "@/lib/api"
+import { showError } from "@/lib/toast"
+import { useAuth } from "@/components/AuthProvider"
+import type { User } from "@/components/AuthProvider"
 
 function GitHubCallback() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const { setUser } = useAuth()
   const code = searchParams.get("code")
-  const state = searchParams.get("state")
+  const called = useRef(false)
 
-  if (!code) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">缺少认证参数</p>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (!code || called.current) return
+    called.current = true
+
+    api<User>("/api/oauth/github", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, redirect_uri: window.location.origin + window.location.pathname }),
+    })
+      .then((user) => {
+        setUser(user)
+        navigate("/", { replace: true })
+      })
+      .catch((err) => {
+        showError(err)
+        navigate("/login", { replace: true })
+      })
+  }, [code, navigate, setUser])
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-base font-medium">GitHub 认证回调</CardTitle>
-          <CardDescription>后端正在开发中，以下是 GitHub 返回的临时授权码</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-muted-foreground">授权码</label>
-            <code className="rounded-md bg-muted px-3 py-2 text-sm break-all font-mono">
-              {code}
-            </code>
-          </div>
-          {state && (
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-muted-foreground">Nonce</label>
-              <code className="rounded-md bg-muted px-3 py-2 text-sm break-all font-mono">
-                {state}
-              </code>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    <div className="flex min-h-screen items-center justify-center">
+      <p className="text-muted-foreground">正在登录...</p>
     </div>
   )
 }

@@ -43,7 +43,7 @@ func (bc *BaseCollection[T]) Database() *mongo.Database {
 	return bc.coll.Database()
 }
 
-func (bc *BaseCollection[T]) Collection() *mongo.Collection {
+func (bc *BaseCollection[T]) RawCollection() *mongo.Collection {
 	return bc.coll
 }
 

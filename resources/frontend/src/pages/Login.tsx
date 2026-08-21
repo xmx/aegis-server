@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -5,6 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { api } from "@/lib/api"
+import { showError } from "@/lib/toast"
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -19,20 +22,34 @@ function GitHubIcon({ className }: { className?: string }) {
   )
 }
 
-const GITHUB_CLIENT_ID = "Ov23liHp87FJSGkoRYSB"
-const GITHUB_REDIRECT_URI = "https://dev.zhaoyun.wang/login/github"
+interface ProviderResponse {
+  provider: string
+  client_id: string
+  redirect_uri: string
+  auth_url: string
+  scopes?: string[]
+}
 
 function Login() {
-  const handleGitHubLogin = () => {
-    const nonce = crypto.randomUUID()
-    sessionStorage.setItem("oauth_nonce", nonce)
-    const params = new URLSearchParams({
-      client_id: GITHUB_CLIENT_ID,
-      redirect_uri: GITHUB_REDIRECT_URI,
-      scope: "user:email",
-      state: nonce,
-    })
-    window.location.href = `https://github.com/login/oauth/authorize?${params.toString()}`
+  const [loading, setLoading] = useState(false)
+
+  const handleGitHubLogin = async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ provider: "github" })
+      const data = await api<ProviderResponse>(`/api/oauth/provider?${params}`)
+
+      const authParams = new URLSearchParams({
+        client_id: data.client_id,
+        redirect_uri: data.redirect_uri,
+        scope: (data.scopes ?? []).join(" "),
+      })
+
+      window.location.href = `${data.auth_url}?${authParams.toString()}`
+    } catch (err) {
+      showError(err)
+      setLoading(false)
+    }
   }
 
   return (
@@ -46,10 +63,11 @@ function Login() {
             variant="outline"
             size="lg"
             className="w-full"
+            disabled={loading}
             onClick={handleGitHubLogin}
           >
             <GitHubIcon className="size-5" />
-            GitHub
+            {loading ? "请求中..." : "GitHub"}
           </Button>
         </CardContent>
       </Card>

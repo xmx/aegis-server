@@ -33,4 +33,6 @@ go.work.sum
 
 .crash.txt
 VERSION
+
 resources/config
+resources/log
