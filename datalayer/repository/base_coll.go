@@ -12,9 +12,16 @@ type CreateIndexer interface {
 	CreateIndex(context.Context, ...options.Lister[options.CreateIndexesOptions]) ([]string, error)
 }
 
+type CollectionInfer interface {
+	// CollectionInfo 注意：该方法应该支持 nil 调用。
+	// collName 为集合名，必须符合标准且不能为空。
+	// collComment 为集合备注说明。
+	CollectionInfo() (name, description string)
+}
+
 type Collection[T any] interface {
 	CreateIndexer
-	Name() string
+	CollectionInfer
 	Database() *mongo.Database
 	Collection() *mongo.Collection
 	BulkWrite(ctx context.Context, models []mongo.WriteModel, opts ...options.Lister[options.BulkWriteOptions]) (*mongo.BulkWriteResult, error)
@@ -46,18 +53,4 @@ type Collection[T any] interface {
 	DistinctObjectID(ctx context.Context, fieldName string, filter any, opts ...options.Lister[options.DistinctOptions]) ([]bson.ObjectID, error)
 	AggregateTo(ctx context.Context, pipe, result any, opts ...options.Lister[options.AggregateOptions]) error
 	Page(ctx context.Context, filter any, page, size int64, opts ...options.Lister[options.FindOptions]) (*Pages[T], error)
-}
-
-type Pages[T any] struct {
-	Page    int64 `json:"page"`
-	Size    int64 `json:"size"`
-	Total   int64 `json:"total"`
-	Records []*T  `json:"records,omitzero"`
-}
-
-func NewEmptyPages[T any]() *Pages[T] {
-	return &Pages[T]{
-		Page: 1,
-		Size: 10,
-	}
 }

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"log/slog"
+	"reflect"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 )
@@ -10,6 +11,8 @@ import (
 type BaseDB struct {
 	db  *mongo.Database
 	log *slog.Logger
+
+	oauthClient OAuthClient
 }
 
 func NewBaseDB(db *mongo.Database, log *slog.Logger) *BaseDB {
@@ -19,10 +22,77 @@ func NewBaseDB(db *mongo.Database, log *slog.Logger) *BaseDB {
 	}
 }
 
-func (b *BaseDB) Database() *mongo.Database {
-	return b.db
-}
+func (b *BaseDB) Database() *mongo.Database { return b.db }
+func (b *BaseDB) OAuthClient() OAuthClient  { return b.oauthClient }
 
 func (b *BaseDB) CreateIndex(ctx context.Context) error {
+	rv := reflect.ValueOf(b)
+	for i := range rv.NumMethod() {
+		mv := rv.Method(i)
+		idx, inf := b.reflectCall(mv, mv.Type())
+		if idx == nil {
+			continue
+		}
+
+		name, description := inf.CollectionInfo()
+		args := []any{"name", name, "description", description}
+		b.log.DebugContext(ctx, "准备创建索引", args...)
+
+		indexes, err := idx.CreateIndex(ctx)
+		if err != nil {
+			args = append(args, "err", err)
+			b.log.ErrorContext(ctx, "索引创建错误", args...)
+			return err
+		}
+
+		if len(indexes) == 0 {
+			b.log.Debug("该集合无需创建索引", args)
+		} else {
+			args = append(args, "indexes", indexes)
+			b.log.Debug("集合索引创建完毕", args...)
+		}
+	}
+
 	return nil
+}
+
+func (b *BaseDB) reflectCall(mv reflect.Value, mt reflect.Type) (CreateIndexer, CollectionInfer) {
+	if mt.NumIn() != 0 || mt.NumOut() != 1 {
+		return nil, nil
+	}
+
+	rets := mv.Call([]reflect.Value{})
+	if len(rets) != 1 {
+		return nil, nil
+	}
+	ret := rets[0]
+	if ret.IsNil() || !ret.IsValid() {
+		return nil, nil
+	}
+
+	val := ret.Interface()
+	ic, ok := val.(CreateIndexer)
+	if !ok {
+		return nil, nil
+	}
+
+	if inf, yes := val.(CollectionInfer); yes {
+		return ic, inf
+	}
+
+	name := ret.Type().Name()
+	if ni, yes := val.(interface{ Name() string }); yes {
+		name = ni.Name()
+	}
+	fake := &fakeCollectionInfo{name: name}
+
+	return ic, fake
+}
+
+type fakeCollectionInfo struct {
+	name string
+}
+
+func (f *fakeCollectionInfo) CollectionInfo() (name, description string) {
+	return f.name, ""
 }
