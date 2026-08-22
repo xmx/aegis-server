@@ -130,7 +130,7 @@ import {useTheme} from "@/components/ThemeProvider"
 
 - 组件通过 `npx shadcn@latest add <name>` 添加
 - 注意：CLI 生成的组件需手动从 `@/` 目录移至 `src/` 对应位置（路径别名解析 bug）
-- 已安装组件：button、dialog、select、input、separator、skeleton、tooltip、sheet、sidebar
+- 已安装组件：button、dialog、select、input、separator、skeleton、tooltip、sheet、sidebar、card、toast、dropdown-menu、table、pagination
 - 组件底层库为 Base UI（`@base-ui/react`），非 Radix
 - 图标库为 lucide（`lucide-react`）
 

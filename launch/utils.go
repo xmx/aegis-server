@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/xmx/aegis-server/application/config"
+	"github.com/xmx/aegis-server/datalayer/model"
 	"github.com/xmx/aegis-server/library/logger"
 	"github.com/xmx/aegis-server/library/netutil"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -58,4 +59,18 @@ func initLog() (*logger.MultiHandler, io.Closer) {
 		logger.NewTint(os.Stdout, opts),
 		slog.NewJSONHandler(file, opts),
 	), file
+}
+
+func initLogHandlers(l model.SCLogger) (hs []slog.Handler, c io.Closer) {
+	lvl := l.LevelVar()
+	opts := &slog.HandlerOptions{AddSource: true, Level: lvl}
+	if fd := l.ConsoleFD(); fd != nil {
+		hs = append(hs, logger.NewTint(fd, opts))
+	}
+	if f := l.Lumber(); f != nil {
+		hs = append(hs, slog.NewJSONHandler(f, opts))
+		return hs, f
+	}
+
+	return hs, io.NopCloser(nil)
 }

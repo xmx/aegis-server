@@ -11,30 +11,30 @@ type MUXHandler interface {
 	HandleMUX(mux muxconn.Muxer) error
 }
 
-type NodeMUX struct {
+type AgentMUX struct {
 	biz http.Handler // 业务
 	log *slog.Logger
 }
 
-func NewNodeMUX(log *slog.Logger) *NodeMUX {
-	return &NodeMUX{
+func NewAgentMUX(log *slog.Logger) *AgentMUX {
+	return &AgentMUX{
 		log: log,
 	}
 }
 
-func (h *NodeMUX) HandleMUX(mux muxconn.Muxer) error {
-	return nil
+func (h *AgentMUX) HandleMUX(mux muxconn.Muxer) error {
+	return h.serveHTTP(mux)
 }
 
-func (h *NodeMUX) serveHTTP(mux muxconn.Muxer) error {
+func (h *AgentMUX) serveHTTP(mux muxconn.Muxer) error {
 	srv := &http.Server{Handler: h.biz}
 	return srv.Serve(mux) // 阻塞运行直至连接断开
 }
 
-func (h *NodeMUX) onconnect() {
+func (h *AgentMUX) onconnect() {
 	// 新增/更新 agent 表
 }
 
-func (h *NodeMUX) ondisconnect() {
+func (h *AgentMUX) ondisconnect() {
 	// 更新 agent 表与连接历史表
 }

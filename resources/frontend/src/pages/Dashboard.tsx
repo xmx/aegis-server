@@ -1,18 +1,4 @@
-import {
-  BookOpen,
-  Bot,
-  ChevronRight,
-  Command,
-  Frame,
-  LifeBuoy,
-  Map,
-  Moon,
-  PieChart,
-  Send,
-  Settings2,
-  SquareTerminal,
-  Sun,
-} from "lucide-react"
+import { Command, Moon, Sun, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "@/components/ThemeProvider"
 import { useAuth } from "@/components/AuthProvider"
@@ -29,108 +15,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Outlet } from "react-router-dom"
-
-type NavSubItem = { title: string; url: string }
-type NavItem = {
-  title: string
-  url: string
-  isActive?: boolean
-  subItems?: NavSubItem[]
-}
-
-const navMain: {
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  isActive?: boolean
-  items: NavItem[]
-}[] = [
-  {
-    title: "仪表盘",
-    icon: SquareTerminal,
-    isActive: true,
-    items: [
-      {
-        title: "概览",
-        url: "#",
-        isActive: true,
-        subItems: [
-          { title: "今日概要", url: "#" },
-          { title: "实时流量", url: "#" },
-        ],
-      },
-      { title: "实时监控", url: "#" },
-      { title: "统计分析", url: "#" },
-    ],
-  },
-  {
-    title: "项目管理",
-    icon: Bot,
-    items: [
-      {
-        title: "项目列表",
-        url: "#",
-        subItems: [
-          { title: "进行中", url: "#" },
-          { title: "已归档", url: "#" },
-        ],
-      },
-      { title: "任务看板", url: "#" },
-      { title: "甘特图", url: "#" },
-    ],
-  },
-  {
-    title: "文档中心",
-    icon: BookOpen,
-    items: [
-      { title: "API 文档", url: "#" },
-      {
-        title: "使用指南",
-        url: "#",
-        subItems: [
-          { title: "快速入门", url: "#" },
-          { title: "进阶教程", url: "#" },
-          { title: "常见问题", url: "#" },
-        ],
-      },
-      { title: "更新日志", url: "#" },
-    ],
-  },
-  {
-    title: "系统设置",
-    icon: Settings2,
-    items: [
-      {
-        title: "用户管理",
-        url: "#",
-        subItems: [
-          { title: "用户列表", url: "#" },
-          { title: "邀请成员", url: "#" },
-        ],
-      },
-      {
-        title: "角色权限",
-        url: "#",
-        subItems: [
-          { title: "角色列表", url: "#" },
-          { title: "权限模板", url: "#" },
-        ],
-      },
-      { title: "系统配置", url: "#" },
-    ],
-  },
-]
-
-const navSecondary = [
-  { title: "帮助中心", url: "#", icon: LifeBuoy },
-  { title: "反馈建议", url: "#", icon: Send },
-]
+import { Outlet, useLocation, Link } from "react-router-dom"
 
 function DashboardLayout() {
   const { resolvedTheme, setTheme } = useTheme()
@@ -180,6 +68,8 @@ function DashboardLayout() {
 }
 
 function AppSidebar() {
+  const { pathname } = useLocation()
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -188,7 +78,7 @@ function AppSidebar() {
             <SidebarMenuButton
               size="lg"
               render={
-                <a href="/">
+                <Link to="/">
                   <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                     <Command className="size-4" />
                   </div>
@@ -198,7 +88,7 @@ function AppSidebar() {
                       企业版
                     </span>
                   </div>
-                </a>
+                </Link>
               }
             />
           </SidebarMenuItem>
@@ -206,74 +96,18 @@ function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>平台导航</SidebarGroupLabel>
+          <SidebarGroupLabel>系统管理</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <Map className="size-4" />
-                  <span>全局搜索</span>
+                <SidebarMenuButton
+                  isActive={pathname === "/user"}
+                  render={<Link to="/user" />}
+                >
+                  <Users className="size-4" />
+                  <span>系统用户</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <Frame className="size-4" />
-                  <span>快捷入口</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <PieChart className="size-4" />
-                  <span>数据报表</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        {navMain.map((group) => (
-          <SidebarGroup key={group.title}>
-            <SidebarGroupLabel>{group.title}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      isActive={item.isActive}
-                      data-collapsed-icon={item.title.charAt(0)}
-                    >
-                      {item.title}
-                    </SidebarMenuButton>
-                    {item.subItems && item.subItems.length > 0 && (
-                      <SidebarMenuSub>
-                        {item.subItems.map((sub) => (
-                          <SidebarMenuSubItem key={sub.title}>
-                            <SidebarMenuSubButton
-                              data-collapsed-icon={sub.title.charAt(0)}
-                            >
-                              {sub.title}
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    )}
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
-        <SidebarGroup>
-          <SidebarGroupLabel>其他</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {navSecondary.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton>
-                    <item.icon className="size-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -282,7 +116,6 @@ function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton>
-              <ChevronRight className="size-4" />
               <span>版本 1.0.0</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -291,8 +124,6 @@ function AppSidebar() {
     </Sidebar>
   )
 }
-
-export default DashboardLayout
 
 function UserMenu({ user }: { user: NonNullable<ReturnType<typeof useAuth>["user"]> }) {
   const [open, setOpen] = useState(false)
@@ -347,3 +178,5 @@ function UserMenu({ user }: { user: NonNullable<ReturnType<typeof useAuth>["user
     </div>
   )
 }
+
+export default DashboardLayout

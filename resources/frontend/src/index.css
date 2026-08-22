@@ -127,6 +127,15 @@
     cursor: pointer;
   }
 
+  /* Portal 组件继承全局字体 */
+  [data-slot="tooltip-content"],
+  [data-slot="toast"],
+  [data-slot="select-content"],
+  [data-slot="dialog-content"],
+  [data-slot="dropdown-menu-content"] {
+    font-family: inherit;
+  }
+
   /* 侧边栏折叠时，无图标项显示首字作为图标 */
   .group\/menu-button[data-collapsed-icon] {
     position: relative;

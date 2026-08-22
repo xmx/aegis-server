@@ -12,8 +12,9 @@ type BaseDB struct {
 	db  *mongo.Database
 	log *slog.Logger
 
-	oauthClient OAuthClient
-	user        User
+	oauthClient  OAuthClient
+	systemConfig SystemConfig
+	user         User
 }
 
 func NewBaseDB(db *mongo.Database, log *slog.Logger) *BaseDB {
@@ -21,14 +22,16 @@ func NewBaseDB(db *mongo.Database, log *slog.Logger) *BaseDB {
 		db:  db,
 		log: log,
 
-		oauthClient: NewOAuthClient(db),
-		user:        NewUser(db),
+		oauthClient:  NewOAuthClient(db),
+		systemConfig: NewSystemConfig(db),
+		user:         NewUser(db),
 	}
 }
 
-func (b *BaseDB) Database() *mongo.Database { return b.db }
-func (b *BaseDB) OAuthClient() OAuthClient  { return b.oauthClient }
-func (b *BaseDB) User() User                { return b.user }
+func (b *BaseDB) Database() *mongo.Database  { return b.db }
+func (b *BaseDB) OAuthClient() OAuthClient   { return b.oauthClient }
+func (b *BaseDB) SystemConfig() SystemConfig { return b.systemConfig }
+func (b *BaseDB) User() User                 { return b.user }
 
 func (b *BaseDB) CreateIndex(ctx context.Context) error {
 	rv := reflect.ValueOf(b)
@@ -50,7 +53,7 @@ func (b *BaseDB) CreateIndex(ctx context.Context) error {
 		}
 
 		if len(indexes) == 0 {
-			b.log.Debug("该集合无需创建索引", args)
+			b.log.Debug("该集合无需创建索引", args...)
 		} else {
 			args = append(args, "indexes", indexes)
 			b.log.Debug("集合索引创建完毕", args...)
