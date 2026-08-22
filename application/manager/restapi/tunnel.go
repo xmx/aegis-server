@@ -6,7 +6,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/xgfone/ship/v5"
-	"github.com/xmx/aegis-server/application/muxgate/linkhub"
+	"github.com/xmx/aegis-server/application/nodelink/linkhub"
 	"github.com/xmx/muxconn"
 )
 

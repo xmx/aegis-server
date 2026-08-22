@@ -22,19 +22,19 @@ func NewAgentMUX(log *slog.Logger) *AgentMUX {
 	}
 }
 
-func (h *AgentMUX) HandleMUX(mux muxconn.Muxer) error {
-	return h.serveHTTP(mux)
+func (s *AgentMUX) HandleMUX(mux muxconn.Muxer) error {
+	return s.serveHTTP(mux)
 }
 
-func (h *AgentMUX) serveHTTP(mux muxconn.Muxer) error {
-	srv := &http.Server{Handler: h.biz}
+func (s *AgentMUX) serveHTTP(mux muxconn.Muxer) error {
+	srv := &http.Server{Handler: s.biz}
 	return srv.Serve(mux) // 阻塞运行直至连接断开
 }
 
-func (h *AgentMUX) onconnect() {
+func (s *AgentMUX) onconnect() {
 	// 新增/更新 agent 表
 }
 
-func (h *AgentMUX) ondisconnect() {
+func (s *AgentMUX) ondisconnect() {
 	// 更新 agent 表与连接历史表
 }
