@@ -4,8 +4,21 @@ import { api } from "@/lib/api"
 import { showError } from "@/lib/toast"
 import { useAuth } from "@/components/AuthProvider"
 import type { User } from "@/components/AuthProvider"
+import { Spinner, makeStyles } from "@fluentui/react-components"
+import { useDocumentTitle } from "@/hooks/useDocumentTitle"
+
+const useStyles = makeStyles({
+  root: {
+    display: "flex",
+    minHeight: "100vh",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+})
 
 function GitHubCallback() {
+  const styles = useStyles()
+  useDocumentTitle("正在登录")
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { setUser } = useAuth()
@@ -29,11 +42,11 @@ function GitHubCallback() {
         showError(err)
         navigate("/login", { replace: true })
       })
-  }, [code, navigate, setUser])
+  }, [])
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <p className="text-muted-foreground">正在登录...</p>
+    <div className={styles.root}>
+      <Spinner label="正在登录..." />
     </div>
   )
 }

@@ -1,19 +1,18 @@
-import { Settings } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useEffect } from "react"
 import {
+  Button,
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import {
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogActions,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select"
+  makeStyles,
+  tokens,
+  Text,
+} from "@fluentui/react-components"
+import { SettingsRegular } from "@fluentui/react-icons"
 
 const CN_FONTS = [
   { value: "system", label: "系统默认" },
@@ -58,8 +57,8 @@ const EN_FONT_MAP: Record<string, string> = {
   "cascadia-code": '"Cascadia Code", Menlo, Consolas, monospace',
   "source-code-pro": '"Source Code Pro", Menlo, Consolas, monospace',
   "ibm-plex-mono": '"IBM Plex Mono", Menlo, Consolas, monospace',
-  consolas: 'Consolas, Menlo, monospace',
-  menlo: 'Menlo, Consolas, monospace',
+  consolas: "Consolas, Menlo, monospace",
+  menlo: "Menlo, Consolas, monospace",
   "courier-new": '"Courier New", monospace',
 }
 
@@ -69,21 +68,14 @@ export function getFontStyle(cnFont: string, enFont: string): string {
   return cn ? `${en},${cn}` : en
 }
 
-function cnFontFace(key: string): string {
-  return CN_FONT_MAP[key] ?? ""
-}
-
-function enFontFace(key: string): string {
-  return EN_FONT_MAP[key] ?? ""
-}
-
-function cnLabel(key: string): string {
-  return CN_FONTS.find((f) => f.value === key)?.label ?? key
-}
-
-function enLabel(key: string): string {
-  return EN_FONTS.find((f) => f.value === key)?.label ?? key
-}
+const useStyles = makeStyles({
+  preview: {
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+    padding: tokens.spacingHorizontalM,
+  },
+})
 
 interface FontSettingsProps {
   cnFont: string
@@ -92,91 +84,96 @@ interface FontSettingsProps {
   onEnFontChange: (value: string) => void
 }
 
-function FontSettings({
-  cnFont,
-  enFont,
-  onCnFontChange,
-  onEnFontChange,
-}: FontSettingsProps) {
+function FontSettings({ cnFont, enFont, onCnFontChange, onEnFontChange }: FontSettingsProps) {
+  const styles = useStyles()
+  const fontStyle = getFontStyle(cnFont, enFont)
+
+  // 按需加载非默认英文字体
+  useEffect(() => {
+    const defaultEnFonts = ["space-mono"]
+    if (defaultEnFonts.includes(enFont)) return
+
+    if (!document.getElementById("font-optional-styles")) {
+      const link = document.createElement("link")
+      link.id = "font-optional-styles"
+      link.rel = "stylesheet"
+      link.href = "https://fonts.loli.net/css2?family=JetBrains+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Fira+Code:wght@400;700&family=Cascadia+Code:wght@400;700&family=Source+Code+Pro:ital,wght@0,400;0,700;1,400;1,700&family=IBM+Plex+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+      document.head.appendChild(link)
+    }
+  }, [enFont])
+
   return (
     <Dialog>
-      <DialogTrigger
-        render={
-          <Button variant="outline" size="icon">
-            <Settings className="size-4" />
-          </Button>
-        }
-      />
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogTrigger disableButtonEnhancement>
+        <Button appearance="outline" icon={<SettingsRegular />} />
+      </DialogTrigger>
+      <DialogSurface>
+        <DialogBody>
           <DialogTitle>字体设置</DialogTitle>
-          <DialogDescription>选择页面显示的中文字体和英文字体</DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-5 py-4">
-          <div
-            className="rounded-lg border bg-muted/50 p-4"
-            style={{ fontFamily: getFontStyle(cnFont, enFont) }}
-          >
-            <p className="text-sm leading-relaxed">
-                Default:
-                <br />
-                abcdefghijklmnopqrstuvwxyz
-                <br />
-                ABCDEFGHIJKLMNOPQRSTUVWXYZ
-                <br />
-                0123456789 (){}[]
-                <br />
-                + - * / = .,;:!? #&$%@|^
-                <br />
-                <br />
-                <span className="font-bold">Bold:</span>
-                <br />
-                <span className="font-bold">abcdefghijklmnopqrstuvwxyz</span>
-                <br />
-                <span className="font-bold">ABCDEFGHIJKLMNOPQRSTUVWXYZ</span>
-                <br />
-                <span className="font-bold">0123456789 (){}[]</span>
-                <br />
-                <span className="font-bold">+ - * / = .,;:!? #&$%@|^</span>
-                <br />
-                <br />
-                &lt;!-- != := === &gt;= &gt;- &gt;=&gt; |-&gt; -&gt; &lt;$&gt;
-                <br />
-                &lt;/&gt; #[ |||&gt; |= ~@
-              </p>
+          <div style={{ "--preview-font": fontStyle } as React.CSSProperties} className={styles.preview}>
+            <Text size={200}>
+              Default:
+              <br />
+              abcdefghijklmnopqrstuvwxyz
+              <br />
+              ABCDEFGHIJKLMNOPQRSTUVWXYZ
+              <br />
+              0123456789 (){}[]
+              <br />
+              + - * / = .,;:!? #&$%@|^
+              <br />
+              <br />
+              <Text weight="bold">Bold:</Text>
+              <br />
+              <Text weight="bold">abcdefghijklmnopqrstuvwxyz</Text>
+              <br />
+              <Text weight="bold">ABCDEFGHIJKLMNOPQRSTUVWXYZ</Text>
+              <br />
+              <Text weight="bold">0123456789 (){}[]</Text>
+              <br />
+              <Text weight="bold">+ - * / = .,;:!? #&$%@|^</Text>
+              <br />
+              <br />
+              {"<!-- != := === >= >- >=> |-> -> <$>"}
+              <br />
+              {"</> #[ |||> |= ~@"}
+              <br />
+              <br />
+              敏捷的棕色狐狸跨过懒狗
+              <br />
+              你好世界，欢迎使用 Aegis 系统
+            </Text>
           </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">中文字体</label>
-            <Select value={cnFont} onValueChange={(v) => onCnFontChange(v ?? "system")}>
-              <SelectTrigger>
-                <span style={{ fontFamily: cnFontFace(cnFont) }}>{cnLabel(cnFont)}</span>
-              </SelectTrigger>
-              <SelectContent>
-                {CN_FONTS.map((font) => (
-                  <SelectItem key={font.value} value={font.value} style={{ fontFamily: cnFontFace(font.value) }}>
-                    {font.label}
-                  </SelectItem>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: tokens.spacingVerticalM }}>
+            <div>
+              <Text size={200} weight="semibold">中文字体</Text>
+              <Select value={cnFont} onChange={(_, d) => onCnFontChange(d.value)} style={{ width: "100%", marginTop: tokens.spacingVerticalXS }}>
+                {CN_FONTS.map((f) => (
+                  <option key={f.value} value={f.value} style={{ fontFamily: CN_FONT_MAP[f.value] }}>
+                    {f.label}
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">英文字体</label>
-            <Select value={enFont} onValueChange={(v) => onEnFontChange(v ?? "space-mono")}>
-              <SelectTrigger>
-                <span style={{ fontFamily: enFontFace(enFont) }}>{enLabel(enFont)}</span>
-              </SelectTrigger>
-              <SelectContent>
-                {EN_FONTS.map((font) => (
-                  <SelectItem key={font.value} value={font.value} style={{ fontFamily: enFontFace(font.value) }}>
-                    {font.label}
-                  </SelectItem>
+              </Select>
+            </div>
+            <div>
+              <Text size={200} weight="semibold">英文字体</Text>
+              <Select value={enFont} onChange={(_, d) => onEnFontChange(d.value)} style={{ width: "100%", marginTop: tokens.spacingVerticalXS }}>
+                {EN_FONTS.map((f) => (
+                  <option key={f.value} value={f.value} style={{ fontFamily: EN_FONT_MAP[f.value] }}>
+                    {f.label}
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
+              </Select>
+            </div>
           </div>
-        </div>
-      </DialogContent>
+        </DialogBody>
+        <DialogActions>
+          <DialogTrigger disableButtonEnhancement>
+            <Button appearance="secondary">关闭</Button>
+          </DialogTrigger>
+        </DialogActions>
+      </DialogSurface>
     </Dialog>
   )
 }

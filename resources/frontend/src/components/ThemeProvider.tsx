@@ -2,37 +2,24 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react"
 
 type Theme = "dark" | "light" | "system"
 
-type ThemeProviderState = {
+interface ThemeState {
   theme: Theme
   resolvedTheme: "dark" | "light"
   setTheme: (theme: Theme) => void
 }
 
-const initialState: ThemeProviderState = {
+const ThemeContext = createContext<ThemeState>({
   theme: "system",
   resolvedTheme: "light",
-  setTheme: () => null,
-}
-
-const ThemeContext = createContext<ThemeProviderState>(initialState)
+  setTheme: () => {},
+})
 
 function getSystemTheme(): "dark" | "light" {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light"
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
 }
 
-function ThemeProvider({
-  children,
-  defaultTheme = "system",
-}: {
-  children: React.ReactNode
-  defaultTheme?: Theme
-}) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem("theme") as Theme | null
-    return stored ?? defaultTheme
-  })
+function ThemeProvider({ children, defaultTheme = "system" }: { children: React.ReactNode; defaultTheme?: Theme }) {
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem("theme") as Theme) ?? defaultTheme)
 
   const resolvedTheme = useMemo<"dark" | "light">(() => {
     return theme === "system" ? getSystemTheme() : theme
@@ -66,11 +53,7 @@ function ThemeProvider({
 }
 
 function useTheme() {
-  const context = useContext(ThemeContext)
-  if (!context) {
-    throw new Error("useTheme must be used within a ThemeProvider")
-  }
-  return context
+  return useContext(ThemeContext)
 }
 
 export { ThemeProvider, useTheme }

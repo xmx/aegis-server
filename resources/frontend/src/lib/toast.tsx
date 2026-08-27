@@ -1,51 +1,74 @@
-import { CheckIcon, CopyIcon } from "lucide-react"
-import { toast } from "@/components/ui/toast"
+import { useState } from "react"
+import {
+  useToastController,
+  Toast,
+  ToastTitle,
+  ToastBody,
+  Toaster,
+  Button,
+  type ToastIntent,
+} from "@fluentui/react-components"
+import { CopyRegular, CheckmarkRegular } from "@fluentui/react-icons"
 import { ApiRequestError } from "@/lib/api"
 
-function showError(err: unknown) {
-  let title = "错误"
-  let detail = ""
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
 
-  if (err instanceof ApiRequestError) {
-    title = err.message
-    detail = err.detail
-  } else if (err instanceof Error) {
-    detail = err.message
-  } else {
-    detail = "未知错误"
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
   }
 
-  let copied = false
-
-  const handleCopy = (id: string) => {
-    if (copied) return
-    copied = true
-    navigator.clipboard.writeText(detail)
-    toast.update(id, {
-      actionProps: {
-        children: <CheckIcon className="size-4 text-emerald-500" />,
-      },
-    })
-    setTimeout(() => {
-      copied = false
-      toast.update(id, {
-        actionProps: {
-          onClick: () => handleCopy(id),
-          children: <CopyIcon className="size-4" />,
-        },
-      })
-    }, 1500)
-  }
-
-  const id = toast.add({
-    type: "error",
-    title,
-    description: detail,
-    actionProps: {
-      onClick: () => handleCopy(id),
-      children: <CopyIcon className="size-4" />,
-    },
-  })
+  return (
+    <Button
+      appearance="subtle"
+      size="small"
+      icon={copied ? <CheckmarkRegular /> : <CopyRegular />}
+      onClick={handleCopy}
+    />
+  )
 }
 
-export { showError }
+let dispatchToast: ((intent: ToastIntent, title: string, body: string) => void) | null = null
+
+function FluentToaster() {
+  const { dispatchToast: dispatch } = useToastController()
+
+  dispatchToast = (intent: ToastIntent, title: string, body: string) => {
+    dispatch(
+      <Toast>
+        <ToastTitle>{title}</ToastTitle>
+        {body ? (
+          <ToastBody>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
+              <span style={{ flex: 1 }}>{body}</span>
+              <CopyButton text={body} />
+            </div>
+          </ToastBody>
+        ) : null}
+      </Toast>,
+      { intent }
+    )
+  }
+
+  return <Toaster />
+}
+
+function showError(err: unknown) {
+  if (!dispatchToast) return
+
+  if (err instanceof ApiRequestError) {
+    dispatchToast("error", err.message, err.detail)
+    return
+  }
+
+  if (err instanceof Error) {
+    dispatchToast("error", "错误", err.message)
+    return
+  }
+
+  dispatchToast("error", "错误", "未知错误")
+}
+
+export { FluentToaster, showError }

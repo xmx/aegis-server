@@ -2,19 +2,24 @@ import { useEffect, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import { showError } from "@/lib/toast"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card"
-import { SearchIcon, CircleCheckIcon, CircleXIcon } from "lucide-react"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { ProviderIcon } from "@/components/Icons"
+import { useDocumentTitle } from "@/hooks/useDocumentTitle"
+import {
+  Button,
+  Input,
+  Text,
+  Tooltip,
+  Table,
+  TableHeader,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
+  makeStyles,
+  tokens,
+  Spinner,
+} from "@fluentui/react-components"
+import { SearchRegular, CheckmarkCircleRegular, DismissCircleRegular } from "@fluentui/react-icons"
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
@@ -46,14 +51,78 @@ interface UserPageResponse {
   records: UserRecord[]
 }
 
+const useStyles = makeStyles({
+  root: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: tokens.spacingVerticalL,
+    padding: tokens.spacingHorizontalXXL,
+  },
+  card: {
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+    overflow: "hidden",
+  },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  searchRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: tokens.spacingHorizontalS,
+  },
+  avatar: {
+    width: "36px",
+    height: "36px",
+    borderRadius: "50%",
+    objectFit: "cover" as const,
+    border: `2px solid ${tokens.colorNeutralStroke1}`,
+  },
+  statusIcon: {
+    display: "inline-flex",
+    alignItems: "center",
+  },
+  pagination: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  paginationButtons: {
+    display: "flex",
+    alignItems: "center",
+    gap: tokens.spacingHorizontalXS,
+  },
+  loading: {
+    display: "flex",
+    justifyContent: "center",
+    padding: tokens.spacingVerticalXXL,
+  },
+  providerCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: tokens.spacingHorizontalXS,
+  },
+  loginCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: tokens.spacingHorizontalXS,
+  },
+})
+
 function User() {
+  const styles = useStyles()
   const [searchParams, setSearchParams] = useSearchParams()
+  useDocumentTitle("系统用户")
   const [data, setData] = useState<UserPageResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [q, setQ] = useState(searchParams.get("q") ?? "")
 
   const page = Number(searchParams.get("page") ?? 1)
-  const size = Number(searchParams.get("size") ?? 12)
+  const size = Number(searchParams.get("size") ?? 10)
 
   const fetchUsers = async (pageNum: number, pageSize: number, search: string) => {
     setLoading(true)
@@ -80,97 +149,135 @@ function User() {
 
   const totalPages = data ? Math.ceil(data.total / data.size) : 0
 
+  const columns = [
+    { columnKey: "avatar", label: "头像" },
+    { columnKey: "login", label: "用户名" },
+    { columnKey: "name", label: "昵称" },
+    { columnKey: "provider", label: "认证渠道" },
+    { columnKey: "puid", label: "PUID" },
+    { columnKey: "email", label: "邮箱" },
+    { columnKey: "created_at", label: "创建时间" },
+  ]
+
   return (
-    <div className="flex flex-1 flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">系统用户</h1>
-        <div className="flex items-center gap-2">
+    <div className={styles.root}>
+      <div className={styles.header}>
+        <Text size={500} weight="semibold">系统用户</Text>
+        <div className={styles.searchRow}>
           <Input
             placeholder="搜索..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="w-48"
+            style={{ width: "192px" }}
           />
-          <Button variant="outline" size="icon" onClick={handleSearch}>
-            <SearchIcon className="size-4" />
-          </Button>
+          <Button appearance="outline" icon={<SearchRegular />} onClick={handleSearch} />
         </div>
       </div>
 
-      {loading && (
-        <p className="py-8 text-center text-muted-foreground">加载中...</p>
-      )}
-      {!loading && data && data.records.length === 0 && (
-        <p className="py-8 text-center text-muted-foreground">暂无数据</p>
-      )}
-      {!loading && data && data.records.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {data.records.map((user) => (
-            <Card key={user.id} className="transition-shadow hover:shadow-md">
-              <CardContent className="flex flex-col items-center gap-3 p-5">
-                <img
-                  src={user.avatar_url}
-                  alt={user.login}
-                  className="size-16 rounded-full object-cover"
-                />
-                <div className="flex flex-col items-center gap-0.5">
-                  <span className="font-medium">{user.name ?? user.login}</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm text-muted-foreground">{user.login}</span>
-                    <Tooltip>
-                      <TooltipTrigger>
+      <div className={styles.card}>
+        <Table>
+        <TableHeader>
+          <TableRow>
+            {columns.map((col) => (
+              <TableHeaderCell key={col.columnKey}>{col.label}</TableHeaderCell>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading && (
+            <TableRow>
+              <TableCell colSpan={columns.length}>
+                <div className={styles.loading}>
+                  <Spinner label="加载中..." />
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
+          {!loading && data && data.records.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={columns.length}>
+                <Text style={{ color: tokens.colorNeutralForeground3, textAlign: "center", display: "block" }}>暂无数据</Text>
+              </TableCell>
+            </TableRow>
+          )}
+          {!loading &&
+            data?.records.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell>
+                  <img src={user.avatar_url} alt={user.login} className={styles.avatar} />
+                </TableCell>
+                <TableCell>
+                  <div className={styles.loginCell}>
+                    {user.provider === "github" ? (
+                      <a
+                        href={`https://github.com/${user.login}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ textDecoration: "none", color: "inherit" }}
+                      >
+                        <Text weight="semibold">{user.login}</Text>
+                      </a>
+                    ) : (
+                      <Text weight="semibold">{user.login}</Text>
+                    )}
+                    <Tooltip content={user.enabled ? "此用户可正常登录本系统" : "此用户已被禁止登录本系统"} relationship="label">
+                      <span className={styles.statusIcon}>
                         {user.enabled ? (
-                          <CircleCheckIcon className="size-4 text-emerald-500" />
+                          <CheckmarkCircleRegular style={{ color: tokens.colorStatusSuccessForeground1 }} />
                         ) : (
-                          <CircleXIcon className="size-4 text-muted-foreground" />
+                          <DismissCircleRegular style={{ color: tokens.colorNeutralForeground3 }} />
                         )}
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {user.enabled ? "此用户可正常登录本系统" : "此用户已被禁止登录本系统"}
-                      </TooltipContent>
+                      </span>
                     </Tooltip>
                   </div>
-                </div>
-                <div className="flex w-full items-center justify-between pt-2 text-xs text-muted-foreground">
-                  <ProviderIcon provider={user.provider} className="size-4" />
-                  <span className="truncate font-mono" title={user.puid}>{user.puid}</span>
-                </div>
-                <div className="flex w-full justify-center pt-1 text-xs text-muted-foreground">
-                  <span>{formatTime(user.created_at)}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                </TableCell>
+                <TableCell>{user.name ?? "-"}</TableCell>
+                <TableCell>
+                  <div className={styles.providerCell}>
+                    <ProviderIcon provider={user.provider} className="size-4" />
+                    <Text>{user.provider}</Text>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Text size={200} font="monospace" truncate style={{ maxWidth: "120px" }} title={user.puid}>
+                    {user.puid}
+                  </Text>
+                </TableCell>
+                <TableCell>{user.email ?? "-"}</TableCell>
+                <TableCell>
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                    {formatTime(user.created_at)}
+                  </Text>
+                </TableCell>
+              </TableRow>
+            ))}
+        </TableBody>
+      </Table>
+      </div>
 
-      {data && totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
+      {data && (
+        <div className={styles.pagination}>
+          <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
             共 {data.total} 条
-          </span>
-          <div className="flex items-center gap-1">
+          </Text>
+          <div className={styles.paginationButtons}>
             <Button
-              variant="outline"
-              size="sm"
+              appearance="outline"
+              size="small"
               disabled={page <= 1}
-              onClick={() =>
-                setSearchParams({ page: String(page - 1), size: String(size), q })
-              }
+              onClick={() => setSearchParams({ page: String(page - 1), size: String(size), q })}
             >
               上一页
             </Button>
-            <span className="px-2 text-sm text-muted-foreground">
+            <Text size={200} style={{ padding: `0 ${tokens.spacingHorizontalS}`, color: tokens.colorNeutralForeground3 }}>
               {page} / {totalPages}
-            </span>
+            </Text>
             <Button
-              variant="outline"
-              size="sm"
+              appearance="outline"
+              size="small"
               disabled={page >= totalPages}
-              onClick={() =>
-                setSearchParams({ page: String(page + 1), size: String(size), q })
-              }
+              onClick={() => setSearchParams({ page: String(page + 1), size: String(size), q })}
             >
               下一页
             </Button>
