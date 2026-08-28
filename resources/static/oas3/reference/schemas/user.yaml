@@ -1,0 +1,53 @@
+type: object
+x-examples:
+  Example 1:
+    id: 6a883bcaec40f3b09b776000
+    enabled: true
+    provider: github
+    puid: '76583642'
+    login: xmx
+    name: ʕ◔ϖ◔ʔ
+    avatar_url: 'https://avatars.githubusercontent.com/u/76583642?v=4'
+    location: Shanghai
+    created_at: '2026-08-21T11:51:38.142Z'
+    updated_at: '2026-08-24T07:53:52.941Z'
+properties:
+  id:
+    $ref: ./oid.yaml
+    description: ID
+  enabled:
+    type: boolean
+    description: 是否启用
+  provider:
+    type: string
+    example: github
+    enum:
+      - github
+    description: 认证提供商
+  puid:
+    type: string
+    example: '76583642'
+  login:
+    type: string
+    example: tom
+  name:
+    type: string
+    example: Tom
+    description: 昵称
+  avatar_url:
+    type: string
+    example: 'https://avatars.githubusercontent.com/u/76583642?v=4'
+  location:
+    type: string
+  created_at:
+    $ref: ./rfc3339.yaml
+    description: 创建时间
+  updated_at:
+    $ref: ./rfc3339.yaml
+    description: 更新时间
+required:
+  - id
+  - enabled
+  - provider
+  - created_at
+  - updated_at

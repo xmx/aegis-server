@@ -1,0 +1,6 @@
+title: total
+x-stoplight:
+  id: 6y2lqtvnv9doz
+type: integer
+description: 符合条件的总条数
+example: 43

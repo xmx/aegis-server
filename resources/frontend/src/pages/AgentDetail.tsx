@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import { api } from "@/lib/api"
 import { showError } from "@/lib/toast"
@@ -6,12 +6,6 @@ import { useDocumentTitle } from "@/hooks/useDocumentTitle"
 import {
   Button,
   Text,
-  Table,
-  TableHeader,
-  TableRow,
-  TableHeaderCell,
-  TableBody,
-  TableCell,
   makeStyles,
   tokens,
   Spinner,
@@ -113,9 +107,47 @@ const useStyles = makeStyles({
   root: {
     flex: 1,
     display: "flex",
+    gap: tokens.spacingHorizontalXS,
+    padding: tokens.spacingHorizontalXXL,
+  },
+  nav: {
+    display: "flex",
+    flexDirection: "column",
+    width: "180px",
+    minWidth: "180px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+    padding: tokens.spacingVerticalS,
+  },
+  navItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: tokens.spacingHorizontalS,
+    padding: `${tokens.spacingVerticalSNudge} ${tokens.spacingHorizontalM}`,
+    borderRadius: tokens.borderRadiusMedium,
+    fontSize: tokens.fontSizeBase300,
+    color: tokens.colorNeutralForeground2,
+    cursor: "pointer",
+    width: "100%",
+    background: "none",
+    border: "none",
+    textAlign: "left" as const,
+    ":hover": {
+      backgroundColor: tokens.colorNeutralBackground1Hover,
+      color: tokens.colorNeutralForeground1,
+    },
+  },
+  navItemActive: {
+    backgroundColor: tokens.colorNeutralBackground1Selected,
+    color: tokens.colorNeutralForeground1,
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  content: {
+    flex: 1,
+    display: "flex",
     flexDirection: "column",
     gap: tokens.spacingVerticalL,
-    padding: tokens.spacingHorizontalXXL,
   },
   backRow: {
     display: "flex",
@@ -165,6 +197,91 @@ const useStyles = makeStyles({
     justifyContent: "center",
     padding: tokens.spacingVerticalXXL,
   },
+  tableWrap: {
+    overflowX: "auto" as const,
+  },
+  denseTable: {
+    width: "100%",
+    borderCollapse: "collapse" as const,
+    fontSize: tokens.fontSizeBase200,
+    whiteSpace: "nowrap" as const,
+  },
+  th: {
+    padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalS}`,
+    textAlign: "left" as const,
+    fontSize: tokens.fontSizeBase200,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground3,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+    position: "sticky" as const,
+    top: 0,
+  },
+  thNum: {
+    textAlign: "right" as const,
+  },
+  td: {
+    padding: `${tokens.spacingVerticalXXS} ${tokens.spacingHorizontalS}`,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke3}`,
+    lineHeight: "20px",
+  },
+  tdNum: {
+    textAlign: "right" as const,
+    fontVariantNumeric: "tabular-nums",
+    color: tokens.colorNeutralForeground2,
+  },
+  tdMono: {
+    fontVariantNumeric: "tabular-nums",
+    color: tokens.colorNeutralForeground2,
+  },
+  row: {
+    ":hover": {
+      backgroundColor: tokens.colorNeutralBackground1Hover,
+    },
+  },
+  statusDot: {
+    display: "inline-block",
+    width: "6px",
+    height: "6px",
+    borderRadius: "50%",
+    marginRight: tokens.spacingHorizontalXS,
+    verticalAlign: "middle",
+  },
+  dotOnline: {
+    backgroundColor: tokens.colorStatusSuccessForeground1,
+  },
+  dotOffline: {
+    backgroundColor: tokens.colorNeutralForeground4,
+  },
+  summary: {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: tokens.spacingHorizontalL,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalL}`,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  summaryItem: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: tokens.spacingHorizontalXS,
+  },
+  summaryLabel: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+  },
+  summaryValue: {
+    fontSize: tokens.fontSizeBase300,
+    fontWeight: tokens.fontWeightSemibold,
+    fontVariantNumeric: "tabular-nums",
+  },
+  sectionHeadRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: tokens.spacingHorizontalL,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
 })
 
 function AgentDetail() {
@@ -173,6 +290,7 @@ function AgentDetail() {
   const navigate = useNavigate()
   const location = useLocation()
   useDocumentTitle("终端节点详情")
+  const [activeTab, setActiveTab] = useState<"info" | "connections">("info")
 
   const [agent, setAgent] = useState<AgentRecord | null>(location.state as AgentRecord | null)
   const [agentLoading, setAgentLoading] = useState(!location.state)
@@ -205,12 +323,41 @@ function AgentDetail() {
       .finally(() => setConnLoading(false))
   }, [id, connPage])
 
-  if (agentLoading || !agent) {
+  const connStats = useMemo(() => {
+    const records = connData?.records
+    if (!records || records.length === 0) return null
+    return {
+      count: records.length,
+      online: records.filter((r) => !r.disconnected_at).length,
+      totalSeconds: records.reduce((sum, r) => sum + (r.active_seconds ?? 0), 0),
+      rx: records.reduce((sum, r) => sum + (r.tunnel_info.receive_bytes ?? 0), 0),
+      tx: records.reduce((sum, r) => sum + (r.tunnel_info.transmit_bytes ?? 0), 0),
+    }
+  }, [connData])
+
+  if (agentLoading) {
     return (
       <div className={styles.root}>
         <div className={styles.loading}>
           <Spinner label="加载中..." />
         </div>
+      </div>
+    )
+  }
+
+  if (!agent) {
+    return (
+      <div className={styles.root}>
+        <div className={styles.backRow}>
+          <Button
+            appearance="subtle"
+            icon={<ArrowLeftRegular />}
+            onClick={() => navigate("/agent")}
+          >
+            返回
+          </Button>
+        </div>
+        <Text size={400} style={{ color: tokens.colorNeutralForeground3 }}>未找到该终端节点</Text>
       </div>
     )
   }
@@ -221,16 +368,34 @@ function AgentDetail() {
 
   return (
     <div className={styles.root}>
-      <div className={styles.backRow}>
-        <Button
-          appearance="subtle"
-          icon={<ArrowLeftRegular />}
-          onClick={() => navigate("/agent")}
+      <nav className={styles.nav}>
+        <button
+          className={`${styles.navItem} ${activeTab === "info" ? styles.navItemActive : ""}`}
+          onClick={() => setActiveTab("info")}
         >
-          返回
-        </Button>
-      </div>
+          基本信息
+        </button>
+        <button
+          className={`${styles.navItem} ${activeTab === "connections" ? styles.navItemActive : ""}`}
+          onClick={() => setActiveTab("connections")}
+        >
+          连接记录
+        </button>
+      </nav>
 
+      <div className={styles.content}>
+        <div className={styles.backRow}>
+          <Button
+            appearance="subtle"
+            icon={<ArrowLeftRegular />}
+            onClick={() => navigate("/agent")}
+          >
+            返回
+          </Button>
+        </div>
+
+        {activeTab === "info" ? (
+          <>
       <div className={styles.section}>
         <div className={styles.sectionTitle}>
           <Text weight="semibold" size={400}>基本信息</Text>
@@ -314,98 +479,132 @@ function AgentDetail() {
           </div>
         </div>
       </div>
+          </>
+        ) : (
+          <>
+            <div className={styles.section}>
+              <div className={styles.sectionHeadRow}>
+                <Text weight="semibold" size={400}>连接记录</Text>
+                <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                  共 {connData?.total ?? 0} 条
+                </Text>
+              </div>
 
-      <div className={styles.section}>
-        <div className={styles.sectionTitle}>
-          <Text weight="semibold" size={400}>连接记录</Text>
-        </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHeaderCell>主机名</TableHeaderCell>
-              <TableHeaderCell>IP 地址</TableHeaderCell>
-              <TableHeaderCell>连接时间</TableHeaderCell>
-              <TableHeaderCell>断开时间</TableHeaderCell>
-              <TableHeaderCell>服务端地址</TableHeaderCell>
-              <TableHeaderCell>远程地址</TableHeaderCell>
-              <TableHeaderCell>持续时间</TableHeaderCell>
-              <TableHeaderCell>接收字节</TableHeaderCell>
-              <TableHeaderCell>发送字节</TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {connLoading && (
-              <TableRow>
-                <TableCell colSpan={9}>
-                  <div className={styles.loading}>
-                    <Spinner label="加载中..." />
+              {connStats && (
+                <div className={styles.summary}>
+                  <div className={styles.summaryItem}>
+                    <span className={styles.summaryLabel}>本页连接</span>
+                    <span className={styles.summaryValue}>{connStats.count}</span>
                   </div>
-                </TableCell>
-              </TableRow>
-            )}
-            {!connLoading && connData?.records?.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9}>
-                  <Text style={{ color: tokens.colorNeutralForeground3, textAlign: "center" as const, display: "block" }}>
-                    暂无记录
-                  </Text>
-                </TableCell>
-              </TableRow>
-            )}
-            {!connLoading && connData?.records?.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell>{r.process_info.hostname ?? "-"}</TableCell>
-                <TableCell>{r.process_info.inet ?? "-"}</TableCell>
-                <TableCell>{formatTime(r.tunnel_info.connected_at)}</TableCell>
-                <TableCell>{formatTime(r.disconnected_at)}</TableCell>
-                <TableCell>{r.tunnel_info.server_addr ?? "-"}</TableCell>
-                <TableCell>{r.tunnel_info.remote_addr ?? "-"}</TableCell>
-                <TableCell>
+                  <div className={styles.summaryItem}>
+                    <span className={styles.summaryLabel}>在线</span>
+                    <span className={styles.summaryValue}>{connStats.online}</span>
+                  </div>
+                  <div className={styles.summaryItem}>
+                    <span className={styles.summaryLabel}>累计时长</span>
+                    <span className={styles.summaryValue}>{formatDuration(connStats.totalSeconds)}</span>
+                  </div>
+                  <div className={styles.summaryItem}>
+                    <span className={styles.summaryLabel}>接收</span>
+                    <span className={styles.summaryValue}>{formatBytes(connStats.rx)}</span>
+                  </div>
+                  <div className={styles.summaryItem}>
+                    <span className={styles.summaryLabel}>发送</span>
+                    <span className={styles.summaryValue}>{formatBytes(connStats.tx)}</span>
+                  </div>
+                </div>
+              )}
+
+              {connLoading ? (
+                <div className={styles.loading}>
+                  <Spinner label="加载中..." />
+                </div>
+              ) : connData?.records?.length === 0 ? (
+                <div className={styles.loading}>
+                  <Text style={{ color: tokens.colorNeutralForeground3 }}>暂无记录</Text>
+                </div>
+              ) : (
+                <div className={styles.tableWrap}>
+                  <table className={styles.denseTable}>
+                    <thead>
+                      <tr>
+                        <th className={styles.th}>状态 / 主机名</th>
+                        <th className={styles.th}>IP 地址</th>
+                        <th className={styles.th}>版本</th>
+                        <th className={styles.th}>连接时间</th>
+                        <th className={styles.th}>断开时间</th>
+                        <th className={`${styles.th} ${styles.thNum}`}>持续</th>
+                        <th className={styles.th}>服务端地址</th>
+                        <th className={styles.th}>远程地址</th>
+                        <th className={styles.th}>库</th>
+                        <th className={`${styles.th} ${styles.thNum}`}>接收</th>
+                        <th className={`${styles.th} ${styles.thNum}`}>发送</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {connData?.records?.map((r) => {
+                        const online = !r.disconnected_at
+                        return (
+                          <tr key={r.id} className={styles.row}>
+                            <td className={styles.td} title={r.machine_id}>
+                              <span
+                                className={`${styles.statusDot} ${online ? styles.dotOnline : styles.dotOffline}`}
+                              />
+                              {r.process_info.hostname ?? "-"}
+                            </td>
+                            <td className={`${styles.td} ${styles.tdMono}`}>{r.process_info.inet ?? "-"}</td>
+                            <td className={`${styles.td} ${styles.tdMono}`}>{r.process_info.semver?.version ?? "-"}</td>
+                            <td className={`${styles.td} ${styles.tdMono}`}>{formatTime(r.tunnel_info.connected_at)}</td>
+                            <td className={`${styles.td} ${styles.tdMono}`}>
+                              {online ? "—" : formatTime(r.disconnected_at)}
+                            </td>
+                            <td className={`${styles.td} ${styles.tdNum}`}>{formatDuration(r.active_seconds)}</td>
+                            <td className={`${styles.td} ${styles.tdMono}`}>{r.tunnel_info.server_addr ?? "-"}</td>
+                            <td className={`${styles.td} ${styles.tdMono}`}>{r.tunnel_info.remote_addr ?? "-"}</td>
+                            <td className={styles.td} title={r.tunnel_info.library_module}>
+                              {r.tunnel_info.library_name ?? "-"}
+                            </td>
+                            <td className={`${styles.td} ${styles.tdNum}`}>{formatBytes(r.tunnel_info.receive_bytes)}</td>
+                            <td className={`${styles.td} ${styles.tdNum}`}>{formatBytes(r.tunnel_info.transmit_bytes)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {connData && connTotalPages > 1 && (
+                <div className={styles.pagination}>
                   <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                    {formatDuration(r.active_seconds)}
+                    第 {(connData.page - 1) * connData.size + 1}-
+                    {Math.min(connData.page * connData.size, connData.total)} 条，共 {connData.total} 条
                   </Text>
-                </TableCell>
-                <TableCell>
-                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                    {formatBytes(r.tunnel_info.receive_bytes)}
-                  </Text>
-                </TableCell>
-                <TableCell>
-                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                    {formatBytes(r.tunnel_info.transmit_bytes)}
-                  </Text>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {connData && connTotalPages > 1 && (
-          <div className={styles.pagination}>
-            <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-              共 {connData.total} 条
-            </Text>
-            <div className={styles.paginationButtons}>
-              <Button
-                appearance="outline"
-                size="small"
-                disabled={connPage <= 1}
-                onClick={() => setConnPage(connPage - 1)}
-              >
-                上一页
-              </Button>
-              <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
-                {connPage} / {connTotalPages}
-              </Text>
-              <Button
-                appearance="outline"
-                size="small"
-                disabled={connPage >= connTotalPages}
-                onClick={() => setConnPage(connPage + 1)}
-              >
-                下一页
-              </Button>
+                  <div className={styles.paginationButtons}>
+                    <Button
+                      appearance="outline"
+                      size="small"
+                      disabled={connPage <= 1}
+                      onClick={() => setConnPage(connPage - 1)}
+                    >
+                      上一页
+                    </Button>
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                      {connPage} / {connTotalPages}
+                    </Text>
+                    <Button
+                      appearance="outline"
+                      size="small"
+                      disabled={connPage >= connTotalPages}
+                      onClick={() => setConnPage(connPage + 1)}
+                    >
+                      下一页
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>

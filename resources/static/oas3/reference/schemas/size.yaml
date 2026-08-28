@@ -1,0 +1,7 @@
+title: size
+x-stoplight:
+  id: 2c42w4vehu1qx
+type: integer
+default: 10
+example: 10
+description: 每页显示条数

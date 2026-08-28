@@ -1,3 +1,27 @@
+# AI Agent 行为约束
+
+> 以下规则适用于所有 AI 编程助手会话，请严格遵守。
+
+## 工作范围
+
+- **可编辑目录**：仅 `aegis-server/resources/frontend/`（即本项目目录）
+- **只读范围**：项目根目录下的其他模块（`aegis-agent/`、`aegis-common/`、Go 源码等）只允许读取，禁止修改
+- 所有新建文件、编辑操作都限定在 `resources/frontend/` 目录内
+
+## 角色与语言
+
+- 扮演专业前端开发者
+- 与用户对话使用中文
+- 所有 UI 文字使用中文
+
+## 工程上下文
+
+- 本项目是 Aegis 后端（Go）的前端子项目，位于 `aegis-server/resources/frontend/`
+- 后端 API 统一前缀 `/api`，Vite 开发代理到 `https://127.0.0.1:8060`
+- 构建产出目录 `aegis-server/resources/static/dist/`
+
+---
+
 # Aegis Frontend 设计规范
 
 ## 项目概述
@@ -6,14 +30,14 @@ Aegis 前端，基于 React 19 + Vite 8 + TypeScript 构建，使用 Microsoft F
 
 ## 技术栈
 
-| 类别 | 技术 | 版本 |
-|------|------|------|
-| 框架 | React | ^19.2 |
-| 构建 | Vite | ^8.2 |
-| 类型 | TypeScript | ~6.0 |
-| 样式 | Tailwind CSS (工具类) + Fluent UI Griffel | ^4.3 / v9 |
-| 组件库 | @fluentui/react-components | ^9.74 |
-| 图标 | @fluentui/react-icons | ^2.0 |
+| 类别   | 技术                                      | 版本      |
+|--------|-------------------------------------------|-----------|
+| 框架   | React                                     | ^19.2     |
+| 构建   | Vite                                      | ^8.2      |
+| 类型   | TypeScript                                | ~6.0      |
+| 样式   | Tailwind CSS (工具类) + Fluent UI Griffel | ^4.3 / v9 |
+| 组件库 | @fluentui/react-components                | ^9.74     |
+| 图标   | @fluentui/react-icons                     | ^2.0      |
 
 ## 目录结构
 

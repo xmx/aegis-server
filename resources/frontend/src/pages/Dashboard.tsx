@@ -1,12 +1,26 @@
 import { useTheme } from "@/components/ThemeProvider"
 import { useAuth } from "@/components/AuthProvider"
 import { FontSettings, getFontStyle } from "@/components/FontSettings"
-import { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect } from "react"
+import { api } from "@/lib/api"
 import {
   Button,
+  Dialog,
+  DialogTrigger,
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogActions,
+  Table,
+  TableHeader,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
   makeStyles,
   tokens,
   Text,
+  Spinner,
 } from "@fluentui/react-components"
 import {
   WeatherSunnyRegular,
@@ -158,11 +172,44 @@ function DashboardLayout() {
   const [enFont, setEnFont] = useState("space-mono")
   const navigate = useNavigate()
   const location = useLocation()
+  interface BuildInfo {
+  goos: string
+  goarch: string
+  version: string
+  revision: string
+  username: string
+  workdir: string
+  module: string
+  committed_at: string
+  build_info: {
+    GoVersion: string
+    Path: string
+    Main: { Path: string; Version: string }
+    Deps: { Path: string; Version: string }[]
+    Settings: { Key: string; Value: string }[]
+  }
+}
+  const [buildinfo, setBuildinfo] = useState<BuildInfo | null>(null)
+  const [buildinfoLoading, setBuildinfoLoading] = useState(false)
+  const [buildinfoOpen, setBuildinfoOpen] = useState(false)
+  const [buildinfoError, setBuildinfoError] = useState(false)
+
+  const handleLogoClick = () => {
+    setBuildinfoOpen(true)
+    setBuildinfoError(false)
+    if (!buildinfoLoading && !buildinfo) {
+      setBuildinfoLoading(true)
+      api<BuildInfo>("/api/system/buildinfo")
+        .then(setBuildinfo)
+        .catch(() => setBuildinfoError(true))
+        .finally(() => setBuildinfoLoading(false))
+    }
+  }
 
   return (
     <div className={styles.root} style={{ "--app-font": getFontStyle(cnFont, enFont) } as React.CSSProperties}>
       <nav className={styles.sidebar}>
-        <button className={styles.sidebarBrand} onClick={() => navigate("/")}>
+        <button className={styles.sidebarBrand} onClick={handleLogoClick}>
           <div>
             <Text weight="semibold" size={400}>Aegis</Text>
             <br />
@@ -199,6 +246,111 @@ function DashboardLayout() {
           </div>
         </div>
       </nav>
+
+      <Dialog open={buildinfoOpen} onOpenChange={(_, d) => setBuildinfoOpen(d.open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Aegis 构建信息</DialogTitle>
+            {buildinfoLoading ? (
+              <div style={{ display: "flex", justifyContent: "center", padding: tokens.spacingVerticalXL }}>
+                <Spinner label="加载中..." />
+              </div>
+            ) : buildinfoError ? (
+              <Text style={{ color: tokens.colorNeutralForeground3 }}>后端接口尚未就绪</Text>
+            ) : buildinfo ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: tokens.spacingVerticalL, maxHeight: "60vh", overflowY: "auto" }}>
+                <div>
+                  <Text weight="semibold" size={300}>基本信息</Text>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px", marginTop: tokens.spacingVerticalS }}>
+                    {[
+                      ["版本", buildinfo.version],
+                      ["修订", buildinfo.revision],
+                      ["用户", buildinfo.username],
+                      ["工作目录", buildinfo.workdir],
+                      ["模块", buildinfo.module],
+                      ["提交时间", buildinfo.committed_at],
+                      ["OS", buildinfo.goos + "/" + buildinfo.goarch],
+                    ].map(([label, value]) => (
+                      <React.Fragment key={label}>
+                        <Text size={200} style={{ color: tokens.colorNeutralForeground3, whiteSpace: "nowrap" }}>{label}</Text>
+                        <Text size={200} style={{ wordBreak: "break-all" }}>{value}</Text>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Text weight="semibold" size={300}>构建信息</Text>
+                  <div style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: "4px 16px", marginTop: tokens.spacingVerticalS }}>
+                    {[
+                      ["Go 版本", buildinfo.build_info.GoVersion],
+                      ["主模块", buildinfo.build_info.Main.Path + " " + buildinfo.build_info.Main.Version],
+                    ].map(([label, value]) => (
+                      <React.Fragment key={label}>
+                        <Text size={200} style={{ color: tokens.colorNeutralForeground3, whiteSpace: "nowrap" }}>{label}</Text>
+                        <Text size={200} style={{ wordBreak: "break-all" }}>{value}</Text>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Text weight="semibold" size={300}>依赖项 ({buildinfo.build_info.Deps.length})</Text>
+                  <Table size="small" style={{ marginTop: tokens.spacingVerticalS }}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell>模块</TableHeaderCell>
+                        <TableHeaderCell>版本</TableHeaderCell>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {buildinfo.build_info.Deps.map((d) => (
+                        <TableRow key={d.Path}>
+                          <TableCell style={{ wordBreak: "break-all" }}>
+                            <Text size={200}>{d.Path}</Text>
+                          </TableCell>
+                          <TableCell>
+                            <Text size={200} font="monospace">{d.Version}</Text>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div>
+                  <Text weight="semibold" size={300}>构建参数</Text>
+                  <Table size="small" style={{ marginTop: tokens.spacingVerticalS }}>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHeaderCell>Key</TableHeaderCell>
+                        <TableHeaderCell>Value</TableHeaderCell>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {buildinfo.build_info.Settings.map((s) => (
+                        <TableRow key={s.Key}>
+                          <TableCell>
+                            <Text size={200} font="monospace">{s.Key}</Text>
+                          </TableCell>
+                          <TableCell>
+                            <Text size={200}>{s.Value}</Text>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ) : null}
+          </DialogBody>
+          <DialogActions>
+            <DialogTrigger disableButtonEnhancement>
+              <Button appearance="secondary">关闭</Button>
+            </DialogTrigger>
+          </DialogActions>
+        </DialogSurface>
+      </Dialog>
 
       <div className={styles.main}>
         <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>

@@ -1,0 +1,6 @@
+title: oid
+x-stoplight:
+  id: evb9o11dx9zyz
+type: string
+example: 6a883bcaec40f3b09b776000
+description: '[ObjectId](https://www.mongodb.com/zh-cn/docs/manual/reference/method/ObjectId/)'

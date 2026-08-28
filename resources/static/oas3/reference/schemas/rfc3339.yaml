@@ -1,0 +1,6 @@
+title: RFC 3339 格式的时间
+x-stoplight:
+  id: 3n0cv1p7jx6m7
+type: string
+description: '[RFC 3339](https://www.rfc-editor.org/info/rfc3339/) 格式的时间'
+example: '2026-08-24T07:53:52.941Z'

@@ -1,0 +1,7 @@
+title: page
+x-stoplight:
+  id: yd9cxne2myaxm
+type: integer
+default: 1
+example: 1
+description: 页码

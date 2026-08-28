@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <!-- https://redocly.com/docs/redoc/v3.x/deployment/html -->
+    <title>Redocly UI</title>
+    <script src="js/utils.js"></script>
+    <script type="module" src="js/redocly-3.x@redoc.standalone.js"></script>
+</head>
+<body>
+
+<script>
+    function init() {
+        const name = Utils.oas3();
+        if (!name) {
+            const warning = document.createElement('a')
+            warning.href = './'
+            warning.innerText = '未找到接口文档，点击跳转至接口文档主页'
+            document.body.appendChild(warning)
+
+            return
+        }
+
+        const redoc = document.createElement('redoc')
+        redoc.setAttribute('spec-url', 'oas3/' + name)
+        document.body.appendChild(redoc)
+    }
+
+    init()
+</script>
+
+</body>
+</html>
