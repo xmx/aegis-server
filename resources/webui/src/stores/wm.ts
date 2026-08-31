@@ -169,15 +169,19 @@ export const useWMStore = create<WMStore>((set, get) => ({
   },
 
   toggleMinimize: (id: string) => {
-    set((s) => ({
-      windows: s.windows.map((w) =>
-        w.id === id ? { ...w, minimized: !w.minimized } : w,
-      ),
-    }))
-    // 恢复时聚焦
     const win = get().windows.find((w) => w.id === id)
-    if (win?.minimized) {
-      get().focusWindow(id)
+    if (!win) return
+    if (win.minimized) {
+      // 还原并聚焦
+      const z = get().zTop + 1
+      set((s) => ({
+        windows: s.windows.map((w) => (w.id === id ? { ...w, minimized: false, z } : w)),
+        activeId: id,
+        zTop: z,
+      }))
+    } else {
+      // 最小化
+      get().minimizeWindow(id)
     }
   },
 

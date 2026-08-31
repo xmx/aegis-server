@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, type CSSProperties } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useWMStore } from '@/stores/wm'
 import { getPinnedDesktop } from '@/apps/registry'
 import WindowFrame from '@/os/WindowFrame'
@@ -13,8 +13,7 @@ interface ContextMenuState {
 
 export default function Desktop() {
   const { windows, openApp } = useWMStore()
-  const wallpaper = useThemeStore((s) => s.wallpaper)
-  const customWallpaperUrl = useThemeStore((s) => s.customWallpaperUrl)
+  const singleClickOpen = useThemeStore((s) => s.singleClickOpen)
   const [cm, setCm] = useState<ContextMenuState | null>(null)
   const [selectedIcon, setSelectedIcon] = useState<string | null>(null)
   const desktopRef = useRef<HTMLDivElement>(null)
@@ -22,6 +21,9 @@ export default function Desktop() {
   const pinned = getPinnedDesktop()
 
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    // 窗口内部右键交给应用自己处理，桌面不再弹出菜单
+    if (target.closest('.window-layer')) return
     e.preventDefault()
     setCm({ x: e.clientX, y: e.clientY })
     setSelectedIcon(null)
@@ -42,9 +44,13 @@ export default function Desktop() {
   const handleIconClick = useCallback(
     (e: React.MouseEvent, appId: string) => {
       e.stopPropagation()
-      setSelectedIcon(appId)
+      if (singleClickOpen) {
+        openApp(appId)
+      } else {
+        setSelectedIcon(appId)
+      }
     },
-    [],
+    [singleClickOpen, openApp],
   )
 
   useEffect(() => {
@@ -53,18 +59,10 @@ export default function Desktop() {
     return () => window.removeEventListener('click', handler)
   }, [])
 
-  // 自定义图片壁纸用 inline style，内置壁纸用 CSS class
-  const isCustom = wallpaper === 'custom' && customWallpaperUrl
-  const wpClass = isCustom ? 'wallpaper-custom' : `wallpaper-${wallpaper}`
-  const wpStyle: CSSProperties = isCustom
-    ? { backgroundImage: `url(/wallpapers/${customWallpaperUrl})` }
-    : {}
-
   return (
     <div
       ref={desktopRef}
-      className={`desktop ${wpClass}`}
-      style={wpStyle}
+      className="desktop"
       onContextMenu={handleContextMenu}
       onClick={handleClick}
     >
@@ -75,7 +73,8 @@ export default function Desktop() {
             key={app.id}
             className={`desktop-icon ${selectedIcon === app.id ? 'desktop-icon--selected' : ''}`}
             onClick={(e) => handleIconClick(e, app.id)}
-            onDoubleClick={() => handleIconDoubleClick(app.id)}
+            onMouseEnter={singleClickOpen ? () => setSelectedIcon(app.id) : undefined}
+            onDoubleClick={singleClickOpen ? undefined : () => handleIconDoubleClick(app.id)}
           >
             <div className="desktop-icon-img"><ColorIcon name={app.colorIcon} size={36} /></div>
             <span className="desktop-icon-label">{app.title}</span>

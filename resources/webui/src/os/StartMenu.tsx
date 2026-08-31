@@ -1,7 +1,7 @@
 import { memo, useState } from 'react'
 import { useAuthStore } from '@/stores/auth'
 import { useWMStore } from '@/stores/wm'
-import { getPinnedStart } from '@/apps/registry'
+import { getAllApps } from '@/apps/registry'
 import ColorIcon from '@/components/ColorIcon'
 import { SearchRegular, PowerRegular } from '@fluentui/react-icons'
 
@@ -12,12 +12,22 @@ interface StartMenuProps {
 function StartMenu({ onClose }: StartMenuProps) {
   const { user, logout } = useAuthStore()
   const { openApp } = useWMStore()
-  const pinned = getPinnedStart()
+  const allApps = getAllApps()
+  const [query, setQuery] = useState('')
   const [confirming, setConfirming] = useState(false)
+
+  const q = query.trim().toLowerCase()
+  const matches = q
+    ? allApps.filter((a) => a.title.toLowerCase().includes(q) || a.id.toLowerCase().includes(q))
+    : allApps
 
   const handleAppClick = (appId: string) => {
     openApp(appId)
     onClose()
+  }
+
+  const handleSearchEnter = () => {
+    if (matches.length === 1) handleAppClick(matches[0].id)
   }
 
   const handlePowerClick = () => {
@@ -42,48 +52,33 @@ function StartMenu({ onClose }: StartMenuProps) {
           className="start-search-input"
           type="text"
           placeholder="键入此处搜索"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              handleAppClick('agents')
-            }
+            if (e.key === 'Enter') handleSearchEnter()
           }}
         />
       </div>
 
-      {/* 已固定应用 */}
+      {/* 所有应用 */}
       <div className="start-section">
-        <div className="start-section-title">已固定</div>
-        <div className="start-grid">
-          {pinned.map((app) => (
-            <button
-              key={app.id}
-              className="start-grid-item"
-              onClick={() => handleAppClick(app.id)}
-            >
-              <div className="start-grid-icon"><ColorIcon name={app.colorIcon} size={30} /></div>
-              <span className="start-grid-label">{app.title}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 推荐 */}
-      <div className="start-section">
-        <div className="start-section-title">推荐</div>
-        <div className="start-recommend">
-          <button className="start-recommend-item" onClick={() => handleAppClick('overview')}>
-            安全运营中心概览
-          </button>
-          <button className="start-recommend-item" onClick={() => handleAppClick('agents')}>
-            终端节点管理
-          </button>
-          <button className="start-recommend-item" onClick={() => handleAppClick('users')}>
-            系统用户管理
-          </button>
-          <button className="start-recommend-item" onClick={() => handleAppClick('about')}>
-            关于
-          </button>
-        </div>
+        <div className="start-section-title">所有应用</div>
+        {matches.length === 0 ? (
+          <div className="start-empty">未找到匹配的应用</div>
+        ) : (
+          <div className="start-grid">
+            {matches.map((app) => (
+              <button
+                key={app.id}
+                className="start-grid-item"
+                onClick={() => handleAppClick(app.id)}
+              >
+                <div className="start-grid-icon"><ColorIcon name={app.colorIcon} size={30} /></div>
+                <span className="start-grid-label">{app.title}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 底部：用户 + 电源 */}

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useThemeStore, type ThemeMode, type Wallpaper } from '@/stores/theme'
+import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/lib/api'
 import wallpaperItems from 'virtual:wallpapers'
+import lockscreenItems from 'virtual:lockscreens'
 import Logo from '@/components/Logo'
 import ColorIcon from '@/components/ColorIcon'
 import type { BuildInfo } from '@/lib/types'
@@ -11,7 +12,6 @@ import {
   WeatherSunnyRegular,
   WeatherMoonRegular,
   DesktopMacRegular,
-  ImageRegular,
   ChevronRightRegular,
   SearchRegular,
 } from '@fluentui/react-icons'
@@ -26,11 +26,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { id: 'about', label: '关于', colorIcon: 'question_circle_48_color' },
   { id: 'home', label: '首页', colorIcon: 'home_48_color' },
   { id: 'system', label: '系统', colorIcon: 'settings_48_color' },
   { id: 'personalization', label: '个性化', colorIcon: 'paint_brush_32_color' },
   { id: 'account', label: '账户', colorIcon: 'person_48_color' },
-  { id: 'about', label: '关于', colorIcon: 'question_circle_48_color' },
 ]
 
 // ============================================================
@@ -39,8 +39,6 @@ const navItems: NavItem[] = [
 export default function SettingsApp() {
   const [section, setSection] = useState('home')
   const { user } = useAuthStore()
-  const current = navItems.find((n) => n.id === section)
-  const title = current ? `设置 / ${current.label}` : '设置'
 
   return (
     <div className="settings-layout">
@@ -90,7 +88,6 @@ export default function SettingsApp() {
 
       {/* 右侧内容 */}
       <div className="settings-content">
-        <div className="settings-breadcrumb">{title}</div>
         {section === 'home' && <SettingsHome onNavigate={setSection} />}
         {section === 'system' && <SettingsSystem />}
         {section === 'personalization' && <SettingsPersonalization />}
@@ -214,14 +211,6 @@ const themes: { value: ThemeMode; label: string; icon: typeof WeatherSunnyRegula
   { value: 'system', label: '跟随系统', icon: DesktopMacRegular },
 ]
 
-const wallpapers: { value: Wallpaper; label: string }[] = [
-  { value: 'bloom', label: '绽放' },
-  { value: 'sunrise', label: '日出' },
-  { value: 'forest', label: '森林' },
-  { value: 'midnight', label: '午夜' },
-  { value: 'custom', label: '自定义图片' },
-]
-
 /** Win11 主题色色板 */
 const accents: string[] = [
   '#0067c0', // 蓝色（默认）
@@ -240,14 +229,16 @@ function SettingsPersonalization() {
   const {
     mode,
     wallpaper,
-    customWallpaperUrl,
+    lockWallpaper,
     windowTransparency,
     accent,
+    singleClickOpen,
     setMode,
     setWallpaper,
-    setCustomWallpaper,
+    setLockWallpaper,
     setWindowTransparency,
     setAccent,
+    setSingleClickOpen,
   } = useThemeStore()
 
   return (
@@ -297,55 +288,59 @@ function SettingsPersonalization() {
         </p>
       </div>
 
-      {/* 壁纸 */}
+      {/* 桌面壁纸 */}
       <div className="settings-block">
-        <h4 className="settings-block-title">背景</h4>
-        <div className="settings-grid-4">
-          {wallpapers.map((wp) => {
-            const isCustom = wp.value === 'custom'
-            return (
+        <h4 className="settings-block-title">桌面壁纸</h4>
+        {wallpaperItems.length > 0 ? (
+          <div className="settings-wallpaper-grid">
+            {wallpaperItems.map((item) => (
               <button
-                key={wp.value}
-                className={`settings-card ${wallpaper === wp.value ? 'settings-card--active' : ''}`}
-                onClick={() => setWallpaper(wp.value)}
+                key={item.path}
+                className={`settings-wallpaper-item ${wallpaper === item.path ? 'settings-wallpaper-item--active' : ''}`}
+                onClick={() => setWallpaper(item.path)}
+                title={item.name}
               >
-                <div className={`settings-wallpaper ${isCustom ? '' : `wallpaper-${wp.value}`}`}>
-                  {isCustom && <ImageRegular />}
-                </div>
-                <span>{wp.label}</span>
+                <img
+                  className="settings-wallpaper-thumb"
+                  src={`/wallpaper/${item.path}`}
+                  alt={item.name}
+                  loading="lazy"
+                />
               </button>
-            )
-          })}
-        </div>
-
-        {wallpaper === 'custom' && (
-          <div className="settings-custom-wallpaper">
-            <p className="settings-custom-wallpaper-tip">
-              {wallpaperItems.length > 0
-                ? '从 public/wallpapers 目录选择壁纸：'
-                : '未发现自定义壁纸，请将 .jpg / .png / .webp 图片放入 public/wallpapers/ 目录。'}
-            </p>
-            {wallpaperItems.length > 0 && (
-              <div className="settings-wallpaper-grid">
-                {wallpaperItems.map((item) => (
-                  <button
-                    key={item.path}
-                    className={`settings-wallpaper-item ${customWallpaperUrl === item.path ? 'settings-wallpaper-item--active' : ''}`}
-                    onClick={() => setCustomWallpaper(item.path)}
-                    title={item.name}
-                  >
-                    <img
-                      className="settings-wallpaper-thumb"
-                      src={`/wallpapers/${item.path}`}
-                      alt={item.name}
-                      loading="lazy"
-                    />
-                    <span className="settings-wallpaper-name">{item.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
+        ) : (
+          <p className="settings-transparency-desc">
+            未发现桌面壁纸，请将图片放入 public/wallpaper/ 目录。
+          </p>
+        )}
+      </div>
+
+      {/* 锁屏壁纸 */}
+      <div className="settings-block">
+        <h4 className="settings-block-title">锁屏壁纸</h4>
+        {lockscreenItems.length > 0 ? (
+          <div className="settings-wallpaper-grid">
+            {lockscreenItems.map((item) => (
+              <button
+                key={item.path}
+                className={`settings-wallpaper-item ${lockWallpaper === item.path ? 'settings-wallpaper-item--active' : ''}`}
+                onClick={() => setLockWallpaper(item.path)}
+                title={item.name}
+              >
+                <img
+                  className="settings-wallpaper-thumb"
+                  src={`/lockscreen/${item.path}`}
+                  alt={item.name}
+                  loading="lazy"
+                />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="settings-transparency-desc">
+            未发现锁屏壁纸，请将图片放入 public/lockscreen/ 目录。
+          </p>
         )}
       </div>
 
@@ -372,6 +367,29 @@ function SettingsPersonalization() {
         </div>
         <p className="settings-transparency-desc">
           调整窗口的毛玻璃透明度，数值越低越透明。
+        </p>
+      </div>
+
+      {/* 点击方式 */}
+      <div className="settings-block">
+        <h4 className="settings-block-title">点击方式</h4>
+        <div className="settings-toggle-row">
+          <div className="settings-toggle-text">
+            <div className="settings-toggle-title">单击打开项目</div>
+            <div className="settings-toggle-desc">指向时选中，单击打开（网页风格）</div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={singleClickOpen}
+            className={`settings-toggle ${singleClickOpen ? 'settings-toggle--on' : ''}`}
+            onClick={() => setSingleClickOpen(!singleClickOpen)}
+          >
+            <span className="settings-toggle-thumb" />
+          </button>
+        </div>
+        <p className="settings-transparency-desc">
+          关闭时为 Win11 默认行为：单击选中、双击打开。
         </p>
       </div>
     </div>

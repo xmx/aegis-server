@@ -2,19 +2,22 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
-export type Wallpaper = 'bloom' | 'sunrise' | 'forest' | 'midnight' | 'custom'
 
 interface ThemeStore {
   mode: ThemeMode
-  wallpaper: Wallpaper
-  customWallpaperUrl: string
+  /** 桌面壁纸文件名（public/wallpaper 目录），如 'default.jpg' */
+  wallpaper: string
+  /** 锁屏壁纸文件名（public/lockscreen 目录），如 'default.jpg' */
+  lockWallpaper: string
   windowTransparency: number
   accent: string
+  singleClickOpen: boolean
   setMode: (mode: ThemeMode) => void
-  setWallpaper: (wp: Wallpaper) => void
-  setCustomWallpaper: (url: string) => void
+  setWallpaper: (wallpaper: string) => void
+  setLockWallpaper: (lockWallpaper: string) => void
   setWindowTransparency: (value: number) => void
   setAccent: (color: string) => void
+  setSingleClickOpen: (value: boolean) => void
 }
 
 /** Win11 默认主题色 */
@@ -49,16 +52,29 @@ export const useThemeStore = create<ThemeStore>()(
   persist(
     (set) => ({
       mode: 'system',
-      wallpaper: 'bloom',
-      customWallpaperUrl: '',
+      wallpaper: 'default.jpg',
+      lockWallpaper: 'default.jpg',
       windowTransparency: 0.96,
       accent: DEFAULT_ACCENT,
+      singleClickOpen: false,
       setMode: (mode: ThemeMode) => set({ mode }),
-      setWallpaper: (wallpaper: Wallpaper) => set({ wallpaper }),
-      setCustomWallpaper: (url: string) => set({ customWallpaperUrl: url }),
+      setWallpaper: (wallpaper: string) => set({ wallpaper }),
+      setLockWallpaper: (lockWallpaper: string) => set({ lockWallpaper }),
       setWindowTransparency: (windowTransparency: number) => set({ windowTransparency }),
       setAccent: (accent: string) => set({ accent }),
+      setSingleClickOpen: (singleClickOpen: boolean) => set({ singleClickOpen }),
     }),
-    { name: 'aegis.theme' },
+    {
+      name: 'aegis.theme',
+      version: 2,
+      migrate: (persisted) => {
+        // v1 的壁纸是内置渐变枚举，v2 改为图片文件名，旧值统一回退到 default.jpg
+        const s = (persisted ?? {}) as Record<string, unknown>
+        const legacy = ['bloom', 'sunrise', 'forest', 'midnight', 'custom']
+        if (typeof s.wallpaper !== 'string' || legacy.includes(s.wallpaper)) s.wallpaper = 'default.jpg'
+        if (typeof s.lockWallpaper !== 'string') s.lockWallpaper = 'default.jpg'
+        return s as unknown as ThemeStore
+      },
+    },
   ),
 )

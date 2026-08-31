@@ -14,6 +14,7 @@ export default defineConfig({
         target: 'https://127.0.0.1:8060',
         changeOrigin: true,
         secure: false,
+        ws: true,
       },
     },
   },
@@ -21,6 +22,8 @@ export default defineConfig({
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
       '@icons': path.resolve(import.meta.dirname, './fluentui-system-icons/assets'),
+      '@extract': path.resolve(import.meta.dirname, './fluentui-system-icons/extract'),
+      '@win11': path.resolve(import.meta.dirname, './win11react'),
     },
   },
   build: {

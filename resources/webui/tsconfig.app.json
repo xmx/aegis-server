@@ -11,7 +11,9 @@
     /* Path aliases */
     "paths": {
       "@/*": ["./src/*"],
-      "@icons/*": ["./fluentui-system-icons/assets/*"]
+      "@icons/*": ["./fluentui-system-icons/assets/*"],
+      "@extract/*": ["./fluentui-system-icons/extract/*"],
+      "@win11/*": ["./win11react/*"]
     },
 
     /* Bundler mode */

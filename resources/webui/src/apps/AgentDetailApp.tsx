@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { api } from '@/lib/api'
 import type { AgentRecord, AgentConnRecord, PageResponse } from '@/lib/types'
 import { formatTime, formatDuration, formatBytes } from '@/lib/format'
+import { InfoRegular, LinkRegular } from '@fluentui/react-icons'
 
 interface AgentDetailProps {
   windowId: string
@@ -88,13 +89,15 @@ export default function AgentDetailApp({ props }: AgentDetailProps) {
           className={`app-detail-nav-item ${tab === 'info' ? 'app-detail-nav-item--active' : ''}`}
           onClick={() => setTab('info')}
         >
-          基本信息
+          <InfoRegular className="app-detail-nav-icon" />
+          <span>基本信息</span>
         </button>
         <button
           className={`app-detail-nav-item ${tab === 'connections' ? 'app-detail-nav-item--active' : ''}`}
           onClick={() => setTab('connections')}
         >
-          连接记录
+          <LinkRegular className="app-detail-nav-icon" />
+          <span>连接记录</span>
         </button>
       </div>
 

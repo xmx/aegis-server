@@ -11,6 +11,13 @@ import agentsIcon from '@icons/Agents/SVG/ic_fluent_agents_48_color.svg?url'
 import shieldIcon from '@icons/Shield/SVG/ic_fluent_shield_48_color.svg?url'
 import peopleIcon from '@icons/People/SVG/ic_fluent_people_48_color.svg?url'
 import laptopIcon from '@icons/Laptop/SVG/ic_fluent_laptop_48_color.svg?url'
+import searchSparkleIcon from '@icons/Search Sparkle/SVG/ic_fluent_search_sparkle_24_color.svg?url'
+import codeIcon from '@icons/Code/SVG/ic_fluent_code_24_color.svg?url'
+import imageIcon from '@icons/Image/SVG/ic_fluent_image_48_color.svg?url'
+import thisPcIcon from '@win11/icon/win/thispc.png?url'
+import wtIcon from '@extract/wt.png?url'
+import edgeIcon from '@win11/icon/edge.png?url'
+import settingsPngIcon from '@win11/icon/settings.png?url'
 
 interface ColorIconProps {
   /** 短键，见下方 ICON_PATHS */
@@ -30,6 +37,13 @@ const ICON_PATHS: Record<string, string> = {
   shield_48_color: shieldIcon,
   people_48_color: peopleIcon,
   laptop_48_color: laptopIcon,
+  search_sparkle_24_color: searchSparkleIcon,
+  code_24_color: codeIcon,
+  image_48_color: imageIcon,
+  thispc_png: thisPcIcon,
+  wt_png: wtIcon,
+  edge_png: edgeIcon,
+  settings_png: settingsPngIcon,
 }
 
 /**

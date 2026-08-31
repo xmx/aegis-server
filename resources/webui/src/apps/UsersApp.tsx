@@ -2,7 +2,14 @@ import { useEffect, useState, useCallback } from 'react'
 import { api } from '@/lib/api'
 import type { UserRecord, PageResponse } from '@/lib/types'
 import { formatTime } from '@/lib/format'
-import { SearchRegular, CheckmarkCircleRegular, DismissCircleRegular } from '@fluentui/react-icons'
+import {
+  SearchRegular,
+  ArrowClockwiseRegular,
+  ChevronLeftRegular,
+  ChevronRightRegular,
+  CheckmarkCircleRegular,
+  DismissCircleRegular,
+} from '@fluentui/react-icons'
 
 export default function UsersApp() {
   const [data, setData] = useState<PageResponse<UserRecord> | null>(null)
@@ -19,9 +26,10 @@ export default function UsersApp() {
       const res = await api<PageResponse<UserRecord>>('/api/users?' + params)
       setData(res)
     } catch {
-      // handled
+      // handled by api()
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }, [])
 
   useEffect(() => {
@@ -33,99 +41,114 @@ export default function UsersApp() {
     fetchData(1, q)
   }
 
+  const handleRefresh = () => {
+    fetchData(page, q)
+  }
+
   const totalPages = data ? Math.ceil(data.total / data.size) : 0
 
   return (
     <div className="app-page">
-      <div className="app-page-header">
-        <h2 className="app-page-title">系统用户</h2>
-        <div className="app-page-search">
-          <input
-            className="app-search-input"
-            type="text"
-            placeholder="搜索..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
-          <button className="app-btn app-btn-icon" onClick={handleSearch}>
-            <SearchRegular />
+      {/* 命令栏 */}
+      <div className="users-commandbar">
+        <div className="users-heading">
+          <h2 className="app-page-title">系统用户</h2>
+          {data && <span className="users-count">共 {data.total} 个用户</span>}
+        </div>
+        <div className="users-actions">
+          <div className="users-search">
+            <SearchRegular className="users-search-icon" />
+            <input
+              className="users-search-input"
+              type="text"
+              placeholder="搜索用户"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+          </div>
+          <button
+            className="app-btn app-btn-icon"
+            onClick={handleRefresh}
+            title="刷新"
+            disabled={loading}
+          >
+            <ArrowClockwiseRegular />
           </button>
         </div>
       </div>
 
       <div className="app-page-body">
         {loading ? (
-          <div className="app-loading">加载中...</div>
+          <div className="app-loading">正在加载...</div>
         ) : !data || data.records.length === 0 ? (
-          <div className="app-empty">暂无数据</div>
+          <div className="users-empty">
+            <SearchRegular />
+            <span>未找到用户</span>
+          </div>
         ) : (
           <>
-            <div className="app-table-wrap">
-              <table className="app-table">
-                <thead>
-                  <tr>
-                    <th>头像</th>
-                    <th>用户名</th>
-                    <th>昵称</th>
-                    <th>认证渠道</th>
-                    <th>PUID</th>
-                    <th>邮箱</th>
-                    <th>创建时间</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.records.map((user) => (
-                    <tr key={user.id}>
-                      <td>
-                        {user.avatar_url ? (
-                          <img src={user.avatar_url} alt={user.login} className="app-avatar" />
-                        ) : (
-                          <div className="app-avatar app-avatar--placeholder" />
-                        )}
-                      </td>
-                      <td>
-                        <span className="app-user-login">
-                          <span className="app-user-name">{user.login}</span>
-                          {user.enabled ? (
-                            <CheckmarkCircleRegular className="app-status-online" />
-                          ) : (
-                            <DismissCircleRegular className="app-status-offline" />
-                          )}
-                        </span>
-                      </td>
-                      <td>{user.name ?? '-'}</td>
-                      <td>
-                        <span className="app-tag">{user.provider}</span>
-                      </td>
-                      <td>
-                        <span className="app-td-mono">{user.puid}</span>
-                      </td>
-                      <td>{user.email ?? '-'}</td>
-                      <td className="app-td-muted">{formatTime(user.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="users-list">
+              <div className="users-list-header">
+                <span>头像</span>
+                <span>用户名</span>
+                <span>昵称</span>
+                <span>认证渠道</span>
+                <span>PUID</span>
+                <span>邮箱</span>
+                <span>创建时间</span>
+              </div>
+              {data.records.map((user) => (
+                <div key={user.id} className="users-row">
+                  <span className="users-cell users-cell--avatar">
+                    {user.avatar_url ? (
+                      <img className="users-avatar" src={user.avatar_url} alt={user.login} />
+                    ) : (
+                      <span className="users-avatar users-avatar--placeholder">
+                        {user.login?.charAt(0).toUpperCase() ?? '?'}
+                      </span>
+                    )}
+                  </span>
+                  <span className="users-cell">
+                    <span className="users-name">
+                      {user.login}
+                      {user.enabled ? (
+                        <CheckmarkCircleRegular className="users-status users-status--on" title="已启用" />
+                      ) : (
+                        <DismissCircleRegular className="users-status users-status--off" title="已禁用" />
+                      )}
+                    </span>
+                  </span>
+                  <span className="users-cell">{user.name ?? '-'}</span>
+                  <span className="users-cell">
+                    <span className="users-provider">{user.provider}</span>
+                  </span>
+                  <span className="users-cell users-cell--mono">{user.puid}</span>
+                  <span className="users-cell">{user.email ?? '-'}</span>
+                  <span className="users-cell users-cell--muted">{formatTime(user.created_at)}</span>
+                </div>
+              ))}
             </div>
 
-            <div className="app-pagination">
-              <span className="app-pagination-info">共 {data.total} 条</span>
-              <div className="app-pagination-btns">
+            <div className="users-pagination">
+              <span className="users-pagination-info">第 {page} 页，共 {data.total} 条</span>
+              <div className="users-pagination-btns">
                 <button
-                  className="app-btn app-btn-sm"
+                  className="users-pagination-btn"
                   disabled={page <= 1}
                   onClick={() => setPage(page - 1)}
+                  title="上一页"
                 >
-                  上一页
+                  <ChevronLeftRegular />
                 </button>
-                <span className="app-pagination-page">{page} / {totalPages}</span>
+                <span className="users-pagination-page">{page} / {totalPages}</span>
                 <button
-                  className="app-btn app-btn-sm"
+                  className="users-pagination-btn"
                   disabled={page >= totalPages}
                   onClick={() => setPage(page + 1)}
+                  title="下一页"
                 >
-                  下一页
+                  <ChevronRightRegular />
                 </button>
               </div>
             </div>

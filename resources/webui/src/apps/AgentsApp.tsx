@@ -3,7 +3,12 @@ import { api } from '@/lib/api'
 import type { AgentRecord, PageResponse } from '@/lib/types'
 import { formatTime } from '@/lib/format'
 import { useWMStore } from '@/stores/wm'
-import { CircleFilled, CircleRegular, SearchRegular } from '@fluentui/react-icons'
+import {
+  SearchRegular,
+  ArrowClockwiseRegular,
+  ChevronLeftRegular,
+  ChevronRightRegular,
+} from '@fluentui/react-icons'
 
 export default function AgentsApp() {
   const [data, setData] = useState<PageResponse<AgentRecord> | null>(null)
@@ -36,100 +41,117 @@ export default function AgentsApp() {
     fetchData(1, q)
   }
 
+  const handleRefresh = () => {
+    fetchData(page, q)
+  }
+
   const totalPages = data ? Math.ceil(data.total / data.size) : 0
 
   return (
     <div className="app-page">
-      <div className="app-page-header">
-        <h2 className="app-page-title">终端节点</h2>
-        <div className="app-page-search">
-          <input
-            className="app-search-input"
-            type="text"
-            placeholder="搜索..."
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
-          <button className="app-btn app-btn-icon" onClick={handleSearch}>
-            <SearchRegular />
+      {/* 命令栏 */}
+      <div className="agents-commandbar">
+        <div className="agents-heading">
+          <h2 className="app-page-title">终端节点</h2>
+          {data && <span className="agents-count">共 {data.total} 台终端</span>}
+        </div>
+        <div className="agents-actions">
+          <div className="agents-search">
+            <SearchRegular className="agents-search-icon" />
+            <input
+              className="agents-search-input"
+              type="text"
+              placeholder="搜索终端节点"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            />
+          </div>
+          <button
+            className="app-btn app-btn-icon"
+            onClick={handleRefresh}
+            title="刷新"
+            disabled={loading}
+          >
+            <ArrowClockwiseRegular />
           </button>
         </div>
       </div>
 
       <div className="app-page-body">
         {loading ? (
-          <div className="app-loading">加载中...</div>
+          <div className="app-loading">正在加载...</div>
         ) : !data || data.records.length === 0 ? (
-          <div className="app-empty">暂无数据</div>
+          <div className="agents-empty">
+            <SearchRegular />
+            <span>未找到终端节点</span>
+          </div>
         ) : (
           <>
-            <div className="app-table-wrap">
-              <table className="app-table">
-                <thead>
-                  <tr>
-                    <th>主机名</th>
-                    <th>IP 地址</th>
-                    <th>状态</th>
-                    <th>版本</th>
-                    <th>系统</th>
-                    <th>创建时间</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.records.map((agent) => (
-                    <tr
-                      key={agent.id}
-                      className="app-table-row--clickable"
-                      onClick={() => openApp('agent-detail', {
-                        props: { agentId: agent.id },
-                        title: agent.process_info.hostname || '终端详情',
-                      })}
-                    >
-                      <td>{agent.process_info.hostname ?? '-'}</td>
-                      <td>{agent.process_info.inet ?? '-'}</td>
-                      <td>
-                        <span className="app-status">
-                          {agent.status ? (
-                            <CircleFilled className="app-status-online" />
-                          ) : (
-                            <CircleRegular className="app-status-offline" />
-                          )}
-                          {agent.status ? '在线' : '离线'}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="app-tag">{agent.process_info.semver?.version ?? '-'}</span>
-                      </td>
-                      <td>
-                        <span className="app-tag">
-                          {(agent.process_info.goos ?? '-')}/{agent.process_info.goarch ?? '-'}
-                        </span>
-                      </td>
-                      <td className="app-td-muted">{formatTime(agent.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="agents-list">
+              <div className="agents-list-header">
+                <span>主机名</span>
+                <span>IP 地址</span>
+                <span>状态</span>
+                <span>版本</span>
+                <span>系统</span>
+                <span>创建时间</span>
+              </div>
+              {data.records.map((agent) => (
+                <div
+                  key={agent.id}
+                  className="agents-row"
+                  onClick={() =>
+                    openApp('agent-detail', {
+                      props: { agentId: agent.id },
+                      title: agent.process_info.hostname || '终端详情',
+                    })
+                  }
+                >
+                  <span className="agents-cell" title={agent.process_info.hostname ?? '-'}>
+                    {agent.process_info.hostname ?? '-'}
+                  </span>
+                  <span className="agents-cell agents-cell--mono">
+                    {agent.process_info.inet ?? '-'}
+                  </span>
+                  <span className="agents-cell">
+                    <span className={`agents-status ${agent.status ? 'agents-status--online' : 'agents-status--offline'}`}>
+                      <span className="agents-status-dot" />
+                      {agent.status ? '在线' : '离线'}
+                    </span>
+                  </span>
+                  <span className="agents-cell agents-cell--mono">
+                    {agent.process_info.semver?.version ?? '-'}
+                  </span>
+                  <span className="agents-cell agents-cell--mono">
+                    {(agent.process_info.goos ?? '-')}/{agent.process_info.goarch ?? '-'}
+                  </span>
+                  <span className="agents-cell agents-cell--muted">
+                    {formatTime(agent.created_at)}
+                  </span>
+                </div>
+              ))}
             </div>
 
-            <div className="app-pagination">
-              <span className="app-pagination-info">共 {data.total} 条</span>
-              <div className="app-pagination-btns">
+            <div className="agents-pagination">
+              <span className="agents-pagination-info">第 {page} 页，共 {data.total} 条</span>
+              <div className="agents-pagination-btns">
                 <button
-                  className="app-btn app-btn-sm"
+                  className="agents-pagination-btn"
                   disabled={page <= 1}
                   onClick={() => setPage(page - 1)}
+                  title="上一页"
                 >
-                  上一页
+                  <ChevronLeftRegular />
                 </button>
-                <span className="app-pagination-page">{page} / {totalPages}</span>
+                <span className="agents-pagination-page">{page} / {totalPages}</span>
                 <button
-                  className="app-btn app-btn-sm"
+                  className="agents-pagination-btn"
                   disabled={page >= totalPages}
                   onClick={() => setPage(page + 1)}
+                  title="下一页"
                 >
-                  下一页
+                  <ChevronRightRegular />
                 </button>
               </div>
             </div>

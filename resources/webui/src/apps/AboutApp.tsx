@@ -34,7 +34,7 @@ export default function AboutApp() {
 
             <div className="app-about-section">
               <h3 className="app-about-section-title">基本信息</h3>
-              <div className="app-about-grid">
+              <div className="app-about-list">
                 <AboutField label="版本" value={info.version} />
                 <AboutField label="修订" value={info.revision} />
                 <AboutField label="用户名" value={info.username} />
@@ -50,7 +50,7 @@ export default function AboutApp() {
               <>
                 <div className="app-about-section">
                   <h3 className="app-about-section-title">构建信息</h3>
-                  <div className="app-about-grid">
+                  <div className="app-about-list">
                     <AboutField label="Go 版本" value={info.build_info.GoVersion} />
                     <AboutField label="主模块" value={`${info.build_info.Main.Path} ${info.build_info.Main.Version}`} />
                   </div>
@@ -78,9 +78,9 @@ export default function AboutApp() {
 
 function AboutField({ label, value }: { label: string; value?: string }) {
   return (
-    <div className="app-about-field">
-      <span className="app-about-field-label">{label}</span>
-      <span className="app-about-field-value">{value ?? '-'}</span>
+    <div className="app-about-row">
+      <span className="app-about-row-label">{label}</span>
+      <span className="app-about-row-value">{value ?? '-'}</span>
     </div>
   )
 }

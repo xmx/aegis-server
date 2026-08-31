@@ -43,3 +43,12 @@ export function formatDate(d: Date): string {
   const day = d.getDate()
   return `${y}/${m}/${day}`
 }
+
+/** Win11 锁屏风格的日期：如「2026年8月31日 星期一」 */
+export function formatLockDate(d: Date): string {
+  const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+  const y = d.getFullYear()
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  return `${y}年${m}月${day}日 ${weekdays[d.getDay()]}`
+}

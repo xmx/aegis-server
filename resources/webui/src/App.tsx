@@ -8,9 +8,10 @@ import Desktop from '@/os/Desktop'
 import Taskbar from '@/os/Taskbar'
 import LockScreen from '@/os/LockScreen'
 
-function GitHubCallback() {
+function GitHubCallback({ onSuccess }: { onSuccess: () => void }) {
   const [status, setStatus] = useState<'loading' | 'error'>('loading')
   const { setUser } = useAuthStore()
+  const lockWallpaper = useThemeStore((s) => s.lockWallpaper)
   const called = useRef(false)
 
   useEffect(() => {
@@ -41,15 +42,19 @@ function GitHubCallback() {
           email: user.email,
         })
         window.history.replaceState({}, '', '/')
+        onSuccess()
       })
       .catch(() => {
         setStatus('error')
       })
-  }, [setUser])
+  }, [setUser, onSuccess])
 
   return (
     <div className="lockscreen">
-      <div className="lockscreen-wallpaper wallpaper-bloom" />
+      <div
+        className="lockscreen-wallpaper"
+        style={{ backgroundImage: `url(/lockscreen/${lockWallpaper})` }}
+      />
       <div className="lockscreen-panel">
         <div className="lockscreen-panel-time">
           {status === 'loading' ? '正在登录...' : '登录失败'}
@@ -123,7 +128,7 @@ export default function App() {
   }, [user, phase])
 
   if (isCallback) {
-    return <GitHubCallback />
+    return <GitHubCallback onSuccess={handleUnlock} />
   }
 
   if (phase === 'boot') {
@@ -142,7 +147,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell wallpaper-${wallpaper}`}>
+    <div className="app-shell wallpaper-image" style={{ backgroundImage: `url(/wallpaper/${wallpaper})` }}>
       <Desktop />
       <Taskbar />
     </div>
