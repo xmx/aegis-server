@@ -30,9 +30,15 @@ function WindowFrame({ win }: WindowFrameProps) {
 
   const handleDragStop = useCallback(
     (_e: any, d: { x: number; y: number }) => {
+      const MARGIN = 32
+      const el = document.querySelector('.desktop') as HTMLElement | null
+      const dw = el?.clientWidth ?? window.innerWidth
+      const dh = el?.clientHeight ?? window.innerHeight - 48
+      const clampedX = Math.max(-win.bounds.width + MARGIN, Math.min(dw - MARGIN, d.x))
+      const clampedY = Math.max(-win.bounds.height + MARGIN, Math.min(dh - MARGIN, d.y))
       setBounds(win.id, {
-        x: d.x,
-        y: d.y,
+        x: clampedX,
+        y: clampedY,
         width: win.bounds.width,
         height: win.bounds.height,
       })
@@ -75,11 +81,10 @@ function WindowFrame({ win }: WindowFrameProps) {
         }}
         minWidth={minSize.width}
         minHeight={minSize.height}
-        bounds="parent"
-        dragHandleClassName="win-titlebar"
-        cancel=".win-titlebar-buttons"
         disableDragging={win.maximized}
         enableResizing={!win.maximized}
+        dragHandleClassName="win-titlebar"
+        cancel=".win-titlebar-buttons"
         onDragStart={handleDragStart}
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}

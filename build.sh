@@ -1,28 +1,38 @@
 #!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")"
 
-# Exit on error
-# set -e
+readonly BASE_NAME="aegis-server"
 
-BASE_NAME="aegis-server"
-TIME_VERSION=$(TZ=UTC git log -1 --format="%cd" --date=format-local:"%y.%m.%d" | awk -F. '{printf "%d.%d.%d\n", $1, $2, $3}')
-VERSION="v${TIME_VERSION}"
-SHORT_SHA=$(git rev-parse --short HEAD)
-BINARY_NAME="${BASE_NAME}_$(go env GOOS)-$(go env GOARCH)@${VERSION}+${SHORT_SHA}$(go env GOEXE)"
-CURRENT_TIME=$(date --rfc-email)
-LD_FLAGS="-s -w -extldflags=-static -X '$(go list -m)/buildinfo.compileTime=${CURRENT_TIME}'"
-CGO_ENABLED=0 go build -o "${BINARY_NAME}" -tags=osusergo,netgo -trimpath -ldflags "${LD_FLAGS}" ./main
+GIT_SHORT_SHA=$(git rev-parse --short=7 HEAD)
+GIT_COMMIT_EPOCH=$(git log -1 --format=%ct)
+TIME_VERSION=$(date -u -d "@${GIT_COMMIT_EPOCH}" +'%y.%-m.%-d')
+[[ -n "${TIME_VERSION}" ]] || { echo "无法解析版本号" >&2; exit 1; }
+VERSION="v${TIME_VERSION}+${GIT_SHORT_SHA}"
+
+GO_GOOS=$(go env GOOS)
+GO_GOARCH=$(go env GOARCH)
+GO_GOEXE=$(go env GOEXE)
+BINARY_NAME="${BASE_NAME}_${GO_GOOS}-${GO_GOARCH}@${VERSION}${GO_GOEXE}"
+
+go build \
+  -o "${BINARY_NAME}" \
+  -tags=osusergo,netgo \
+  -trimpath \
+  -ldflags "-s -w" \
+  ./main
 
 BINARY_MD5=$(md5sum "${BINARY_NAME}" | awk '{print $1}')
 BINARY_SHA1=$(sha1sum "${BINARY_NAME}" | awk '{print $1}')
 BINARY_SHA256=$(sha256sum "${BINARY_NAME}" | awk '{print $1}')
 cat <<EOF > VERSION
-VERSION: ${VERSION}+${SHORT_SHA}
 BINARY_FILE_NAME: ${BINARY_NAME}
 BINARY_FILE_MD5: ${BINARY_MD5}
 BINARY_FILE_SHA1: ${BINARY_SHA1}
 BINARY_FILE_SHA256: ${BINARY_SHA256}
+VERSION: ${VERSION}
 GO_VERSION: $(go version)
-BUILD_TIME: ${CURRENT_TIME}
+GIT_VERSION: $(git version)
 EOF
 
 echo "编译产物：${BINARY_NAME}"

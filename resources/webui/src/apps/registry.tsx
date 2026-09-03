@@ -10,6 +10,7 @@ import SettingsApp from '@/apps/SettingsApp'
 import AboutApp from '@/apps/AboutApp'
 import TerminalApp from '@/apps/TerminalApp'
 import BrowserApp from '@/apps/BrowserApp'
+import TaskManagerApp from '@/apps/TaskManagerApp'
 
 export interface AppMeta {
   id: string
@@ -141,6 +142,16 @@ const registry: AppMeta[] = [
     single: false,
     pinnedDesktop: true,
     pinnedTaskbar: true,
+  },
+  {
+    id: 'taskmanager',
+    title: '任务管理器',
+    colorIcon: 'taskmgr_png',
+    component: TaskManagerApp,
+    defaultSize: { width: 900, height: 600 },
+    minSize: { width: 620, height: 420 },
+    single: true,
+    pinnedDesktop: true,
   },
 ]
 

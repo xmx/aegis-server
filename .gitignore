@@ -34,5 +34,11 @@ go.work.sum
 .crash.txt
 VERSION
 
-resources/config
-resources/log
+resources/config/
+resources/log/
+resources/test/
+resources/temp/
+
+# 编译产物
+aegis-server_*
+resources/static/dist/

@@ -3,25 +3,19 @@ package middle
 import (
 	"strings"
 
-	"github.com/xgfone/ship/v5"
+	"github.com/labstack/echo/v5"
 )
 
 // NewAuth 需要凭借临时密钥才可以初始化。
-func NewAuth(token string) ship.Middleware {
-	m := stringToken(token)
+func NewAuth(token string) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			str := c.Request().Header.Get(echo.HeaderAuthorization)
+			if strings.EqualFold(str, token) {
+				return next(c)
+			}
 
-	return m.handle
-}
-
-type stringToken string
-
-func (st stringToken) handle(h ship.Handler) ship.Handler {
-	return func(c *ship.Context) error {
-		str := c.GetReqHeader(ship.HeaderAuthorization)
-		if strings.EqualFold(str, string(st)) {
-			return h(c)
+			return echo.ErrUnauthorized
 		}
-
-		return ship.ErrUnauthorized
 	}
 }

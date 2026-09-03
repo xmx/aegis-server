@@ -11,13 +11,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/xgfone/ship/v5"
+	"github.com/labstack/echo/v5"
 	"github.com/xmx/aegis-server/application/config"
 	"github.com/xmx/aegis-server/application/oobe/middle"
 	"github.com/xmx/aegis-server/application/oobe/restapi"
 	"github.com/xmx/aegis-server/application/oobe/webui"
-	"github.com/xmx/aegis-server/application/shipx"
-	"github.com/xmx/aegis-server/library/logger"
 	"github.com/xmx/aegis-server/library/netutil"
 	"github.com/xmx/aegis-server/library/tlscert"
 	"github.com/xmx/aegis-server/library/validation"
@@ -51,31 +49,27 @@ func runOOBE(ctx context.Context, file string) (*config.Config, error) {
 		log.Info("如需自定义初始化地址，请通过环境变量设置", "key", config.EnvironOOBEAddr)
 	}
 
-	sh := ship.Default()
-	sh.Validator = valid
-	sh.Logger = logger.NewFormat(log.Handler(), 6)
-	sh.NotFound = shipx.NotFound
-	sh.HandleError = shipx.HandleError
+	e := echo.New()
+	e.Validator = valid
+	e.Logger = log
 
 	if dist == "" {
-		sh.Route("/").StaticFS(webui.Dist())
+		e.StaticFS("/", webui.Dist())
 		log.Info("如需自定义初始化页面，请通过环境变量设置", "key", config.EnvironOOBEDist)
 	} else {
-		sh.Route("/").Static(dist)
+		e.Static("/", dist)
 	}
 
 	cfgch := make(chan *config.Config)
 	oobeAPI := restapi.NewOOBE(cfgch, file)
-	rgb := sh.Group("/api").Use(middle.NewAuth(token))
-	if err := shipx.RegisterRoutes(rgb, []shipx.RouteRegister{oobeAPI}); err != nil {
-		log.Error("路由注册错误", "err", err)
-		return nil, err
-	}
+
+	eg := e.Group("/api", middle.NewAuth(token))
+	_ = oobeAPI.RegisterRoute(eg)
 
 	selfTLS := tlscert.NewMatch(nil, log) // 临时自签证书
 	srv := &http.Server{
 		Addr:         addr,
-		Handler:      sh,
+		Handler:      e,
 		TLSConfig:    &tls.Config{GetCertificate: selfTLS.GetCertificate},
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,

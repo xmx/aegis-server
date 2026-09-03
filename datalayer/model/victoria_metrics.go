@@ -14,7 +14,7 @@ type VictoriaMetrics struct {
 	Enabled   bool          `bson:"enabled"              json:"enabled"` // 同时最多只能有一个启用
 	Method    string        `bson:"method"               json:"method"`
 	Address   string        `bson:"address"              json:"address"`
-	Header    HTTPHeader    `bson:"header"               json:"header"`
+	Header    MapHeader     `bson:"header"               json:"header"`
 	CreatedAt time.Time     `bson:"created_at,omitempty" json:"created_at"`
 	UpdatedAt time.Time     `bson:"updated_at,omitempty" json:"updated_at"`
 }

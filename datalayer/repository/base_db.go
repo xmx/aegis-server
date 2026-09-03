@@ -12,9 +12,12 @@ type BaseDB struct {
 	db  *mongo.Database
 	log *slog.Logger
 
-	oauthClient  OAuthClient
-	systemConfig SystemConfig
-	user         User
+	agent           Agent
+	agentConnRecord AgentConnRecord
+	oauthClient     OAuthClient
+	otelClient      OTelClient
+	systemConfig    SystemConfig
+	user            User
 }
 
 func NewBaseDB(db *mongo.Database, log *slog.Logger) *BaseDB {
@@ -22,16 +25,22 @@ func NewBaseDB(db *mongo.Database, log *slog.Logger) *BaseDB {
 		db:  db,
 		log: log,
 
-		oauthClient:  NewOAuthClient(db),
-		systemConfig: NewSystemConfig(db),
-		user:         NewUser(db),
+		agent:           NewAgent(db),
+		agentConnRecord: NewAgentConnRecord(db),
+		oauthClient:     NewOAuthClient(db),
+		systemConfig:    NewSystemConfig(db),
+		user:            NewUser(db),
 	}
 }
 
-func (b *BaseDB) Database() *mongo.Database  { return b.db }
-func (b *BaseDB) OAuthClient() OAuthClient   { return b.oauthClient }
-func (b *BaseDB) SystemConfig() SystemConfig { return b.systemConfig }
-func (b *BaseDB) User() User                 { return b.user }
+func (b *BaseDB) Database() *mongo.Database { return b.db }
+
+func (b *BaseDB) Agent() Agent                     { return b.agent }
+func (b *BaseDB) AgentConnRecord() AgentConnRecord { return b.agentConnRecord }
+func (b *BaseDB) OAuthClient() OAuthClient         { return b.oauthClient }
+func (b *BaseDB) OTelClient() OTelClient           { return b.otelClient }
+func (b *BaseDB) SystemConfig() SystemConfig       { return b.systemConfig }
+func (b *BaseDB) User() User                       { return b.user }
 
 func (b *BaseDB) CreateIndex(ctx context.Context) error {
 	rv := reflect.ValueOf(b)

@@ -3,7 +3,7 @@ package restapi
 import (
 	"net/http"
 
-	"github.com/xgfone/ship/v5"
+	"github.com/labstack/echo/v5"
 	"github.com/xmx/aegis-server/application/manager/request"
 	"github.com/xmx/aegis-server/application/manager/service"
 )
@@ -18,15 +18,15 @@ func NewUser(svc *service.User) *User {
 	}
 }
 
-func (usr *User) RegisterRoute(r *ship.RouteGroupBuilder) error {
-	r.Route("/users").GET(usr.page)
+func (usr *User) RegisterRoute(r *echo.Group) error {
+	r.GET("/users", usr.page)
 
 	return nil
 }
 
-func (usr *User) page(c *ship.Context) error {
+func (usr *User) page(c *echo.Context) error {
 	req := new(request.Pages)
-	if err := c.BindQuery(req); err != nil {
+	if err := c.Bind(req); err != nil {
 		return err
 	}
 

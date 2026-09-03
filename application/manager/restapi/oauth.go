@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/xgfone/ship/v5"
+	"github.com/labstack/echo/v5"
 	"github.com/xmx/aegis-server/application/manager/request"
 	"github.com/xmx/aegis-server/application/manager/response"
 	"github.com/xmx/aegis-server/application/manager/service"
@@ -22,14 +22,14 @@ func NewOAuth(svc *service.OAuth) *OAuth {
 	}
 }
 
-func (ath *OAuth) RegisterRoute(r *ship.RouteGroupBuilder) error {
-	r.Route("/oauth/provider").GET(ath.provider)
-	r.Route("/oauth/github").POST(ath.github)
+func (ath *OAuth) RegisterRoute(r *echo.Group) error {
+	r.GET("/oauth/provider", ath.provider)
+	r.POST("/oauth/github", ath.github)
 
 	return nil
 }
 
-func (ath *OAuth) github(c *ship.Context) error {
+func (ath *OAuth) github(c *echo.Context) error {
 	req := new(request.OAuthCode)
 	if err := c.Bind(req); err != nil {
 		return err
@@ -44,15 +44,15 @@ func (ath *OAuth) github(c *ship.Context) error {
 	return c.JSON(http.StatusOK, ret)
 }
 
-func (ath *OAuth) provider(c *ship.Context) error {
+func (ath *OAuth) provider(c *echo.Context) error {
 	req := new(request.OAuthProvider)
-	if err := c.BindQuery(req); err != nil {
+	if err := c.Bind(req); err != nil {
 		return err
 	}
 
 	provider, origin := req.Provider, req.Origin
 	if origin == "" {
-		origin = c.GetReqHeader(ship.HeaderOrigin)
+		origin = c.Request().Header.Get(echo.HeaderOrigin)
 	}
 
 	ctx := c.Request().Context()

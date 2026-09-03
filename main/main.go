@@ -9,7 +9,7 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/xmx/aegis-common/buildinfo"
+	"github.com/xmx/aegis-common/bininfo"
 	"github.com/xmx/aegis-server/launch"
 )
 
@@ -19,7 +19,7 @@ func main() {
 	ver := set.Bool("v", false, "打印版本")
 	_ = set.Parse(os.Args[1:])
 
-	if _, _ = buildinfo.ANSI(os.Stdout); *ver {
+	if _, _ = bininfo.ANSI(os.Stdout); *ver {
 		return
 	}
 

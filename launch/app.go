@@ -8,14 +8,13 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/xgfone/ship/v5"
+	"github.com/labstack/echo/v5"
 	"github.com/xmx/aegis-server/application/config"
+	"github.com/xmx/aegis-server/application/echox"
 	"github.com/xmx/aegis-server/application/manager/restapi"
 	"github.com/xmx/aegis-server/application/manager/service"
-	"github.com/xmx/aegis-server/application/muxgate/linkhub"
-	"github.com/xmx/aegis-server/application/shipx"
+	"github.com/xmx/aegis-server/application/nodelink/linkhub"
 	"github.com/xmx/aegis-server/datalayer/repository"
-	"github.com/xmx/aegis-server/library/logger"
 	"github.com/xmx/aegis-server/library/mongodb"
 	"github.com/xmx/aegis-server/library/netutil"
 	"github.com/xmx/aegis-server/library/tlscert"
@@ -55,29 +54,46 @@ func runApp(ctx context.Context, cfg *config.Config) error {
 	lmh.Replace(hs...)
 	_ = tmpc.Close()
 
-	sh := ship.Default()
-	sh.Validator = valid
-	sh.Logger = logger.NewFormat(log.Handler(), 6)
-	sh.NotFound = shipx.NotFound
-	sh.HandleError = shipx.HandleError
+	e := echo.New()
+	e.Logger = log
+	e.Validator = valid
+
 	for k, v := range dcfg.Server.Static {
 		if k != "" && v != "" {
-			sh.Route(k).Static(v)
+			e.Static(k, v)
 		}
 	}
 
-	mux := linkhub.NewAgentMUX(log)
-	authSvc := service.NewOAuth(db, log)
-	userSvc := service.NewUser(db, log)
-
-	apis := []shipx.RouteRegister{
-		restapi.NewTunnel(mux, log),
-		restapi.NewOAuth(authSvc),
-		restapi.NewUser(userSvc),
+	proxyURL, _ := url.Parse("socks5://127.0.0.1:41080")
+	cli := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyURL(proxyURL),
+		},
 	}
 
-	base := sh.Group("/api")
-	if err = shipx.RegisterRoutes(base, apis); err != nil {
+	fake := http.NewServeMux()
+	mux := linkhub.NewAgentMUX(db, fake, log)
+	agentSvc := service.NewAgent(db, log)
+	authSvc := service.NewOAuth(db, cli, log)
+	otelClientSvc := service.NewOTelClient(db, log)
+	userSvc := service.NewUser(db, log)
+
+	const baseURL = "/api"
+	apis := []echox.RouteRegister{
+		restapi.NewAgent(agentSvc),
+		restapi.NewTunnel(mux, log),
+		restapi.NewOAuth(authSvc),
+		restapi.NewOTelClient(otelClientSvc),
+		restapi.NewPTY(),
+		restapi.NewSystemBinary(),
+		restapi.NewSystemProcess(),
+		restapi.NewSystemService(),
+		restapi.NewUser(userSvc),
+		restapi.NewWebDAV(baseURL, "/"),
+	}
+
+	eg := e.Group(baseURL)
+	if err = echox.RegisterRoutes(eg, apis); err != nil {
 		return err
 	}
 
@@ -88,7 +104,7 @@ func runApp(ctx context.Context, cfg *config.Config) error {
 	}
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           sh,
+		Handler:           e,
 		ReadHeaderTimeout: 10 * time.Second,
 		TLSConfig:         &tls.Config{GetCertificate: selfTLS.GetCertificate},
 	}

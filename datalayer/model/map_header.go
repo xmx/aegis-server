@@ -5,10 +5,10 @@ import (
 	"strings"
 )
 
-type HTTPHeader map[string]string
+type MapHeader map[string]string
 
-func (h HTTPHeader) Canonical() HTTPHeader {
-	hm := make(HTTPHeader, len(h))
+func (h MapHeader) Canonical() MapHeader {
+	hm := make(MapHeader, len(h))
 	for k, v := range h {
 		key := http.CanonicalHeaderKey(strings.TrimSpace(k))
 		hm[key] = v

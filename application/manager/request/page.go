@@ -5,3 +5,8 @@ type Pages struct {
 	Size int64  `json:"size" form:"size" query:"size" validate:"gte=0,lte=1000"`
 	Q    string `json:"q"    form:"q"    query:"q"    validate:"lte=1000"`
 }
+
+type IDPages struct {
+	ObjectID
+	Pages
+}

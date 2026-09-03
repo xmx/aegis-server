@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/xgfone/ship/v5"
+	"github.com/labstack/echo/v5"
 	"github.com/xmx/aegis-server/application/nodelink/linkhub"
 	"github.com/xmx/muxconn"
 )
@@ -27,8 +27,8 @@ func NewTunnel(next linkhub.MUXHandler, log *slog.Logger) *Tunnel {
 	}
 }
 
-func (tnl *Tunnel) RegisterRoute(r *ship.RouteGroupBuilder) error {
-	r.Route("/tunnel").GET(tnl.connect)
+func (tnl *Tunnel) RegisterRoute(r *echo.Group) error {
+	r.GET("/tunnel", tnl.connect)
 
 	return nil
 }
@@ -36,9 +36,8 @@ func (tnl *Tunnel) RegisterRoute(r *ship.RouteGroupBuilder) error {
 // connect Agent 接入端点。
 //
 //goland:noinspection GoUnhandledErrorResult
-func (tnl *Tunnel) connect(c *ship.Context) error {
-	clientIP := c.ClientIP()
-	c.Infof("通道准备建连 [%s]", clientIP)
+func (tnl *Tunnel) connect(c *echo.Context) error {
+	// clientIP := c.RealIP()
 
 	w, r := c.Response(), c.Request()
 	ws, err := tnl.wsupg.Upgrade(w, r, nil)
@@ -68,8 +67,7 @@ func (tnl *Tunnel) connect(c *ship.Context) error {
 	}
 	defer mux.Close()
 
-	err = tnl.next.HandleMUX(mux)
-	c.Warnf("连接已断开 [%s] %v", clientIP, err)
+	_ = tnl.next.HandleMUX(mux)
 
 	return nil
 }

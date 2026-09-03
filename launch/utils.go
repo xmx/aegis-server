@@ -9,9 +9,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/xmx/aegis-common/logger"
 	"github.com/xmx/aegis-server/application/config"
 	"github.com/xmx/aegis-server/datalayer/model"
-	"github.com/xmx/aegis-server/library/logger"
 	"github.com/xmx/aegis-server/library/netutil"
 	"gopkg.in/natefinch/lumberjack.v2"
 )

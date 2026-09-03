@@ -8,7 +8,7 @@ import (
 
 type Semver struct {
 	Version string `bson:"version" json:"version"`
-	Number  uint64 `bson:"number"  json:"number"`
+	Number  uint64 `bson:"number"  json:"number,string"`
 }
 
 // ParseSemver https://semver.org/

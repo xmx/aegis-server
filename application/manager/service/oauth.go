@@ -23,7 +23,7 @@ type OAuth struct {
 	log *slog.Logger
 }
 
-func NewOAuth(db *repository.BaseDB, log *slog.Logger) *OAuth {
+func NewOAuth(db *repository.BaseDB, cli *http.Client, log *slog.Logger) *OAuth {
 	return &OAuth{
 		db:  db,
 		log: log,

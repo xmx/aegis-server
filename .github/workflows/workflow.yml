@@ -36,4 +36,5 @@ jobs:
           name: ${{ steps.artifact.outputs.name }}
           path: |
             aegis-server_*
+            resources/static
             VERSION

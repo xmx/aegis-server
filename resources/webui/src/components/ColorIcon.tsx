@@ -18,6 +18,7 @@ import thisPcIcon from '@win11/icon/win/thispc.png?url'
 import wtIcon from '@extract/wt.png?url'
 import edgeIcon from '@win11/icon/edge.png?url'
 import settingsPngIcon from '@win11/icon/settings.png?url'
+import taskmgrIcon from '@extract/taskmgr.png?url'
 
 interface ColorIconProps {
   /** 短键，见下方 ICON_PATHS */
@@ -44,6 +45,7 @@ const ICON_PATHS: Record<string, string> = {
   wt_png: wtIcon,
   edge_png: edgeIcon,
   settings_png: settingsPngIcon,
+  taskmgr_png: taskmgrIcon,
 }
 
 /**

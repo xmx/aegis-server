@@ -6,6 +6,7 @@ import { formatClock, formatDate } from '@/lib/format'
 import Logo from '@/components/Logo'
 import ColorIcon from '@/components/ColorIcon'
 import StartMenu from '@/os/StartMenu'
+import Calendar from '@/os/Calendar'
 
 function Clock({ onClick }: { onClick: () => void }) {
   const [now, setNow] = useState(new Date())
@@ -31,6 +32,7 @@ function Taskbar() {
   const { windows, activeId, openApp, toggleMinimize, focusWindow, toggleMaximize, closeWindow } = useWMStore()
   const { unpinned, extraPinned, pin, unpin } = useTaskbarStore()
   const [startOpen, setStartOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const [menu, setMenu] = useState<TaskbarMenuState | null>(null)
   const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -147,6 +149,8 @@ function Taskbar() {
     <>
       {startOpen && <StartMenu onClose={() => setStartOpen(false)} />}
 
+      {calendarOpen && <Calendar onClose={() => setCalendarOpen(false)} />}
+
       {menu && (
         <div
           ref={menuRef}
@@ -235,7 +239,7 @@ function Taskbar() {
 
         {/* 右侧：托盘 */}
         <div className="taskbar-right">
-          <Clock onClick={() => openApp('settings')} />
+          <Clock onClick={() => setCalendarOpen((v) => !v)} />
           <button className="taskbar-tray-btn taskbar-notify" title="通知">
             <span className="taskbar-notify-badge">0</span>
           </button>
